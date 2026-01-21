@@ -21,24 +21,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchUser = useCallback(async () => {
-    console.log("[AuthContext] fetchUser called");
+  const fetchUser = useCallback(async (forceRefresh = false) => {
+    console.log("[AuthContext] fetchUser called, forceRefresh:", forceRefresh);
     try {
       setLoading(true);
       setError(null);
 
-      // First check for cached user info
-      const cachedUser = await Auth.getUserInfo();
-      console.log("[AuthContext] Cached user:", cachedUser);
+      // First check for cached user info (skip if forceRefresh)
+      if (!forceRefresh) {
+        const cachedUser = await Auth.getUserInfo();
+        console.log("[AuthContext] Cached user:", cachedUser);
 
-      if (cachedUser) {
-        console.log("[AuthContext] Using cached user info");
-        setUser(cachedUser);
-        setLoading(false);
-        return;
+        if (cachedUser) {
+          console.log("[AuthContext] Using cached user info");
+          setUser(cachedUser);
+          setLoading(false);
+          return;
+        }
       }
 
-      // Web platform: try to fetch from API if no cached user
+      // Web platform: fetch from API
       if (Platform.OS === "web") {
         console.log("[AuthContext] Web platform: fetching user from API...");
         try {
@@ -53,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: apiUser.email,
               loginMethod: apiUser.loginMethod,
               lastSignedIn: new Date(apiUser.lastSignedIn),
+              profileImageUrl: apiUser.profileImageUrl,
             };
             setUser(userInfo);
             await Auth.setUserInfo(userInfo);
@@ -142,6 +145,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, [user, loading, isAuthenticated, error]);
 
+  const refreshUser = useCallback(() => fetchUser(true), [fetchUser]);
+
   const value = useMemo(() => ({
     user,
     loading,
@@ -150,8 +155,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     refresh: fetchUser,
-    refreshUser: fetchUser,
-  }), [user, loading, error, isAuthenticated, login, logout, fetchUser]);
+    refreshUser,
+  }), [user, loading, error, isAuthenticated, login, logout, fetchUser, refreshUser]);
 
   return (
     <AuthContext.Provider value={value}>

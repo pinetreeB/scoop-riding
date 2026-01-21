@@ -268,7 +268,7 @@ export default function PostDetailScreen() {
                 onPress={() => router.push(`/ride-detail?id=${attachedRide.id}` as any)}
                 style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-xl p-4 border border-border mb-4">
+                <View className="bg-surface rounded-xl p-4 border border-border mb-4 overflow-hidden">
                   <View className="flex-row items-center mb-3">
                     <MaterialIcons name="route" size={20} color={colors.primary} />
                     <Text className="text-primary font-medium ml-2">첨부된 주행 기록</Text>
@@ -276,16 +276,17 @@ export default function PostDetailScreen() {
                   
                   {/* Route Preview Map */}
                   {attachedRide.gpsPoints && attachedRide.gpsPoints.length > 1 && (
-                    <View className="mb-3">
+                    <View className="mb-3 rounded-lg overflow-hidden">
                       <RoutePreview
                         gpsPoints={attachedRide.gpsPoints}
                         height={120}
+                        width={undefined}
                       />
                     </View>
                   )}
                   
-                  <Text className="text-foreground font-medium">{attachedRide.date}</Text>
-                  <Text className="text-muted text-sm">
+                  <Text className="text-foreground font-medium" numberOfLines={1}>{attachedRide.date}</Text>
+                  <Text className="text-muted text-sm" numberOfLines={1}>
                     {(attachedRide.distance / 1000).toFixed(2)}km • {formatDuration(attachedRide.duration)} • 평균 {attachedRide.avgSpeed.toFixed(1)}km/h
                   </Text>
                 </View>

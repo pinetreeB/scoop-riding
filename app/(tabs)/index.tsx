@@ -23,6 +23,7 @@ import {
   formatDistance,
   type RidingRecord,
 } from "@/lib/riding-store";
+import { LEVEL_DEFINITIONS, calculateLevel, getLevelTitle, formatLevelDistance } from "@/lib/level-system";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -347,33 +348,40 @@ export default function HomeScreen() {
           </View>
 
           {/* Level Progress */}
-          <View className="mt-4 pt-4 border-t border-border">
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-muted text-sm">
-                다음 레벨까지 {Math.max(0, 50 - (displayStats.distance / 1000)).toFixed(1)}km 남았습니다.
-              </Text>
-              <Pressable
-                onPress={() => {
-                  if (Platform.OS !== "web") {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  setShowLevelInfo(true);
-                }}
-                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
-              >
-                <MaterialIcons name="help-outline" size={16} color={colors.muted} />
-              </Pressable>
-            </View>
-            <View className="h-2 bg-border rounded-full overflow-hidden">
-              <View
-                className="h-full rounded-full"
-                style={{
-                  backgroundColor: colors.primary,
-                  width: `${Math.min(100, (displayStats.distance / 1000 / 50) * 100)}%`,
-                }}
-              />
-            </View>
-          </View>
+          {(() => {
+            const levelInfo = calculateLevel(displayStats.distance / 1000);
+            return (
+              <View className="mt-4 pt-4 border-t border-border">
+                <View className="flex-row justify-between items-center mb-2">
+                  <Text className="text-muted text-sm">
+                    {levelInfo.nextLevelDistance > 0 
+                      ? `다음 레벨까지 ${formatLevelDistance(levelInfo.nextLevelDistance)} 남았습니다.`
+                      : "최고 레벨 달성!"}
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      if (Platform.OS !== "web") {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      setShowLevelInfo(true);
+                    }}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
+                  >
+                    <MaterialIcons name="help-outline" size={16} color={colors.muted} />
+                  </Pressable>
+                </View>
+                <View className="h-2 bg-border rounded-full overflow-hidden">
+                  <View
+                    className="h-full rounded-full"
+                    style={{
+                      backgroundColor: colors.primary,
+                      width: `${levelInfo.progress * 100}%`,
+                    }}
+                  />
+                </View>
+              </View>
+            );
+          })()}
         </View>
 
         {/* Weekly Ranking Section */}
@@ -402,7 +410,7 @@ export default function HomeScreen() {
                   return (
                     <Pressable
                       key={item.userId}
-                      onPress={() => router.push(`/user-profile?userId=${item.userId}` as any)}
+                      onPress={() => router.push(`/user-profile?userId=${item.userId}&name=${encodeURIComponent(item.name || "​익명 라이더")}` as any)}
                       style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
                     >
                       <View
@@ -525,53 +533,28 @@ export default function HomeScreen() {
               주행 거리에 따라 레벨이 상승합니다. 더 많이 주행하여 높은 레벨을 달성해보세요!
             </Text>
 
-            <View className="bg-background rounded-xl p-4 mb-4">
-              <View className="flex-row items-center mb-2">
-                <View className="w-8 h-8 rounded-full bg-gray-400 items-center justify-center mr-3">
-                  <Text className="text-white font-bold">1</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-foreground font-medium">비기너</Text>
-                  <Text className="text-muted text-xs">0 ~ 50km</Text>
-                </View>
+            <ScrollView className="max-h-[300px]">
+              <View className="bg-background rounded-xl p-4 mb-4">
+                {LEVEL_DEFINITIONS.map((levelDef, index) => (
+                  <View key={levelDef.level} className={`flex-row items-center ${index < LEVEL_DEFINITIONS.length - 1 ? 'mb-3' : ''}`}>
+                    <View 
+                      className="w-8 h-8 rounded-full items-center justify-center mr-3"
+                      style={{ backgroundColor: levelDef.color }}
+                    >
+                      <Text className="text-white font-bold">{levelDef.level}</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-foreground font-medium">{levelDef.title}</Text>
+                      <Text className="text-muted text-xs">
+                        {levelDef.maxDistance === Infinity 
+                          ? `${formatLevelDistance(levelDef.minDistance)} 이상`
+                          : `${formatLevelDistance(levelDef.minDistance)} ~ ${formatLevelDistance(levelDef.maxDistance)}`}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
               </View>
-              <View className="flex-row items-center mb-2">
-                <View className="w-8 h-8 rounded-full bg-green-500 items-center justify-center mr-3">
-                  <Text className="text-white font-bold">2</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-foreground font-medium">라이더</Text>
-                  <Text className="text-muted text-xs">50 ~ 200km</Text>
-                </View>
-              </View>
-              <View className="flex-row items-center mb-2">
-                <View className="w-8 h-8 rounded-full bg-blue-500 items-center justify-center mr-3">
-                  <Text className="text-white font-bold">3</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-foreground font-medium">엑스퍼트</Text>
-                  <Text className="text-muted text-xs">200 ~ 500km</Text>
-                </View>
-              </View>
-              <View className="flex-row items-center mb-2">
-                <View className="w-8 h-8 rounded-full bg-purple-500 items-center justify-center mr-3">
-                  <Text className="text-white font-bold">4</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-foreground font-medium">마스터</Text>
-                  <Text className="text-muted text-xs">500 ~ 1,000km</Text>
-                </View>
-              </View>
-              <View className="flex-row items-center">
-                <View className="w-8 h-8 rounded-full items-center justify-center mr-3" style={{ backgroundColor: colors.primary }}>
-                  <Text className="text-white font-bold">5</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-foreground font-medium">레전드</Text>
-                  <Text className="text-muted text-xs">1,000km 이상</Text>
-                </View>
-              </View>
-            </View>
+            </ScrollView>
 
             <Pressable
               onPress={() => setShowLevelInfo(false)}

@@ -16,12 +16,14 @@ interface RoutePreviewProps {
 
 export function RoutePreview({
   gpsPoints,
-  width = SCREEN_WIDTH - 32,
+  width,
   height = 150,
   showStats = false,
   distance,
   duration,
 }: RoutePreviewProps) {
+  // Default width calculation - use 100% of available space
+  const effectiveWidth = width ?? SCREEN_WIDTH - 64;
   const colors = useColors();
 
   if (!gpsPoints || gpsPoints.length < 2) {
@@ -53,12 +55,12 @@ export function RoutePreview({
   const lngRange = maxLng - minLng || 0.001;
 
   // Scale to fit
-  const scaleX = (width - padding * 2) / lngRange;
+  const scaleX = (effectiveWidth - padding * 2) / lngRange;
   const scaleY = (height - padding * 2) / latRange;
   const scale = Math.min(scaleX, scaleY);
 
   // Center offset
-  const offsetX = (width - lngRange * scale) / 2;
+  const offsetX = (effectiveWidth - lngRange * scale) / 2;
   const offsetY = (height - latRange * scale) / 2;
 
   // Convert GPS points to SVG coordinates
@@ -88,12 +90,12 @@ export function RoutePreview({
       <View
         className="rounded-xl overflow-hidden"
         style={{
-          width,
+          width: effectiveWidth,
           height,
           backgroundColor: colors.surface,
         }}
       >
-        <Svg width={width} height={height}>
+        <Svg width={effectiveWidth} height={height}>
           {/* Route line */}
           <Polyline
             points={pointsString}

@@ -49,6 +49,7 @@ function buildUserResponse(
         email?: string | null;
         loginMethod?: string | null;
         lastSignedIn?: Date | null;
+        profileImageUrl?: string | null;
       },
 ) {
   return {
@@ -58,6 +59,7 @@ function buildUserResponse(
     email: user?.email ?? null,
     loginMethod: user?.loginMethod ?? null,
     lastSignedIn: (user?.lastSignedIn ?? new Date()).toISOString(),
+    profileImageUrl: (user as any)?.profileImageUrl ?? null,
   };
 }
 

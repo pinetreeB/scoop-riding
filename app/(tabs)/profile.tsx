@@ -24,6 +24,7 @@ import {
   fullSync,
   type RidingRecord,
 } from "@/lib/riding-store";
+import { calculateLevel, getLevelTitle, getLevelColor, LEVEL_DEFINITIONS } from "@/lib/level-system";
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -44,12 +45,7 @@ export default function ProfileScreen() {
     unsyncedCount: 0,
   });
 
-  const calculateLevel = (totalDistanceKm: number) => {
-    // Level up every 50km
-    const level = Math.floor(totalDistanceKm / 50) + 1;
-    const progress = (totalDistanceKm % 50) / 50;
-    return { level, progress };
-  };
+  // Level calculation now uses centralized level-system module
 
   const loadStats = useCallback(async () => {
     const records = await getRidingRecords();
@@ -174,14 +170,7 @@ export default function ProfileScreen() {
     );
   };
 
-  const getLevelTitle = (level: number) => {
-    if (level >= 100) return "레전드 라이더";
-    if (level >= 50) return "마스터 라이더";
-    if (level >= 20) return "프로 라이더";
-    if (level >= 10) return "시니어 라이더";
-    if (level >= 5) return "주니어 라이더";
-    return "루키 라이더";
-  };
+  // getLevelTitle is now imported from @/lib/level-system
 
   const getUserDisplayName = () => {
     if (user?.name) return user.name;

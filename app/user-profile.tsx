@@ -21,12 +21,13 @@ import { trpc } from "@/lib/trpc";
 export default function UserProfileScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { id, name, email } = useLocalSearchParams<{ id: string; name?: string; email?: string }>();
+  const params = useLocalSearchParams<{ id?: string; userId?: string; name?: string; email?: string }>();
   const { isAuthenticated, user: currentUser } = useAuth();
 
   const [refreshing, setRefreshing] = useState(false);
 
-  const userId = parseInt(id || "0");
+  // Support both 'id' and 'userId' parameters for compatibility
+  const userId = parseInt(params.userId || params.id || "0");
   const isOwnProfile = currentUser?.id === userId;
 
   const trpcUtils = trpc.useUtils();
@@ -126,6 +127,8 @@ export default function UserProfileScreen() {
     }
     sendFriendRequestMutation.mutate({ receiverId: userId });
   };
+
+  const { name, email } = params;
 
   const getUserName = () => {
     if (name) return name;
