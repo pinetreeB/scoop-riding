@@ -9,10 +9,12 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  Image,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -27,6 +29,8 @@ const POST_TYPES = [
   { value: "tip", label: "팁", icon: "lightbulb-outline" },
 ] as const;
 
+const MAX_IMAGES = 4;
+
 export default function CreatePostScreen() {
   const colors = useColors();
   const router = useRouter();
@@ -39,8 +43,13 @@ export default function CreatePostScreen() {
   const [showRideSelector, setShowRideSelector] = useState(false);
   const [rides, setRides] = useState<RidingRecord[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const trpcUtils = trpc.useUtils();
+  
+  const uploadImageMutation = trpc.images.upload.useMutation();
+  
   const createPostMutation = trpc.community.createPost.useMutation({
     onSuccess: () => {
       trpcUtils.community.getPosts.invalidate();
@@ -56,6 +65,112 @@ export default function CreatePostScreen() {
       getRidingRecords().then(setRides);
     }, [])
   );
+
+  const pickImage = async () => {
+    if (images.length >= MAX_IMAGES) {
+      Alert.alert("알림", `이미지는 최대 ${MAX_IMAGES}장까지 첨부할 수 있습니다.`);
+      return;
+    }
+
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert("권한 필요", "사진 라이브러리 접근 권한이 필요합니다.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      if (asset.base64) {
+        setIsUploadingImage(true);
+        try {
+          const response = await uploadImageMutation.mutateAsync({
+            base64: asset.base64,
+            filename: `post_image_${Date.now()}.jpg`,
+            contentType: "image/jpeg",
+          });
+          setImages((prev) => [...prev, response.url]);
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+        } catch (error) {
+          Alert.alert("오류", "이미지 업로드에 실패했습니다.");
+        } finally {
+          setIsUploadingImage(false);
+        }
+      }
+    }
+  };
+
+  const takePhoto = async () => {
+    if (images.length >= MAX_IMAGES) {
+      Alert.alert("알림", `이미지는 최대 ${MAX_IMAGES}장까지 첨부할 수 있습니다.`);
+      return;
+    }
+
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert("권한 필요", "카메라 접근 권한이 필요합니다.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      if (asset.base64) {
+        setIsUploadingImage(true);
+        try {
+          const response = await uploadImageMutation.mutateAsync({
+            base64: asset.base64,
+            filename: `post_image_${Date.now()}.jpg`,
+            contentType: "image/jpeg",
+          });
+          setImages((prev) => [...prev, response.url]);
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+        } catch (error) {
+          Alert.alert("오류", "이미지 업로드에 실패했습니다.");
+        } finally {
+          setIsUploadingImage(false);
+        }
+      }
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const showImageOptions = () => {
+    if (Platform.OS === "web") {
+      pickImage();
+      return;
+    }
+
+    Alert.alert(
+      "이미지 추가",
+      "이미지를 어떻게 추가하시겠습니까?",
+      [
+        { text: "취소", style: "cancel" },
+        { text: "사진 촬영", onPress: takePhoto },
+        { text: "앨범에서 선택", onPress: pickImage },
+      ]
+    );
+  };
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -78,6 +193,7 @@ export default function CreatePostScreen() {
         content: content.trim(),
         postType: postType as any,
         ridingRecordId: selectedRide?.id,
+        imageUrls: images.length > 0 ? images : undefined,
       });
     } finally {
       setIsSubmitting(false);
@@ -195,6 +311,50 @@ export default function CreatePostScreen() {
               className="text-base text-foreground min-h-[200px]"
               style={{ color: colors.foreground }}
             />
+          </View>
+
+          {/* Image Attachments */}
+          <View className="px-5 pb-4">
+            <Text className="text-muted text-sm mb-2">이미지 첨부 (최대 {MAX_IMAGES}장)</Text>
+            
+            <View className="flex-row flex-wrap">
+              {images.map((uri, index) => (
+                <View key={index} className="relative mr-2 mb-2">
+                  <Image
+                    source={{ uri }}
+                    className="w-20 h-20 rounded-lg"
+                    resizeMode="cover"
+                  />
+                  <Pressable
+                    onPress={() => removeImage(index)}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                    className="absolute -top-2 -right-2 bg-error rounded-full w-6 h-6 items-center justify-center"
+                  >
+                    <MaterialIcons name="close" size={16} color="#FFFFFF" />
+                  </Pressable>
+                </View>
+              ))}
+              
+              {images.length < MAX_IMAGES && (
+                <Pressable
+                  onPress={showImageOptions}
+                  disabled={isUploadingImage}
+                  style={({ pressed }) => [
+                    { backgroundColor: colors.surface, opacity: pressed ? 0.8 : 1 },
+                  ]}
+                  className="w-20 h-20 rounded-lg border border-dashed border-border items-center justify-center"
+                >
+                  {isUploadingImage ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <>
+                      <MaterialIcons name="add-photo-alternate" size={24} color={colors.muted} />
+                      <Text className="text-muted text-xs mt-1">추가</Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
+            </View>
           </View>
 
           {/* Attach Ride Record */}

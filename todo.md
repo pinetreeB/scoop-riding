@@ -75,3 +75,11 @@
 - [x] 목표 설정 기능 (일간/주간 목표, 달성률 표시)
 - [x] 기체 정비 알림 기능 (주행거리 기준 정비 알림)
 - [x] 커뮤니티 탭 구현 (글 작성, 댓글, 주행 기록 공유, 좋아요)
+
+- [x] 친구 기능 DB 스키마 (친구 요청 테이블) - friendRequests, friends 테이블
+- [x] 친구 검색 기능 (닉네임으로 검색) - searchUsers API
+- [x] 친구 요청 보내기/수락/거절 기능 - friends 화면
+- [x] 친구 목록 화면 - app/friends.tsx
+- [x] 팔로우/팔로워 시스템 - follows 테이블, user-profile 화면
+- [x] 커뮤니티 이미지 첨부 기능 - expo-image-picker, S3 업로드
+- [x] 주행 랭킹 기능 (주간/월간) - app/ranking.tsx

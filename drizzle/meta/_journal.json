@@ -50,6 +50,20 @@
       "when": 1769016409739,
       "tag": "0006_lying_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1769017052909,
+      "tag": "0007_flimsy_jocasta",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1769017511916,
+      "tag": "0008_damp_charles_xavier",
+      "breakpoints": true
     }
   ]
 }

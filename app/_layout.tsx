@@ -72,6 +72,9 @@ function RootLayoutContent() {
         <Stack.Screen name="maintenance" options={{ presentation: "card" }} />
         <Stack.Screen name="create-post" options={{ presentation: "modal" }} />
         <Stack.Screen name="post-detail" options={{ presentation: "card" }} />
+        <Stack.Screen name="friends" options={{ presentation: "card" }} />
+        <Stack.Screen name="ranking" options={{ presentation: "card" }} />
+        <Stack.Screen name="user-profile" options={{ presentation: "card" }} />
       </Stack>
       <StatusBar style="auto" />
     </>

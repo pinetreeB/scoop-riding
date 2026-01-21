@@ -421,6 +421,41 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Social */}
+        <View className="mx-5 mb-6">
+          <Text className="text-lg font-bold text-foreground mb-3">소셜</Text>
+          
+          <View className="bg-surface rounded-2xl border border-border overflow-hidden">
+            {/* Friends */}
+            <Pressable
+              onPress={() => router.push("/friends" as any)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4 border-b border-border"
+            >
+              <MaterialIcons name="people" size={24} color={colors.primary} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">친구</Text>
+                <Text className="text-muted text-xs">친구 검색 및 관리</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+
+            {/* Ranking */}
+            <Pressable
+              onPress={() => router.push("/ranking" as any)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4"
+            >
+              <MaterialIcons name="leaderboard" size={24} color={colors.warning} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">랭킹</Text>
+                <Text className="text-muted text-xs">주간/월간 주행 랭킹</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+          </View>
+        </View>
+
         {/* My Scooters */}
         <View className="mx-5 mb-6">
           <Text className="text-lg font-bold text-foreground mb-3">내 기체</Text>

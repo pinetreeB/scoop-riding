@@ -452,6 +452,7 @@ export const appRouter = router({
           content: z.string().min(1, "내용을 입력해주세요."),
           postType: z.enum(["general", "ride_share", "question", "tip"]).default("general"),
           ridingRecordId: z.string().optional(),
+          imageUrls: z.array(z.string()).optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -461,6 +462,7 @@ export const appRouter = router({
           content: input.content,
           postType: input.postType,
           ridingRecordId: input.ridingRecordId,
+          imageUrls: input.imageUrls ? JSON.stringify(input.imageUrls) : null,
         });
         return { success: true, id };
       }),
@@ -535,6 +537,141 @@ export const appRouter = router({
     getMyPosts: protectedProcedure.query(async ({ ctx }) => {
       return db.getUserPosts(ctx.user.id);
     }),
+  }),
+
+  // Friends
+  friends: router({
+    // Search users
+    searchUsers: protectedProcedure
+      .input(z.object({ query: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        return db.searchUsers(input.query, ctx.user.id);
+      }),
+
+    // Send friend request
+    sendRequest: protectedProcedure
+      .input(z.object({ receiverId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await db.sendFriendRequest(ctx.user.id, input.receiverId);
+        return { success: id !== null, id };
+      }),
+
+    // Get pending requests (received)
+    getPendingRequests: protectedProcedure.query(async ({ ctx }) => {
+      return db.getPendingFriendRequests(ctx.user.id);
+    }),
+
+    // Get sent requests
+    getSentRequests: protectedProcedure.query(async ({ ctx }) => {
+      return db.getSentFriendRequests(ctx.user.id);
+    }),
+
+    // Accept request
+    acceptRequest: protectedProcedure
+      .input(z.object({ requestId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.acceptFriendRequest(input.requestId, ctx.user.id);
+        return { success };
+      }),
+
+    // Reject request
+    rejectRequest: protectedProcedure
+      .input(z.object({ requestId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.rejectFriendRequest(input.requestId, ctx.user.id);
+        return { success };
+      }),
+
+    // Get friends list
+    getFriends: protectedProcedure.query(async ({ ctx }) => {
+      return db.getFriends(ctx.user.id);
+    }),
+
+    // Remove friend
+    removeFriend: protectedProcedure
+      .input(z.object({ friendId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.removeFriend(ctx.user.id, input.friendId);
+        return { success };
+      }),
+  }),
+
+  // Follows
+  follows: router({
+    // Follow user
+    follow: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.followUser(ctx.user.id, input.userId);
+        return { success };
+      }),
+
+    // Unfollow user
+    unfollow: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.unfollowUser(ctx.user.id, input.userId);
+        return { success };
+      }),
+
+    // Get followers
+    getFollowers: protectedProcedure.query(async ({ ctx }) => {
+      return db.getFollowers(ctx.user.id);
+    }),
+
+    // Get following
+    getFollowing: protectedProcedure.query(async ({ ctx }) => {
+      return db.getFollowing(ctx.user.id);
+    }),
+
+    // Check if following
+    isFollowing: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return db.isFollowing(ctx.user.id, input.userId);
+      }),
+
+    // Get follow counts
+    getCounts: protectedProcedure.query(async ({ ctx }) => {
+      return db.getFollowCounts(ctx.user.id);
+    }),
+  }),
+
+  // Images
+  images: router({
+    // Upload image
+    upload: protectedProcedure
+      .input(
+        z.object({
+          base64: z.string(),
+          filename: z.string(),
+          contentType: z.string().default("image/jpeg"),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { storagePut } = await import("./storage");
+        const buffer = Buffer.from(input.base64, "base64");
+        const key = `posts/${ctx.user.id}/${Date.now()}-${input.filename}`;
+        const result = await storagePut(key, buffer, input.contentType);
+        return { url: result.url, key: result.key };
+      }),
+  }),
+
+  // Ranking
+  ranking: router({
+    // Get weekly ranking
+    getWeekly: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(100).default(50) }).optional())
+      .query(async ({ input }) => {
+        return db.getRanking("weekly", input?.limit ?? 50);
+      }),
+
+    // Get monthly ranking
+    getMonthly: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(100).default(50) }).optional())
+      .query(async ({ input }) => {
+        return db.getRanking("monthly", input?.limit ?? 50);
+      }),
   }),
 });
 

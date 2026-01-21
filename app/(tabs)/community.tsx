@@ -130,7 +130,16 @@ export default function CommunityScreen() {
                 {typeInfo.label}
               </Text>
             </View>
-            <Text className="text-muted text-xs flex-1">{getAuthorName(item)}</Text>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                router.push(`/user-profile?id=${item.userId}&name=${encodeURIComponent(item.authorName || "")}&email=${encodeURIComponent(item.authorEmail || "")}` as any);
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+            >
+              <Text className="text-primary text-xs font-medium">{getAuthorName(item)}</Text>
+            </Pressable>
+            <View className="flex-1" />
             <Text className="text-muted text-xs">{formatDate(item.createdAt)}</Text>
           </View>
 

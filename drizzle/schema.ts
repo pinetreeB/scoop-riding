@@ -131,6 +131,8 @@ export const posts = mysqlTable("posts", {
   commentCount: int("commentCount").default(0).notNull(),
   /** View count */
   viewCount: int("viewCount").default(0).notNull(),
+  /** Image URLs (JSON array) */
+  imageUrls: text("imageUrls"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -172,3 +174,68 @@ export const postLikes = mysqlTable("postLikes", {
 
 export type PostLike = typeof postLikes.$inferSelect;
 export type InsertPostLike = typeof postLikes.$inferInsert;
+
+
+/**
+ * Friend requests table
+ */
+export const friendRequests = mysqlTable("friendRequests", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User who sent the request */
+  senderId: int("senderId").notNull(),
+  /** User who received the request */
+  receiverId: int("receiverId").notNull(),
+  /** Status: pending, accepted, rejected */
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FriendRequest = typeof friendRequests.$inferSelect;
+export type InsertFriendRequest = typeof friendRequests.$inferInsert;
+
+/**
+ * Friends table (accepted friendships)
+ */
+export const friends = mysqlTable("friends", {
+  id: int("id").autoincrement().primaryKey(),
+  /** First user ID (always smaller) */
+  userId1: int("userId1").notNull(),
+  /** Second user ID (always larger) */
+  userId2: int("userId2").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Friend = typeof friends.$inferSelect;
+export type InsertFriend = typeof friends.$inferInsert;
+
+/**
+ * Follows table (one-way follow relationship)
+ */
+export const follows = mysqlTable("follows", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User who is following */
+  followerId: int("followerId").notNull(),
+  /** User being followed */
+  followingId: int("followingId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Follow = typeof follows.$inferSelect;
+export type InsertFollow = typeof follows.$inferInsert;
+
+/**
+ * Post images table
+ */
+export const postImages = mysqlTable("postImages", {
+  id: int("id").autoincrement().primaryKey(),
+  postId: int("postId").notNull(),
+  /** Image URL (S3 or local path) */
+  imageUrl: varchar("imageUrl", { length: 500 }).notNull(),
+  /** Image order in the post */
+  orderIndex: int("orderIndex").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PostImage = typeof postImages.$inferSelect;
+export type InsertPostImage = typeof postImages.$inferInsert;

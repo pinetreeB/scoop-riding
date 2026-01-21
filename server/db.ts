@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -437,6 +437,7 @@ export interface PostWithAuthor extends Post {
   authorName: string | null;
   authorEmail: string | null;
   isLiked?: boolean;
+  imageUrls: string | null;
 }
 
 export interface CommentWithAuthor extends Comment {
@@ -471,6 +472,7 @@ export async function getPosts(
       likeCount: posts.likeCount,
       commentCount: posts.commentCount,
       viewCount: posts.viewCount,
+      imageUrls: posts.imageUrls,
       createdAt: posts.createdAt,
       updatedAt: posts.updatedAt,
       authorName: users.name,
@@ -520,6 +522,7 @@ export async function getPostById(postId: number, userId?: number): Promise<Post
       likeCount: posts.likeCount,
       commentCount: posts.commentCount,
       viewCount: posts.viewCount,
+      imageUrls: posts.imageUrls,
       createdAt: posts.createdAt,
       updatedAt: posts.updatedAt,
       authorName: users.name,
@@ -684,6 +687,7 @@ export async function getUserPosts(userId: number): Promise<PostWithAuthor[]> {
       likeCount: posts.likeCount,
       commentCount: posts.commentCount,
       viewCount: posts.viewCount,
+      imageUrls: posts.imageUrls,
       createdAt: posts.createdAt,
       updatedAt: posts.updatedAt,
       authorName: users.name,
@@ -695,4 +699,527 @@ export async function getUserPosts(userId: number): Promise<PostWithAuthor[]> {
     .orderBy(desc(posts.createdAt));
 
   return result;
+}
+
+
+// ==================== Friend Functions ====================
+
+import { or, like, ne } from "drizzle-orm";
+
+export interface UserWithFriendStatus {
+  id: number;
+  name: string | null;
+  email: string | null;
+  isFriend: boolean;
+  hasPendingRequest: boolean;
+  hasReceivedRequest: boolean;
+}
+
+export interface FriendRequestWithUser extends FriendRequest {
+  senderName: string | null;
+  senderEmail: string | null;
+  receiverName: string | null;
+  receiverEmail: string | null;
+}
+
+// Search users by name or email
+export async function searchUsers(
+  query: string,
+  currentUserId: number,
+  limit: number = 20
+): Promise<UserWithFriendStatus[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const searchPattern = `%${query}%`;
+  
+  const result = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+    })
+    .from(users)
+    .where(
+      and(
+        ne(users.id, currentUserId),
+        or(
+          like(users.name, searchPattern),
+          like(users.email, searchPattern)
+        )
+      )
+    )
+    .limit(limit);
+
+  // Check friend status for each user
+  const usersWithStatus = await Promise.all(
+    result.map(async (user) => {
+      const [userId1, userId2] = [currentUserId, user.id].sort((a, b) => a - b);
+      
+      // Check if already friends
+      const friendship = await db
+        .select()
+        .from(friends)
+        .where(and(eq(friends.userId1, userId1), eq(friends.userId2, userId2)))
+        .limit(1);
+
+      // Check pending requests
+      const sentRequest = await db
+        .select()
+        .from(friendRequests)
+        .where(
+          and(
+            eq(friendRequests.senderId, currentUserId),
+            eq(friendRequests.receiverId, user.id),
+            eq(friendRequests.status, "pending")
+          )
+        )
+        .limit(1);
+
+      const receivedRequest = await db
+        .select()
+        .from(friendRequests)
+        .where(
+          and(
+            eq(friendRequests.senderId, user.id),
+            eq(friendRequests.receiverId, currentUserId),
+            eq(friendRequests.status, "pending")
+          )
+        )
+        .limit(1);
+
+      return {
+        ...user,
+        isFriend: friendship.length > 0,
+        hasPendingRequest: sentRequest.length > 0,
+        hasReceivedRequest: receivedRequest.length > 0,
+      };
+    })
+  );
+
+  return usersWithStatus;
+}
+
+// Send friend request
+export async function sendFriendRequest(senderId: number, receiverId: number): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Check if already friends
+  const [userId1, userId2] = [senderId, receiverId].sort((a, b) => a - b);
+  const existingFriend = await db
+    .select()
+    .from(friends)
+    .where(and(eq(friends.userId1, userId1), eq(friends.userId2, userId2)))
+    .limit(1);
+
+  if (existingFriend.length > 0) return null;
+
+  // Check if request already exists
+  const existingRequest = await db
+    .select()
+    .from(friendRequests)
+    .where(
+      and(
+        eq(friendRequests.senderId, senderId),
+        eq(friendRequests.receiverId, receiverId),
+        eq(friendRequests.status, "pending")
+      )
+    )
+    .limit(1);
+
+  if (existingRequest.length > 0) return null;
+
+  const result = await db.insert(friendRequests).values({
+    senderId,
+    receiverId,
+    status: "pending",
+  });
+
+  return result[0].insertId;
+}
+
+// Get pending friend requests (received)
+export async function getPendingFriendRequests(userId: number): Promise<FriendRequestWithUser[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      id: friendRequests.id,
+      senderId: friendRequests.senderId,
+      receiverId: friendRequests.receiverId,
+      status: friendRequests.status,
+      createdAt: friendRequests.createdAt,
+      updatedAt: friendRequests.updatedAt,
+      senderName: users.name,
+      senderEmail: users.email,
+    })
+    .from(friendRequests)
+    .leftJoin(users, eq(friendRequests.senderId, users.id))
+    .where(
+      and(
+        eq(friendRequests.receiverId, userId),
+        eq(friendRequests.status, "pending")
+      )
+    )
+    .orderBy(desc(friendRequests.createdAt));
+
+  return result.map(r => ({
+    ...r,
+    receiverName: null,
+    receiverEmail: null,
+  }));
+}
+
+// Get sent friend requests
+export async function getSentFriendRequests(userId: number): Promise<FriendRequestWithUser[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      id: friendRequests.id,
+      senderId: friendRequests.senderId,
+      receiverId: friendRequests.receiverId,
+      status: friendRequests.status,
+      createdAt: friendRequests.createdAt,
+      updatedAt: friendRequests.updatedAt,
+      receiverName: users.name,
+      receiverEmail: users.email,
+    })
+    .from(friendRequests)
+    .leftJoin(users, eq(friendRequests.receiverId, users.id))
+    .where(
+      and(
+        eq(friendRequests.senderId, userId),
+        eq(friendRequests.status, "pending")
+      )
+    )
+    .orderBy(desc(friendRequests.createdAt));
+
+  return result.map(r => ({
+    ...r,
+    senderName: null,
+    senderEmail: null,
+  }));
+}
+
+// Accept friend request
+export async function acceptFriendRequest(requestId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Get the request
+  const request = await db
+    .select()
+    .from(friendRequests)
+    .where(
+      and(
+        eq(friendRequests.id, requestId),
+        eq(friendRequests.receiverId, userId),
+        eq(friendRequests.status, "pending")
+      )
+    )
+    .limit(1);
+
+  if (request.length === 0) return false;
+
+  // Update request status
+  await db.update(friendRequests)
+    .set({ status: "accepted" })
+    .where(eq(friendRequests.id, requestId));
+
+  // Create friendship (always store smaller ID first)
+  const [userId1, userId2] = [request[0].senderId, userId].sort((a, b) => a - b);
+  await db.insert(friends).values({ userId1, userId2 });
+
+  return true;
+}
+
+// Reject friend request
+export async function rejectFriendRequest(requestId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.update(friendRequests)
+    .set({ status: "rejected" })
+    .where(
+      and(
+        eq(friendRequests.id, requestId),
+        eq(friendRequests.receiverId, userId)
+      )
+    );
+
+  return true;
+}
+
+// Get friends list
+export async function getFriends(userId: number): Promise<{ id: number; name: string | null; email: string | null }[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get friendships where user is userId1
+  const friends1 = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+    })
+    .from(friends)
+    .innerJoin(users, eq(friends.userId2, users.id))
+    .where(eq(friends.userId1, userId));
+
+  // Get friendships where user is userId2
+  const friends2 = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+    })
+    .from(friends)
+    .innerJoin(users, eq(friends.userId1, users.id))
+    .where(eq(friends.userId2, userId));
+
+  return [...friends1, ...friends2];
+}
+
+// Remove friend
+export async function removeFriend(userId: number, friendId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const [userId1, userId2] = [userId, friendId].sort((a, b) => a - b);
+  
+  await db.delete(friends)
+    .where(and(eq(friends.userId1, userId1), eq(friends.userId2, userId2)));
+
+  return true;
+}
+
+// ==================== Follow Functions ====================
+
+// Follow a user
+export async function followUser(followerId: number, followingId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Check if already following
+  const existing = await db
+    .select()
+    .from(follows)
+    .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)))
+    .limit(1);
+
+  if (existing.length > 0) return false;
+
+  await db.insert(follows).values({ followerId, followingId });
+  return true;
+}
+
+// Unfollow a user
+export async function unfollowUser(followerId: number, followingId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.delete(follows)
+    .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
+
+  return true;
+}
+
+// Get followers
+export async function getFollowers(userId: number): Promise<{ id: number; name: string | null; email: string | null }[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+    })
+    .from(follows)
+    .innerJoin(users, eq(follows.followerId, users.id))
+    .where(eq(follows.followingId, userId));
+
+  return result;
+}
+
+// Get following
+export async function getFollowing(userId: number): Promise<{ id: number; name: string | null; email: string | null }[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+    })
+    .from(follows)
+    .innerJoin(users, eq(follows.followingId, users.id))
+    .where(eq(follows.followerId, userId));
+
+  return result;
+}
+
+// Check if following
+export async function isFollowing(followerId: number, followingId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const result = await db
+    .select()
+    .from(follows)
+    .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)))
+    .limit(1);
+
+  return result.length > 0;
+}
+
+// Get follow counts
+export async function getFollowCounts(userId: number): Promise<{ followers: number; following: number }> {
+  const db = await getDb();
+  if (!db) return { followers: 0, following: 0 };
+
+  const followers = await db
+    .select()
+    .from(follows)
+    .where(eq(follows.followingId, userId));
+
+  const following = await db
+    .select()
+    .from(follows)
+    .where(eq(follows.followerId, userId));
+
+  return {
+    followers: followers.length,
+    following: following.length,
+  };
+}
+
+// ==================== Post Image Functions ====================
+
+// Add image to post
+export async function addPostImage(postId: number, imageUrl: string, orderIndex: number = 0): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(postImages).values({ postId, imageUrl, orderIndex });
+  return result[0].insertId;
+}
+
+// Get post images
+export async function getPostImages(postId: number): Promise<PostImage[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select()
+    .from(postImages)
+    .where(eq(postImages.postId, postId))
+    .orderBy(postImages.orderIndex);
+
+  return result;
+}
+
+// Delete post images
+export async function deletePostImages(postId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.delete(postImages).where(eq(postImages.postId, postId));
+  return true;
+}
+
+// ==================== Ranking Functions ====================
+
+export interface RankingUser {
+  userId: number;
+  name: string | null;
+  email: string | null;
+  totalDistance: number;
+  totalRides: number;
+  rank: number;
+}
+
+// Get weekly/monthly ranking
+export async function getRanking(
+  period: "weekly" | "monthly",
+  limit: number = 50
+): Promise<RankingUser[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const now = new Date();
+  let startDate: Date;
+
+  if (period === "weekly") {
+    // Start of current week (Monday)
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    startDate = new Date(now.setDate(diff));
+    startDate.setHours(0, 0, 0, 0);
+  } else {
+    // Start of current month
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+
+  // Get all riding records in the period
+  const records = await db
+    .select({
+      userId: ridingRecords.userId,
+      distance: ridingRecords.distance,
+    })
+    .from(ridingRecords)
+    .where(
+      and(
+        sql`${ridingRecords.createdAt} >= ${startDate}`,
+        sql`${ridingRecords.userId} IS NOT NULL`
+      )
+    );
+
+  // Aggregate by user
+  const userStats = new Map<number, { totalDistance: number; totalRides: number }>();
+  
+  for (const record of records) {
+    if (!record.userId) continue;
+    const existing = userStats.get(record.userId) || { totalDistance: 0, totalRides: 0 };
+    userStats.set(record.userId, {
+      totalDistance: existing.totalDistance + record.distance,
+      totalRides: existing.totalRides + 1,
+    });
+  }
+
+  // Get user info and sort by distance
+  const userIds = Array.from(userStats.keys());
+  if (userIds.length === 0) return [];
+
+  const userInfos = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+    })
+    .from(users)
+    .where(sql`${users.id} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)})`);
+
+  const ranking: RankingUser[] = userInfos
+    .map((user) => {
+      const stats = userStats.get(user.id) || { totalDistance: 0, totalRides: 0 };
+      return {
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        totalDistance: stats.totalDistance,
+        totalRides: stats.totalRides,
+        rank: 0,
+      };
+    })
+    .sort((a, b) => b.totalDistance - a.totalDistance)
+    .slice(0, limit)
+    .map((user, index) => ({ ...user, rank: index + 1 }));
+
+  return ranking;
 }
