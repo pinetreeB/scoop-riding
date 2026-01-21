@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import {
   Text,
   View,
@@ -7,6 +7,7 @@ import {
   Platform,
   Image,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -43,6 +44,7 @@ export default function HomeScreen() {
   });
   const [recentRides, setRecentRides] = useState<RidingRecord[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month" | "all">("week");
+  const [showLevelInfo, setShowLevelInfo] = useState(false);
 
   // Fetch ranking data
   const weeklyRankingQuery = trpc.ranking.getWeekly.useQuery(
@@ -187,6 +189,33 @@ export default function HomeScreen() {
               style={{ width: 40, height: 40, borderRadius: 8 }}
             />
             <Text className="text-2xl font-bold text-primary ml-2">SCOOP</Text>
+            <View className="flex-1" />
+            {/* Friends Location Button */}
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                router.push("/friends-map" as any);
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="p-2 mr-1"
+            >
+              <MaterialIcons name="location-on" size={24} color={colors.primary} />
+            </Pressable>
+            {/* Notifications Button */}
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                router.push("/notifications-center" as any);
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="p-2"
+            >
+              <MaterialIcons name="notifications" size={24} color={colors.foreground} />
+            </Pressable>
           </View>
         </View>
 
@@ -323,7 +352,17 @@ export default function HomeScreen() {
               <Text className="text-muted text-sm">
                 다음 레벨까지 {Math.max(0, 50 - (displayStats.distance / 1000)).toFixed(1)}km 남았습니다.
               </Text>
-              <MaterialIcons name="help-outline" size={16} color={colors.muted} />
+              <Pressable
+                onPress={() => {
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  setShowLevelInfo(true);
+                }}
+                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
+              >
+                <MaterialIcons name="help-outline" size={16} color={colors.muted} />
+              </Pressable>
             </View>
             <View className="h-2 bg-border rounded-full overflow-hidden">
               <View
@@ -461,6 +500,89 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Level Info Modal */}
+      <Modal
+        visible={showLevelInfo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLevelInfo(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black/50 items-center justify-center px-6"
+          onPress={() => setShowLevelInfo(false)}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-surface rounded-2xl p-6 w-full max-w-sm"
+          >
+            <View className="flex-row items-center mb-4">
+              <MaterialIcons name="emoji-events" size={28} color={colors.primary} />
+              <Text className="text-xl font-bold text-foreground ml-2">레벨 시스템</Text>
+            </View>
+            
+            <Text className="text-foreground mb-4">
+              주행 거리에 따라 레벨이 상승합니다. 더 많이 주행하여 높은 레벨을 달성해보세요!
+            </Text>
+
+            <View className="bg-background rounded-xl p-4 mb-4">
+              <View className="flex-row items-center mb-2">
+                <View className="w-8 h-8 rounded-full bg-gray-400 items-center justify-center mr-3">
+                  <Text className="text-white font-bold">1</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-foreground font-medium">비기너</Text>
+                  <Text className="text-muted text-xs">0 ~ 50km</Text>
+                </View>
+              </View>
+              <View className="flex-row items-center mb-2">
+                <View className="w-8 h-8 rounded-full bg-green-500 items-center justify-center mr-3">
+                  <Text className="text-white font-bold">2</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-foreground font-medium">라이더</Text>
+                  <Text className="text-muted text-xs">50 ~ 200km</Text>
+                </View>
+              </View>
+              <View className="flex-row items-center mb-2">
+                <View className="w-8 h-8 rounded-full bg-blue-500 items-center justify-center mr-3">
+                  <Text className="text-white font-bold">3</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-foreground font-medium">엑스퍼트</Text>
+                  <Text className="text-muted text-xs">200 ~ 500km</Text>
+                </View>
+              </View>
+              <View className="flex-row items-center mb-2">
+                <View className="w-8 h-8 rounded-full bg-purple-500 items-center justify-center mr-3">
+                  <Text className="text-white font-bold">4</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-foreground font-medium">마스터</Text>
+                  <Text className="text-muted text-xs">500 ~ 1,000km</Text>
+                </View>
+              </View>
+              <View className="flex-row items-center">
+                <View className="w-8 h-8 rounded-full items-center justify-center mr-3" style={{ backgroundColor: colors.primary }}>
+                  <Text className="text-white font-bold">5</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-foreground font-medium">레전드</Text>
+                  <Text className="text-muted text-xs">1,000km 이상</Text>
+                </View>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={() => setShowLevelInfo(false)}
+              className="bg-primary rounded-xl py-3 items-center"
+              style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+            >
+              <Text className="text-white font-semibold">확인</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }

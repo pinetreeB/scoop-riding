@@ -50,9 +50,24 @@ export default function EditProfileScreen() {
   });
 
   const uploadImageMutation = trpc.profile.uploadImage.useMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setProfileImageUrl(data.url);
       setUploading(false);
+      
+      // 즉시 프로필 사진 업데이트 (저장 버튼 누르지 않아도 바로 반영)
+      try {
+        await updateProfileMutation.mutateAsync({
+          name: name.trim() || user?.name || "",
+          profileImageUrl: data.url,
+        });
+        utils.auth.me.invalidate();
+        if (refreshUser) refreshUser();
+        if (Platform.OS !== "web") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      } catch (e) {
+        console.error("Auto-save profile image failed:", e);
+      }
     },
     onError: (error) => {
       setUploading(false);

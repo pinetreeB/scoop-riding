@@ -91,3 +91,13 @@
 - [x] 프로필 사진 설정 기능 (edit-profile 화면)
 - [x] 알림 센터 구현 (notifications-center 화면)
 - [x] 주행 챌린지 기능 (challenges, create-challenge, challenge-detail 화면)
+
+- [x] 프로필 사진 업로드 즉시 반영 (AuthContext refreshUser 호출)
+- [x] 레벨 설명 팝업 (? 버튼 클릭 시 모달 표시)
+- [x] 커뮤니티 버튼 동작 수정 (공유, 더보기 기능 추가)
+- [x] 게시글 터치 영역 확대 (Pressable로 전체 감싸기)
+- [x] 친구 실시간 위치 표시 (friends-map 화면, liveLocations API)
+- [x] 메인 화면 알림 버튼 추가 (헤더에 알림/친구위치 버튼)
+- [x] 챌린지 초대 기능 (challenge-detail에서 친구 초대 모달)
+- [x] 주행 경로 지도 미리보기 (RoutePreview 컴포넌트)
+- [x] 업적/배지 시스템 (badges 화면, 자동 배지 부여)

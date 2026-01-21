@@ -802,6 +802,83 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return db.getChallengeLeaderboard(input.challengeId);
       }),
+
+    // Send invitation
+    invite: protectedProcedure
+      .input(z.object({ challengeId: z.number(), inviteeId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const invitation = await db.sendChallengeInvitation(input.challengeId, ctx.user.id, input.inviteeId);
+        return { success: !!invitation, invitation };
+      }),
+
+    // Get pending invitations
+    pendingInvitations: protectedProcedure.query(async ({ ctx }) => {
+      return db.getPendingChallengeInvitations(ctx.user.id);
+    }),
+
+    // Respond to invitation
+    respondToInvitation: protectedProcedure
+      .input(z.object({ invitationId: z.number(), accept: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.respondToChallengeInvitation(input.invitationId, ctx.user.id, input.accept);
+        return { success };
+      }),
+  }),
+
+  // Live location router
+  liveLocation: router({
+    // Update current location
+    update: protectedProcedure
+      .input(z.object({
+        latitude: z.number(),
+        longitude: z.number(),
+        heading: z.number().nullable(),
+        speed: z.number().nullable(),
+        isRiding: z.boolean(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateLiveLocation(
+          ctx.user.id,
+          input.latitude,
+          input.longitude,
+          input.heading,
+          input.speed,
+          input.isRiding
+        );
+        return { success: true };
+      }),
+
+    // Stop sharing location
+    stop: protectedProcedure.mutation(async ({ ctx }) => {
+      await db.stopLiveLocation(ctx.user.id);
+      return { success: true };
+    }),
+
+    // Get friends' live locations
+    friends: protectedProcedure.query(async ({ ctx }) => {
+      return db.getFriendsLiveLocations(ctx.user.id);
+    }),
+  }),
+
+  // Badges router
+  badges: router({
+    // Get all badges
+    all: protectedProcedure.query(async () => {
+      return db.getAllBadges();
+    }),
+
+    // Get user's earned badges
+    mine: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserBadges(ctx.user.id);
+    }),
+
+    // Check and award badges
+    check: protectedProcedure
+      .input(z.object({ totalDistance: z.number(), totalRides: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const newBadges = await db.checkAndAwardBadges(ctx.user.id, input.totalDistance, input.totalRides);
+        return { newBadges };
+      }),
   }),
 });
 

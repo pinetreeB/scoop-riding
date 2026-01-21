@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -1620,4 +1620,302 @@ export async function getChallengeLeaderboard(challengeId: number): Promise<{
     }))
     .sort((a, b) => b.progress - a.progress)
     .map((p, i) => ({ ...p, rank: i + 1 }));
+}
+
+
+// ==================== Live Location Functions ====================
+
+// Update or create live location
+export async function updateLiveLocation(
+  userId: number,
+  latitude: number,
+  longitude: number,
+  heading: number | null,
+  speed: number | null,
+  isRiding: boolean
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  // Try to update existing record
+  const existing = await db
+    .select()
+    .from(liveLocations)
+    .where(eq(liveLocations.userId, userId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db
+      .update(liveLocations)
+      .set({
+        latitude: latitude.toString(),
+        longitude: longitude.toString(),
+        heading: heading?.toString() || null,
+        speed: speed?.toString() || null,
+        isRiding,
+      })
+      .where(eq(liveLocations.userId, userId));
+  } else {
+    await db.insert(liveLocations).values({
+      userId,
+      latitude: latitude.toString(),
+      longitude: longitude.toString(),
+      heading: heading?.toString() || null,
+      speed: speed?.toString() || null,
+      isRiding,
+    });
+  }
+}
+
+// Stop sharing location
+export async function stopLiveLocation(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .update(liveLocations)
+    .set({ isRiding: false })
+    .where(eq(liveLocations.userId, userId));
+}
+
+// Get friends' live locations
+export async function getFriendsLiveLocations(userId: number): Promise<{
+  userId: number;
+  name: string | null;
+  latitude: number;
+  longitude: number;
+  heading: number | null;
+  speed: number | null;
+  updatedAt: Date;
+}[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get friend IDs (friends table uses userId1/userId2 where userId1 < userId2)
+  const friendsList1 = await db
+    .select({ friendId: friends.userId2 })
+    .from(friends)
+    .where(eq(friends.userId1, userId));
+
+  const friendsList2 = await db
+    .select({ friendId: friends.userId1 })
+    .from(friends)
+    .where(eq(friends.userId2, userId));
+
+  const friendIds = [
+    ...friendsList1.map(f => f.friendId),
+    ...friendsList2.map(f => f.friendId),
+  ];
+
+  if (friendIds.length === 0) return [];
+
+  // Get live locations of friends who are riding
+  const locations = await db
+    .select({
+      userId: liveLocations.userId,
+      latitude: liveLocations.latitude,
+      longitude: liveLocations.longitude,
+      heading: liveLocations.heading,
+      speed: liveLocations.speed,
+      updatedAt: liveLocations.updatedAt,
+      name: users.name,
+    })
+    .from(liveLocations)
+    .leftJoin(users, eq(liveLocations.userId, users.id))
+    .where(and(
+      eq(liveLocations.isRiding, true),
+      sql`${liveLocations.userId} IN (${sql.join(friendIds.map(id => sql`${id}`), sql`, `)})`
+    ));
+
+  return locations.map(loc => ({
+    userId: loc.userId,
+    name: loc.name,
+    latitude: parseFloat(loc.latitude),
+    longitude: parseFloat(loc.longitude),
+    heading: loc.heading ? parseFloat(loc.heading) : null,
+    speed: loc.speed ? parseFloat(loc.speed) : null,
+    updatedAt: loc.updatedAt,
+  }));
+}
+
+// ==================== Badge Functions ====================
+
+// Get all badges
+export async function getAllBadges(): Promise<Badge[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(badges);
+}
+
+// Get user's earned badges
+export async function getUserBadges(userId: number): Promise<{
+  badge: Badge;
+  earnedAt: Date;
+}[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      badge: badges,
+      earnedAt: userBadges.earnedAt,
+    })
+    .from(userBadges)
+    .innerJoin(badges, eq(userBadges.badgeId, badges.id))
+    .where(eq(userBadges.userId, userId));
+
+  return result;
+}
+
+// Award badge to user
+export async function awardBadge(userId: number, badgeId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  // Check if already earned
+  const existing = await db
+    .select()
+    .from(userBadges)
+    .where(and(eq(userBadges.userId, userId), eq(userBadges.badgeId, badgeId)))
+    .limit(1);
+
+  if (existing.length === 0) {
+    await db.insert(userBadges).values({ userId, badgeId });
+  }
+}
+
+// Check and award badges based on user stats
+export async function checkAndAwardBadges(userId: number, totalDistance: number, totalRides: number): Promise<Badge[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const allBadges = await getAllBadges();
+  const earnedBadges = await getUserBadges(userId);
+  const earnedBadgeIds = new Set(earnedBadges.map(eb => eb.badge.id));
+  const newBadges: Badge[] = [];
+
+  for (const badge of allBadges) {
+    if (earnedBadgeIds.has(badge.id)) continue;
+
+    let qualified = false;
+    const requirement = parseFloat(badge.requirement);
+
+    switch (badge.category) {
+      case "distance":
+        qualified = totalDistance >= requirement * 1000; // km to m
+        break;
+      case "rides":
+        qualified = totalRides >= requirement;
+        break;
+    }
+
+    if (qualified) {
+      await awardBadge(userId, badge.id);
+      newBadges.push(badge);
+    }
+  }
+
+  return newBadges;
+}
+
+// ==================== Challenge Invitation Functions ====================
+
+// Send challenge invitation
+export async function sendChallengeInvitation(
+  challengeId: number,
+  inviterId: number,
+  inviteeId: number
+): Promise<ChallengeInvitation | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Check if already invited
+  const existing = await db
+    .select()
+    .from(challengeInvitations)
+    .where(and(
+      eq(challengeInvitations.challengeId, challengeId),
+      eq(challengeInvitations.inviteeId, inviteeId)
+    ))
+    .limit(1);
+
+  if (existing.length > 0) return null;
+
+  const result = await db.insert(challengeInvitations).values({
+    challengeId,
+    inviterId,
+    inviteeId,
+  });
+
+  const insertId = result[0].insertId;
+  const invitation = await db
+    .select()
+    .from(challengeInvitations)
+    .where(eq(challengeInvitations.id, insertId))
+    .limit(1);
+
+  return invitation[0] || null;
+}
+
+// Get pending challenge invitations for user
+export async function getPendingChallengeInvitations(userId: number): Promise<{
+  invitation: ChallengeInvitation;
+  challenge: Challenge;
+  inviterName: string | null;
+}[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      invitation: challengeInvitations,
+      challenge: challenges,
+      inviterName: users.name,
+    })
+    .from(challengeInvitations)
+    .innerJoin(challenges, eq(challengeInvitations.challengeId, challenges.id))
+    .leftJoin(users, eq(challengeInvitations.inviterId, users.id))
+    .where(and(
+      eq(challengeInvitations.inviteeId, userId),
+      eq(challengeInvitations.status, "pending")
+    ));
+
+  return result;
+}
+
+// Respond to challenge invitation
+export async function respondToChallengeInvitation(
+  invitationId: number,
+  userId: number,
+  accept: boolean
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const invitation = await db
+    .select()
+    .from(challengeInvitations)
+    .where(and(
+      eq(challengeInvitations.id, invitationId),
+      eq(challengeInvitations.inviteeId, userId)
+    ))
+    .limit(1);
+
+  if (invitation.length === 0) return false;
+
+  await db
+    .update(challengeInvitations)
+    .set({
+      status: accept ? "accepted" : "declined",
+      respondedAt: new Date(),
+    })
+    .where(eq(challengeInvitations.id, invitationId));
+
+  if (accept) {
+    // Join the challenge
+    await joinChallenge(invitation[0].challengeId, userId);
+  }
+
+  return true;
 }

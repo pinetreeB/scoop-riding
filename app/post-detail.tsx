@@ -15,6 +15,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { RoutePreview } from "@/components/route-preview";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
@@ -261,17 +262,28 @@ export default function PostDetailScreen() {
             {/* Content */}
             <Text className="text-foreground text-base leading-6 mb-4">{post.content}</Text>
 
-            {/* Attached Ride */}
+            {/* Attached Ride with Route Preview */}
             {attachedRide && (
               <Pressable
                 onPress={() => router.push(`/ride-detail?id=${attachedRide.id}` as any)}
                 style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
               >
                 <View className="bg-surface rounded-xl p-4 border border-border mb-4">
-                  <View className="flex-row items-center mb-2">
+                  <View className="flex-row items-center mb-3">
                     <MaterialIcons name="route" size={20} color={colors.primary} />
                     <Text className="text-primary font-medium ml-2">첨부된 주행 기록</Text>
                   </View>
+                  
+                  {/* Route Preview Map */}
+                  {attachedRide.gpsPoints && attachedRide.gpsPoints.length > 1 && (
+                    <View className="mb-3">
+                      <RoutePreview
+                        gpsPoints={attachedRide.gpsPoints}
+                        height={120}
+                      />
+                    </View>
+                  )}
+                  
                   <Text className="text-foreground font-medium">{attachedRide.date}</Text>
                   <Text className="text-muted text-sm">
                     {(attachedRide.distance / 1000).toFixed(2)}km • {formatDuration(attachedRide.duration)} • 평균 {attachedRide.avgSpeed.toFixed(1)}km/h

@@ -6,6 +6,8 @@ import {
   Pressable,
   RefreshControl,
   Platform,
+  Modal,
+  ScrollView,
 } from "react-native";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -40,6 +42,19 @@ export default function ChallengeDetailScreen() {
       }
     },
   });
+
+  const inviteMutation = trpc.challenges.invite.useMutation({
+    onSuccess: () => {
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      setShowInviteModal(false);
+    },
+  });
+
+  // Get friends list for invitation
+  const { data: friendsList } = trpc.friends.getFriends.useQuery();
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -300,6 +315,27 @@ export default function ChallengeDetailScreen() {
               </Pressable>
             )}
 
+            {/* Invite Friends Button */}
+            {isJoined && (
+              <Pressable
+                onPress={() => setShowInviteModal(true)}
+                style={({ pressed }) => [
+                  {
+                    opacity: pressed ? 0.8 : 1,
+                    backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.primary,
+                  },
+                ]}
+                className="py-4 rounded-xl items-center mb-4 flex-row justify-center"
+              >
+                <MaterialIcons name="person-add" size={20} color={colors.primary} />
+                <Text className="text-primary font-bold text-lg ml-2">
+                  친구 초대하기
+                </Text>
+              </Pressable>
+            )}
+
             {/* Completed Badge */}
             {challenge.userCompleted && (
               <View
@@ -326,6 +362,94 @@ export default function ChallengeDetailScreen() {
         }
         contentContainerStyle={{ paddingBottom: 100 }}
       />
+
+      {/* Invite Friends Modal */}
+      <Modal
+        visible={showInviteModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowInviteModal(false)}
+      >
+        <View className="flex-1 justify-end" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <View
+            className="rounded-t-3xl p-5"
+            style={{ backgroundColor: colors.background, maxHeight: "70%" }}
+          >
+            {/* Modal Header */}
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-xl font-bold text-foreground">친구 초대</Text>
+              <Pressable
+                onPress={() => setShowInviteModal(false)}
+                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              >
+                <MaterialIcons name="close" size={24} color={colors.foreground} />
+              </Pressable>
+            </View>
+
+            <Text className="text-muted mb-4">
+              친구를 선택하여 이 챌린지에 초대하세요
+            </Text>
+
+            {/* Friends List */}
+            <ScrollView style={{ maxHeight: 400 }}>
+              {friendsList && friendsList.length > 0 ? (
+                friendsList.map((friend) => (
+                  <View
+                    key={friend.id}
+                    className="flex-row items-center py-3 border-b border-border"
+                  >
+                    {/* Avatar */}
+                    <View
+                      className="w-10 h-10 rounded-full items-center justify-center mr-3"
+                      style={{ backgroundColor: colors.primary }}
+                    >
+                      <Text className="text-white font-bold">
+                        {(friend.name || "?")[0].toUpperCase()}
+                      </Text>
+                    </View>
+
+                    {/* Name */}
+                    <Text className="text-foreground font-medium flex-1">
+                      {friend.name || "익명"}
+                    </Text>
+
+                    {/* Invite Button */}
+                    <Pressable
+                      onPress={() => {
+                        if (Platform.OS !== "web") {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }
+                        inviteMutation.mutate({
+                          challengeId,
+                          inviteeId: friend.id,
+                        });
+                      }}
+                      disabled={inviteMutation.isPending}
+                      style={({ pressed }) => [
+                        {
+                          opacity: pressed || inviteMutation.isPending ? 0.7 : 1,
+                          backgroundColor: colors.primary,
+                        },
+                      ]}
+                      className="px-4 py-2 rounded-full"
+                    >
+                      <Text className="text-white font-medium">초대</Text>
+                    </Pressable>
+                  </View>
+                ))
+              ) : (
+                <View className="items-center py-10">
+                  <MaterialIcons name="people" size={48} color={colors.muted} />
+                  <Text className="text-muted mt-2">친구가 없습니다</Text>
+                  <Text className="text-muted text-sm mt-1">
+                    먼저 친구를 추가해보세요
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }

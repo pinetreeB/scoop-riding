@@ -494,12 +494,26 @@ export default function ProfileScreen() {
             <Pressable
               onPress={() => router.push("/notifications-center" as any)}
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-              className="flex-row items-center p-4"
+              className="flex-row items-center p-4 border-b border-border"
             >
               <MaterialIcons name="notifications" size={24} color={colors.primary} />
               <View className="flex-1 ml-3">
                 <Text className="text-foreground font-medium">알림</Text>
                 <Text className="text-muted text-xs">친구 요청, 댓글, 좋아요 알림</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+
+            {/* Badges */}
+            <Pressable
+              onPress={() => router.push("/badges" as any)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4"
+            >
+              <MaterialIcons name="military-tech" size={24} color={colors.warning} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">업적 / 배지</Text>
+                <Text className="text-muted text-xs">획득한 배지 확인</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>

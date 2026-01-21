@@ -9,6 +9,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { RideMap } from "@/components/ride-map";
+import { trpc } from "@/lib/trpc";
 import {
   saveRidingRecord,
   formatDuration,
@@ -40,6 +41,10 @@ const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 export default function RidingScreen() {
   const router = useRouter();
   const colors = useColors();
+
+  // Live location mutation for friends tracking
+  const updateLiveLocation = trpc.liveLocation.update.useMutation();
+  const stopLiveLocation = trpc.liveLocation.stop.useMutation();
 
   const [isRunning, setIsRunning] = useState(true);
   const [duration, setDuration] = useState(0);
@@ -226,6 +231,15 @@ export default function RidingScreen() {
       setGpsPoints([...gpsPointsRef.current]);
       setGpsPointCount(gpsPointsRef.current.length);
 
+      // Update live location for friends to see
+      updateLiveLocation.mutate({
+        latitude,
+        longitude,
+        heading: heading ?? null,
+        speed: speed ?? null,
+        isRiding: true,
+      });
+
       if (rawSpeedKmh >= GPS_CONSTANTS.MIN_SPEED_THRESHOLD) {
         setMaxSpeed((prev) => Math.max(prev, rawSpeedKmh));
       }
@@ -308,6 +322,9 @@ export default function RidingScreen() {
             if (Platform.OS !== "web") {
               await stopBackgroundLocationTracking();
             }
+
+            // Stop sharing live location
+            stopLiveLocation.mutate();
 
             const finalDistance = calculateTotalDistance(gpsPointsRef.current);
             const finalAvgSpeed = calculateAverageSpeed(gpsPointsRef.current);

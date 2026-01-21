@@ -328,3 +328,83 @@ export const challengeParticipants = mysqlTable("challengeParticipants", {
 
 export type ChallengeParticipant = typeof challengeParticipants.$inferSelect;
 export type InsertChallengeParticipant = typeof challengeParticipants.$inferInsert;
+
+
+/**
+ * Live location table for real-time friend tracking during rides
+ */
+export const liveLocations = mysqlTable("liveLocations", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User who is sharing location */
+  userId: int("userId").notNull().unique(),
+  /** Current latitude */
+  latitude: decimal("latitude", { precision: 10, scale: 7 }).notNull(),
+  /** Current longitude */
+  longitude: decimal("longitude", { precision: 10, scale: 7 }).notNull(),
+  /** Current heading/bearing in degrees */
+  heading: decimal("heading", { precision: 5, scale: 2 }),
+  /** Current speed in m/s */
+  speed: decimal("speed", { precision: 6, scale: 2 }),
+  /** Whether user is currently riding */
+  isRiding: boolean("isRiding").default(false).notNull(),
+  /** Last update timestamp */
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LiveLocation = typeof liveLocations.$inferSelect;
+export type InsertLiveLocation = typeof liveLocations.$inferInsert;
+
+/**
+ * Badges/Achievements table
+ */
+export const badges = mysqlTable("badges", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Badge name */
+  name: varchar("name", { length: 100 }).notNull(),
+  /** Badge description */
+  description: text("description"),
+  /** Badge icon name */
+  icon: varchar("icon", { length: 50 }).notNull(),
+  /** Badge color */
+  color: varchar("color", { length: 20 }).notNull(),
+  /** Badge category: distance, rides, social, challenge */
+  category: varchar("category", { length: 50 }).notNull(),
+  /** Requirement value to earn this badge */
+  requirement: decimal("requirement", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Badge = typeof badges.$inferSelect;
+export type InsertBadge = typeof badges.$inferInsert;
+
+/**
+ * User badges (earned achievements)
+ */
+export const userBadges = mysqlTable("userBadges", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  badgeId: int("badgeId").notNull(),
+  earnedAt: timestamp("earnedAt").defaultNow().notNull(),
+});
+
+export type UserBadge = typeof userBadges.$inferSelect;
+export type InsertUserBadge = typeof userBadges.$inferInsert;
+
+/**
+ * Challenge invitations table
+ */
+export const challengeInvitations = mysqlTable("challengeInvitations", {
+  id: int("id").autoincrement().primaryKey(),
+  challengeId: int("challengeId").notNull(),
+  /** User who sent the invitation */
+  inviterId: int("inviterId").notNull(),
+  /** User who received the invitation */
+  inviteeId: int("inviteeId").notNull(),
+  /** Invitation status: pending, accepted, declined */
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  respondedAt: timestamp("respondedAt"),
+});
+
+export type ChallengeInvitation = typeof challengeInvitations.$inferSelect;
+export type InsertChallengeInvitation = typeof challengeInvitations.$inferInsert;

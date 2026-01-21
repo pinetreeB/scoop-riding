@@ -9,6 +9,8 @@ import {
   Platform,
   Image,
   Dimensions,
+  Share,
+  Alert,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -176,7 +178,11 @@ export default function CommunityScreen() {
     const hasImages = images.length > 0;
 
     return (
-      <View className="bg-background border-b border-border">
+      <Pressable
+        onPress={() => router.push(`/post-detail?id=${item.id}` as any)}
+        style={({ pressed }) => [{ opacity: pressed ? 0.98 : 1 }]}
+        className="bg-background border-b border-border"
+      >
         {/* Author Header - Instagram Style */}
         <View className="flex-row items-center px-4 py-3">
           <Pressable
@@ -207,7 +213,32 @@ export default function CommunityScreen() {
             </View>
           </Pressable>
           <Pressable
-            onPress={() => {}}
+            onPress={() => {
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              Alert.alert(
+                "게시글 옵션",
+                "",
+                [
+                  {
+                    text: "사용자 프로필 보기",
+                    onPress: () => router.push(`/user-profile?id=${item.userId}&name=${encodeURIComponent(item.authorName || "")}&email=${encodeURIComponent(item.authorEmail || "")}` as any),
+                  },
+                  item.userId === user?.id ? {
+                    text: "삭제하기",
+                    style: "destructive",
+                    onPress: () => {
+                      Alert.alert("삭제 확인", "이 게시글을 삭제하시겠습니까?", [
+                        { text: "취소", style: "cancel" },
+                        { text: "삭제", style: "destructive", onPress: () => {} },
+                      ]);
+                    },
+                  } : null,
+                  { text: "취소", style: "cancel" },
+                ].filter(Boolean) as any
+              );
+            }}
             style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
             className="p-2"
           >
@@ -274,7 +305,18 @@ export default function CommunityScreen() {
             <MaterialIcons name="chat-bubble-outline" size={24} color={colors.foreground} />
           </Pressable>
           <Pressable
-            onPress={() => {}}
+            onPress={async () => {
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              try {
+                await Share.share({
+                  message: `[SCOOP 커뮤니티] ${item.title}\n\n${item.content.substring(0, 100)}${item.content.length > 100 ? "..." : ""}\n\n- ${getAuthorName(item)}님의 글`,
+                });
+              } catch (error) {
+                console.error("Share error:", error);
+              }
+            }}
             style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
             className="mr-4"
           >
@@ -326,7 +368,7 @@ export default function CommunityScreen() {
 
         {/* Spacer */}
         <View className="h-2" />
-      </View>
+      </Pressable>
     );
   };
 
