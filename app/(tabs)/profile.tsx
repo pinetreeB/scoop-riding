@@ -136,7 +136,7 @@ export default function ProfileScreen() {
               if (Platform.OS !== "web") {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               }
-              router.replace("/login");
+              // AuthGuard will handle navigation automatically
             } catch (error) {
               console.error("Logout error:", error);
               Alert.alert("오류", "로그아웃 중 오류가 발생했습니다.");
@@ -435,6 +435,26 @@ export default function ProfileScreen() {
               <View className="flex-1 ml-3">
                 <Text className="text-foreground font-medium">기체 관리</Text>
                 <Text className="text-muted text-xs">전동킥보드 등록 및 관리</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Goals */}
+        <View className="mx-5 mb-6">
+          <Text className="text-lg font-bold text-foreground mb-3">목표</Text>
+          
+          <View className="bg-surface rounded-2xl border border-border overflow-hidden">
+            <Pressable
+              onPress={() => router.push("/goals" as any)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4"
+            >
+              <MaterialIcons name="flag" size={24} color={colors.success} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">목표 설정</Text>
+                <Text className="text-muted text-xs">일일/주간 주행 목표 설정</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>

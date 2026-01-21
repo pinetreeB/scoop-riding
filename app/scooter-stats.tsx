@@ -288,6 +288,68 @@ export default function ScooterStatsScreen() {
           </View>
         )}
 
+        {/* Maintenance Status */}
+        <View className="mx-5 mb-4 bg-surface rounded-2xl p-5 border border-border">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-lg font-bold text-foreground">정비 상태</Text>
+            <Pressable
+              onPress={() => router.push(`/maintenance?id=${scooter.id}` as any)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center"
+            >
+              <Text className="text-primary text-sm font-medium mr-1">설정</Text>
+              <MaterialIcons name="chevron-right" size={18} color={colors.primary} />
+            </Pressable>
+          </View>
+          
+          {(() => {
+            const maintenanceInterval = scooter.maintenanceInterval || 500000;
+            const lastMaintenanceDistance = scooter.lastMaintenanceDistance || 0;
+            const distanceSinceMaintenance = totalDistance - lastMaintenanceDistance;
+            const maintenanceProgress = Math.min(100, (distanceSinceMaintenance / maintenanceInterval) * 100);
+            const needsMaintenance = distanceSinceMaintenance >= maintenanceInterval;
+            
+            return (
+              <>
+                {needsMaintenance ? (
+                  <View className="bg-error/10 rounded-xl p-3 mb-3">
+                    <View className="flex-row items-center">
+                      <MaterialIcons name="warning" size={20} color={colors.error} />
+                      <Text className="text-error font-medium ml-2">정비가 필요합니다!</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View className="bg-success/10 rounded-xl p-3 mb-3">
+                    <View className="flex-row items-center">
+                      <MaterialIcons name="check-circle" size={20} color={colors.success} />
+                      <Text style={{ color: colors.success }} className="font-medium ml-2">정비 상태 양호</Text>
+                    </View>
+                  </View>
+                )}
+                
+                <View className="mb-1">
+                  <View className="flex-row justify-between mb-1">
+                    <Text className="text-muted text-xs">다음 정비까지</Text>
+                    <Text className="text-muted text-xs">{maintenanceProgress.toFixed(0)}%</Text>
+                  </View>
+                  <View className="h-2 bg-border rounded-full overflow-hidden">
+                    <View
+                      className="h-full rounded-full"
+                      style={{
+                        backgroundColor: needsMaintenance ? colors.error : colors.success,
+                        width: `${maintenanceProgress}%`,
+                      }}
+                    />
+                  </View>
+                  <Text className="text-muted text-xs mt-1">
+                    {((maintenanceInterval - distanceSinceMaintenance) / 1000).toFixed(1)}km 남음
+                  </Text>
+                </View>
+              </>
+            );
+          })()}
+        </View>
+
         {/* Notes */}
         {scooter.notes && (
           <View className="mx-5 mb-4 bg-surface rounded-2xl p-5 border border-border">

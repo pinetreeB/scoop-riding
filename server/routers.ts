@@ -369,6 +369,9 @@ export const appRouter = router({
           initialOdometer: z.number().min(0).optional(),
           color: z.string().max(20).optional(),
           notes: z.string().optional(),
+          maintenanceInterval: z.number().min(0).optional(),
+          lastMaintenanceDistance: z.number().min(0).optional(),
+          lastMaintenanceDate: z.string().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -383,6 +386,9 @@ export const appRouter = router({
         if (data.initialOdometer !== undefined) updateData.initialOdometer = data.initialOdometer;
         if (data.color !== undefined) updateData.color = data.color;
         if (data.notes !== undefined) updateData.notes = data.notes;
+        if (data.maintenanceInterval !== undefined) updateData.maintenanceInterval = data.maintenanceInterval;
+        if (data.lastMaintenanceDistance !== undefined) updateData.lastMaintenanceDistance = data.lastMaintenanceDistance;
+        if (data.lastMaintenanceDate !== undefined) updateData.lastMaintenanceDate = new Date(data.lastMaintenanceDate);
 
         const success = await db.updateScooter(id, ctx.user.id, updateData);
         return { success };
@@ -413,6 +419,122 @@ export const appRouter = router({
         const success = await db.updateScooterStats(input.id, ctx.user.id, input.distanceToAdd);
         return { success };
       }),
+  }),
+
+  // Community (posts and comments)
+  community: router({
+    // Get posts list
+    getPosts: protectedProcedure
+      .input(
+        z.object({
+          limit: z.number().min(1).max(50).default(20),
+          offset: z.number().min(0).default(0),
+        }).optional()
+      )
+      .query(async ({ ctx, input }) => {
+        const limit = input?.limit ?? 20;
+        const offset = input?.offset ?? 0;
+        return db.getPosts(limit, offset, ctx.user.id);
+      }),
+
+    // Get single post
+    getPost: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return db.getPostById(input.id, ctx.user.id);
+      }),
+
+    // Create post
+    createPost: protectedProcedure
+      .input(
+        z.object({
+          title: z.string().min(1, "제목을 입력해주세요.").max(200),
+          content: z.string().min(1, "내용을 입력해주세요."),
+          postType: z.enum(["general", "ride_share", "question", "tip"]).default("general"),
+          ridingRecordId: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const id = await db.createPost({
+          userId: ctx.user.id,
+          title: input.title,
+          content: input.content,
+          postType: input.postType,
+          ridingRecordId: input.ridingRecordId,
+        });
+        return { success: true, id };
+      }),
+
+    // Update post
+    updatePost: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          title: z.string().min(1).max(200).optional(),
+          content: z.string().min(1).optional(),
+          postType: z.enum(["general", "ride_share", "question", "tip"]).optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { id, ...data } = input;
+        const success = await db.updatePost(id, ctx.user.id, data);
+        return { success };
+      }),
+
+    // Delete post
+    deletePost: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.deletePost(input.id, ctx.user.id);
+        return { success };
+      }),
+
+    // Toggle like
+    toggleLike: protectedProcedure
+      .input(z.object({ postId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const isLiked = await db.togglePostLike(input.postId, ctx.user.id);
+        return { success: true, isLiked };
+      }),
+
+    // Get comments
+    getComments: protectedProcedure
+      .input(z.object({ postId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getCommentsByPostId(input.postId);
+      }),
+
+    // Create comment
+    createComment: protectedProcedure
+      .input(
+        z.object({
+          postId: z.number(),
+          content: z.string().min(1, "댓글을 입력해주세요."),
+          parentId: z.number().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const id = await db.createComment({
+          postId: input.postId,
+          userId: ctx.user.id,
+          content: input.content,
+          parentId: input.parentId,
+        });
+        return { success: true, id };
+      }),
+
+    // Delete comment
+    deleteComment: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.deleteComment(input.id, ctx.user.id);
+        return { success };
+      }),
+
+    // Get user's posts
+    getMyPosts: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserPosts(ctx.user.id);
+    }),
   }),
 });
 

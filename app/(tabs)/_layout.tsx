@@ -45,6 +45,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="community"
+        options={{
+          title: "커뮤니티",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="forum" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "프로필",

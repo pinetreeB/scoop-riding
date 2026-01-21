@@ -97,9 +97,78 @@ export const scooters = mysqlTable("scooters", {
   color: varchar("color", { length: 20 }).default("#FF6D00"),
   /** Notes */
   notes: text("notes"),
+  /** Maintenance interval in meters (default 500km) */
+  maintenanceInterval: int("maintenanceInterval").default(500000).notNull(),
+  /** Distance at last maintenance in meters */
+  lastMaintenanceDistance: int("lastMaintenanceDistance").default(0).notNull(),
+  /** Last maintenance date */
+  lastMaintenanceDate: timestamp("lastMaintenanceDate"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type Scooter = typeof scooters.$inferSelect;
 export type InsertScooter = typeof scooters.$inferInsert;
+
+/**
+ * Community posts table
+ */
+export const posts = mysqlTable("posts", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Author user ID */
+  userId: int("userId").notNull(),
+  /** Post title */
+  title: varchar("title", { length: 200 }).notNull(),
+  /** Post content */
+  content: text("content").notNull(),
+  /** Post type: general, ride_share, question, tip */
+  postType: varchar("postType", { length: 32 }).default("general").notNull(),
+  /** Attached riding record ID (optional) */
+  ridingRecordId: varchar("ridingRecordId", { length: 64 }),
+  /** Like count */
+  likeCount: int("likeCount").default(0).notNull(),
+  /** Comment count */
+  commentCount: int("commentCount").default(0).notNull(),
+  /** View count */
+  viewCount: int("viewCount").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Post = typeof posts.$inferSelect;
+export type InsertPost = typeof posts.$inferInsert;
+
+/**
+ * Post comments table
+ */
+export const comments = mysqlTable("comments", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Post ID */
+  postId: int("postId").notNull(),
+  /** Author user ID */
+  userId: int("userId").notNull(),
+  /** Comment content */
+  content: text("content").notNull(),
+  /** Parent comment ID for replies (null for top-level comments) */
+  parentId: int("parentId"),
+  /** Like count */
+  likeCount: int("likeCount").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Comment = typeof comments.$inferSelect;
+export type InsertComment = typeof comments.$inferInsert;
+
+/**
+ * Post likes table
+ */
+export const postLikes = mysqlTable("postLikes", {
+  id: int("id").autoincrement().primaryKey(),
+  postId: int("postId").notNull(),
+  userId: int("userId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PostLike = typeof postLikes.$inferSelect;
+export type InsertPostLike = typeof postLikes.$inferInsert;

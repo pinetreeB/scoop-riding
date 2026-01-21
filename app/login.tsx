@@ -20,7 +20,7 @@ import * as Google from "expo-auth-session/providers/google";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
-import * as Auth from "@/lib/_core/auth";
+import { useAuth } from "@/hooks/use-auth";
 
 // Ensure WebBrowser completes auth session
 WebBrowser.maybeCompleteAuthSession();
@@ -34,6 +34,7 @@ export default function LoginScreen() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const { login: authLogin } = useAuth();
   const loginMutation = trpc.auth.login.useMutation();
   const googleLoginMutation = trpc.auth.googleLogin.useMutation();
 
@@ -87,26 +88,24 @@ export default function LoginScreen() {
       });
 
       if (result.success && result.token && result.user) {
-        // Store session token for native
-        if (Platform.OS !== "web") {
-          await Auth.setSessionToken(result.token);
-        }
-
-        // Store user info
-        await Auth.setUserInfo({
-          id: result.user.id,
-          openId: result.user.openId,
-          name: result.user.name,
-          email: result.user.email,
-          loginMethod: result.user.loginMethod,
-          lastSignedIn: new Date(result.user.lastSignedIn),
-        });
+        // Use AuthContext login to update state immediately
+        await authLogin(
+          {
+            id: result.user.id,
+            openId: result.user.openId,
+            name: result.user.name,
+            email: result.user.email,
+            loginMethod: result.user.loginMethod,
+            lastSignedIn: new Date(result.user.lastSignedIn),
+          },
+          result.token
+        );
 
         if (Platform.OS !== "web") {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
 
-        router.replace("/(tabs)");
+        // AuthGuard will handle navigation automatically
       } else {
         Alert.alert("로그인 실패", result.error || "Google 로그인에 실패했습니다.");
       }
@@ -138,27 +137,24 @@ export default function LoginScreen() {
       const result = await loginMutation.mutateAsync({ email: email.trim(), password });
 
       if (result.success && result.token && result.user) {
-        // Store session token for native
-        if (Platform.OS !== "web") {
-          await Auth.setSessionToken(result.token);
-        }
-
-        // Store user info
-        await Auth.setUserInfo({
-          id: result.user.id,
-          openId: result.user.openId,
-          name: result.user.name,
-          email: result.user.email,
-          loginMethod: result.user.loginMethod,
-          lastSignedIn: new Date(result.user.lastSignedIn),
-        });
+        // Use AuthContext login to update state immediately
+        await authLogin(
+          {
+            id: result.user.id,
+            openId: result.user.openId,
+            name: result.user.name,
+            email: result.user.email,
+            loginMethod: result.user.loginMethod,
+            lastSignedIn: new Date(result.user.lastSignedIn),
+          },
+          result.token
+        );
 
         if (Platform.OS !== "web") {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
 
-        // Navigate to home
-        router.replace("/(tabs)");
+        // AuthGuard will handle navigation automatically
       } else {
         Alert.alert("로그인 실패", result.error || "로그인에 실패했습니다.");
       }

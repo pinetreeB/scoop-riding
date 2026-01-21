@@ -36,6 +36,20 @@
       "when": 1769015420091,
       "tag": "0004_graceful_wendell_rand",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1769016265906,
+      "tag": "0005_many_ozymandias",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1769016409739,
+      "tag": "0006_lying_magus",
+      "breakpoints": true
     }
   ]
 }

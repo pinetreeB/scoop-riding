@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -427,4 +427,272 @@ export async function getDefaultScooter(userId: number): Promise<Scooter | undef
     .where(and(eq(scooters.userId, userId), eq(scooters.isDefault, true)))
     .limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+// ==================== Community Functions ====================
+
+import { desc, sql } from "drizzle-orm";
+
+export interface PostWithAuthor extends Post {
+  authorName: string | null;
+  authorEmail: string | null;
+  isLiked?: boolean;
+}
+
+export interface CommentWithAuthor extends Comment {
+  authorName: string | null;
+  authorEmail: string | null;
+}
+
+export async function createPost(data: Omit<InsertPost, "id">): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(posts).values(data);
+  return result[0].insertId;
+}
+
+export async function getPosts(
+  limit: number = 20,
+  offset: number = 0,
+  userId?: number
+): Promise<PostWithAuthor[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      id: posts.id,
+      userId: posts.userId,
+      title: posts.title,
+      content: posts.content,
+      postType: posts.postType,
+      ridingRecordId: posts.ridingRecordId,
+      likeCount: posts.likeCount,
+      commentCount: posts.commentCount,
+      viewCount: posts.viewCount,
+      createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
+      authorName: users.name,
+      authorEmail: users.email,
+    })
+    .from(posts)
+    .leftJoin(users, eq(posts.userId, users.id))
+    .orderBy(desc(posts.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  // Check if user has liked each post
+  if (userId) {
+    const postsWithLikes = await Promise.all(
+      result.map(async (post) => {
+        const like = await db
+          .select()
+          .from(postLikes)
+          .where(and(eq(postLikes.postId, post.id), eq(postLikes.userId, userId)))
+          .limit(1);
+        return { ...post, isLiked: like.length > 0 };
+      })
+    );
+    return postsWithLikes;
+  }
+
+  return result;
+}
+
+export async function getPostById(postId: number, userId?: number): Promise<PostWithAuthor | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Increment view count
+  await db.update(posts)
+    .set({ viewCount: sql`${posts.viewCount} + 1` })
+    .where(eq(posts.id, postId));
+
+  const result = await db
+    .select({
+      id: posts.id,
+      userId: posts.userId,
+      title: posts.title,
+      content: posts.content,
+      postType: posts.postType,
+      ridingRecordId: posts.ridingRecordId,
+      likeCount: posts.likeCount,
+      commentCount: posts.commentCount,
+      viewCount: posts.viewCount,
+      createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
+      authorName: users.name,
+      authorEmail: users.email,
+    })
+    .from(posts)
+    .leftJoin(users, eq(posts.userId, users.id))
+    .where(eq(posts.id, postId))
+    .limit(1);
+
+  if (result.length === 0) return null;
+
+  const post = result[0];
+
+  // Check if user has liked the post
+  if (userId) {
+    const like = await db
+      .select()
+      .from(postLikes)
+      .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)))
+      .limit(1);
+    return { ...post, isLiked: like.length > 0 };
+  }
+
+  return post;
+}
+
+export async function updatePost(
+  postId: number,
+  userId: number,
+  data: Partial<Pick<InsertPost, "title" | "content" | "postType">>
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.update(posts)
+    .set({ ...data, updatedAt: new Date() })
+    .where(and(eq(posts.id, postId), eq(posts.userId, userId)));
+  return true;
+}
+
+export async function deletePost(postId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Delete comments first
+  await db.delete(comments).where(eq(comments.postId, postId));
+  // Delete likes
+  await db.delete(postLikes).where(eq(postLikes.postId, postId));
+  // Delete post
+  await db.delete(posts)
+    .where(and(eq(posts.id, postId), eq(posts.userId, userId)));
+  return true;
+}
+
+export async function togglePostLike(postId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Check if already liked
+  const existingLike = await db
+    .select()
+    .from(postLikes)
+    .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)))
+    .limit(1);
+
+  if (existingLike.length > 0) {
+    // Unlike
+    await db.delete(postLikes)
+      .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+    await db.update(posts)
+      .set({ likeCount: sql`${posts.likeCount} - 1` })
+      .where(eq(posts.id, postId));
+    return false; // Now unliked
+  } else {
+    // Like
+    await db.insert(postLikes).values({ postId, userId });
+    await db.update(posts)
+      .set({ likeCount: sql`${posts.likeCount} + 1` })
+      .where(eq(posts.id, postId));
+    return true; // Now liked
+  }
+}
+
+// Comment functions
+export async function createComment(data: Omit<InsertComment, "id">): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(comments).values(data);
+  
+  // Update post comment count
+  await db.update(posts)
+    .set({ commentCount: sql`${posts.commentCount} + 1` })
+    .where(eq(posts.id, data.postId));
+
+  return result[0].insertId;
+}
+
+export async function getCommentsByPostId(postId: number): Promise<CommentWithAuthor[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      id: comments.id,
+      postId: comments.postId,
+      userId: comments.userId,
+      content: comments.content,
+      parentId: comments.parentId,
+      likeCount: comments.likeCount,
+      createdAt: comments.createdAt,
+      updatedAt: comments.updatedAt,
+      authorName: users.name,
+      authorEmail: users.email,
+    })
+    .from(comments)
+    .leftJoin(users, eq(comments.userId, users.id))
+    .where(eq(comments.postId, postId))
+    .orderBy(comments.createdAt);
+
+  return result;
+}
+
+export async function deleteComment(commentId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Get comment to find postId
+  const comment = await db
+    .select()
+    .from(comments)
+    .where(and(eq(comments.id, commentId), eq(comments.userId, userId)))
+    .limit(1);
+
+  if (comment.length === 0) return false;
+
+  // Delete comment
+  await db.delete(comments)
+    .where(and(eq(comments.id, commentId), eq(comments.userId, userId)));
+
+  // Update post comment count
+  await db.update(posts)
+    .set({ commentCount: sql`${posts.commentCount} - 1` })
+    .where(eq(posts.id, comment[0].postId));
+
+  return true;
+}
+
+export async function getUserPosts(userId: number): Promise<PostWithAuthor[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      id: posts.id,
+      userId: posts.userId,
+      title: posts.title,
+      content: posts.content,
+      postType: posts.postType,
+      ridingRecordId: posts.ridingRecordId,
+      likeCount: posts.likeCount,
+      commentCount: posts.commentCount,
+      viewCount: posts.viewCount,
+      createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
+      authorName: users.name,
+      authorEmail: users.email,
+    })
+    .from(posts)
+    .leftJoin(users, eq(posts.userId, users.id))
+    .where(eq(posts.userId, userId))
+    .orderBy(desc(posts.createdAt));
+
+  return result;
 }

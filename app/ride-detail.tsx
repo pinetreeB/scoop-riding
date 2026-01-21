@@ -18,6 +18,7 @@ import {
   saveAndShareGpx,
   TrackData,
 } from "@/lib/gps-utils";
+import { shareRideAsText } from "@/lib/share-utils";
 
 export default function RideDetailScreen() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function RideDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [record, setRecord] = useState<RidingRecord | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     loadRecord();
@@ -73,6 +75,28 @@ export default function RideDetailScreen() {
       Alert.alert("내보내기 실패", "GPX 파일을 저장하는 중 오류가 발생했습니다.");
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!record) return;
+
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    setIsSharing(true);
+
+    try {
+      const success = await shareRideAsText(record);
+      if (success && Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error) {
+      console.error("Share error:", error);
+      Alert.alert("공유 실패", "주행 기록을 공유하는 중 오류가 발생했습니다.");
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -247,27 +271,47 @@ export default function RideDetailScreen() {
           </View>
         </View>
 
-        {/* Export Button */}
-        {hasGpsData && (
-          <View className="mx-4 mb-6">
+        {/* Action Buttons */}
+        <View className="mx-4 mb-6 gap-3">
+          {/* Share Button */}
+          <Pressable
+            onPress={handleShare}
+            disabled={isSharing}
+            style={({ pressed }) => [
+              {
+                backgroundColor: colors.primary,
+                opacity: pressed || isSharing ? 0.7 : 1,
+              },
+            ]}
+            className="flex-row items-center justify-center py-4 rounded-xl"
+          >
+            <MaterialIcons name="share" size={20} color="#FFFFFF" />
+            <Text className="text-white font-semibold ml-2">
+              {isSharing ? "공유 중..." : "주행 기록 공유"}
+            </Text>
+          </Pressable>
+
+          {/* Export GPX Button */}
+          {hasGpsData && (
             <Pressable
               onPress={handleExportGpx}
               disabled={isExporting}
               style={({ pressed }) => [
                 {
-                  backgroundColor: colors.primary,
+                  borderColor: colors.primary,
+                  borderWidth: 1,
                   opacity: pressed || isExporting ? 0.7 : 1,
                 },
               ]}
-              className="flex-row items-center justify-center py-4 rounded-xl"
+              className="flex-row items-center justify-center py-4 rounded-xl bg-surface"
             >
-              <MaterialIcons name="file-download" size={20} color="#FFFFFF" />
-              <Text className="text-white font-semibold ml-2">
+              <MaterialIcons name="file-download" size={20} color={colors.primary} />
+              <Text style={{ color: colors.primary }} className="font-semibold ml-2">
                 {isExporting ? "내보내는 중..." : "GPX 파일 내보내기"}
               </Text>
             </Pressable>
-          </View>
-        )}
+          )}
+        </View>
       </ScrollView>
     </ScreenContainer>
   );
