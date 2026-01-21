@@ -17,10 +17,16 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }).unique(),
   /** Hashed password for email/password auth */
   passwordHash: varchar("passwordHash", { length: 255 }),
+  /** Google OAuth ID for Google login */
+  googleId: varchar("googleId", { length: 128 }).unique(),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   /** Email verification status */
   emailVerified: boolean("emailVerified").default(false).notNull(),
+  /** Password reset token (temporary) */
+  passwordResetToken: varchar("passwordResetToken", { length: 512 }),
+  /** Password reset token expiry */
+  passwordResetExpiry: timestamp("passwordResetExpiry"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

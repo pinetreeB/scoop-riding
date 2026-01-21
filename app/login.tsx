@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Text,
   View,
@@ -9,16 +9,21 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
-import * as SecureStore from "expo-secure-store";
+import * as WebBrowser from "expo-web-browser";
+import * as Google from "expo-auth-session/providers/google";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import * as Auth from "@/lib/_core/auth";
+
+// Ensure WebBrowser completes auth session
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -26,9 +31,92 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const loginMutation = trpc.auth.login.useMutation();
+  const googleLoginMutation = trpc.auth.googleLogin.useMutation();
+
+  // Google OAuth configuration
+  // Note: You need to set up Google OAuth credentials in Google Cloud Console
+  // and configure the client IDs for iOS, Android, and Web
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    // Replace these with your actual Google OAuth client IDs
+    // Get them from: https://console.cloud.google.com/apis/credentials
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "",
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || "",
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "",
+  });
+
+  // Handle Google OAuth response
+  useEffect(() => {
+    if (response?.type === "success") {
+      handleGoogleSignIn(response.authentication?.accessToken);
+    }
+  }, [response]);
+
+  const handleGoogleSignIn = async (accessToken: string | undefined) => {
+    if (!accessToken) {
+      Alert.alert("오류", "Google 인증에 실패했습니다.");
+      return;
+    }
+
+    setIsGoogleLoading(true);
+
+    try {
+      // Fetch user info from Google
+      const userInfoResponse = await fetch(
+        "https://www.googleapis.com/userinfo/v2/me",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      const userInfo = await userInfoResponse.json();
+
+      if (!userInfo.email || !userInfo.id) {
+        Alert.alert("오류", "Google 계정 정보를 가져올 수 없습니다.");
+        return;
+      }
+
+      // Call our backend to handle Google login
+      const result = await googleLoginMutation.mutateAsync({
+        idToken: accessToken,
+        email: userInfo.email,
+        name: userInfo.name || userInfo.email.split("@")[0],
+        googleId: userInfo.id,
+      });
+
+      if (result.success && result.token && result.user) {
+        // Store session token for native
+        if (Platform.OS !== "web") {
+          await Auth.setSessionToken(result.token);
+        }
+
+        // Store user info
+        await Auth.setUserInfo({
+          id: result.user.id,
+          openId: result.user.openId,
+          name: result.user.name,
+          email: result.user.email,
+          loginMethod: result.user.loginMethod,
+          lastSignedIn: new Date(result.user.lastSignedIn),
+        });
+
+        if (Platform.OS !== "web") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+
+        router.replace("/(tabs)");
+      } else {
+        Alert.alert("로그인 실패", result.error || "Google 로그인에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("Google login error:", error);
+      Alert.alert("오류", "Google 로그인 중 오류가 발생했습니다.");
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim()) {
@@ -86,6 +174,28 @@ export default function LoginScreen() {
     router.push("/register");
   };
 
+  const goToForgotPassword = () => {
+    router.push("/forgot-password");
+  };
+
+  const handleGooglePress = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    
+    // Check if Google OAuth is configured
+    if (!process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID) {
+      Alert.alert(
+        "설정 필요",
+        "Google 로그인을 사용하려면 Google OAuth 클라이언트 ID를 설정해야 합니다.\n\n환경변수에 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID를 추가해주세요.",
+        [{ text: "확인" }]
+      );
+      return;
+    }
+    
+    promptAsync();
+  };
+
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]}>
       <KeyboardAvoidingView
@@ -98,7 +208,7 @@ export default function LoginScreen() {
         >
           <View className="flex-1 px-6 pt-12">
             {/* Logo and Title */}
-            <View className="items-center mb-12">
+            <View className="items-center mb-10">
               <View
                 className="w-20 h-20 rounded-2xl items-center justify-center mb-4"
                 style={{ backgroundColor: colors.primary }}
@@ -132,7 +242,17 @@ export default function LoginScreen() {
 
               {/* Password Input */}
               <View>
-                <Text className="text-sm text-muted mb-2">비밀번호</Text>
+                <View className="flex-row justify-between items-center mb-2">
+                  <Text className="text-sm text-muted">비밀번호</Text>
+                  <Pressable
+                    onPress={goToForgotPassword}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                  >
+                    <Text style={{ color: colors.primary }} className="text-sm">
+                      비밀번호 찾기
+                    </Text>
+                  </Pressable>
+                </View>
                 <View className="flex-row items-center bg-surface rounded-xl px-4 border border-border">
                   <MaterialIcons name="lock" size={20} color={colors.muted} />
                   <TextInput
@@ -168,12 +288,44 @@ export default function LoginScreen() {
                     opacity: pressed || isLoading ? 0.8 : 1,
                   },
                 ]}
-                className="py-4 rounded-xl items-center mt-4"
+                className="py-4 rounded-xl items-center mt-2"
               >
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
                   <Text className="text-white font-semibold text-lg">로그인</Text>
+                )}
+              </Pressable>
+
+              {/* Divider */}
+              <View className="flex-row items-center my-4">
+                <View className="flex-1 h-px bg-border" />
+                <Text className="mx-4 text-muted text-sm">또는</Text>
+                <View className="flex-1 h-px bg-border" />
+              </View>
+
+              {/* Google Login Button */}
+              <Pressable
+                onPress={handleGooglePress}
+                disabled={isGoogleLoading}
+                style={({ pressed }) => [
+                  {
+                    opacity: pressed || isGoogleLoading ? 0.8 : 1,
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                  },
+                ]}
+                className="py-4 rounded-xl items-center flex-row justify-center bg-surface"
+              >
+                {isGoogleLoading ? (
+                  <ActivityIndicator color={colors.foreground} />
+                ) : (
+                  <>
+                    <View className="w-5 h-5 mr-3">
+                      <MaterialIcons name="g-mobiledata" size={24} color={colors.foreground} />
+                    </View>
+                    <Text className="text-foreground font-semibold">Google로 계속하기</Text>
+                  </>
                 )}
               </Pressable>
 

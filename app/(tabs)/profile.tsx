@@ -7,22 +7,32 @@ import {
   Alert,
   Platform,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import { useAuth } from "@/hooks/use-auth";
+import { trpc } from "@/lib/trpc";
 import {
   getRidingRecords,
   clearAllRecords,
   formatDuration,
+  fullSync,
   type RidingRecord,
 } from "@/lib/riding-store";
 
 export default function ProfileScreen() {
   const colors = useColors();
+  const router = useRouter();
+  const trpcUtils = trpc.useUtils();
+  const { user, logout, isAuthenticated, loading: authLoading } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [stats, setStats] = useState({
     totalDistance: 0,
     totalDuration: 0,
@@ -31,6 +41,7 @@ export default function ProfileScreen() {
     maxSpeed: 0,
     level: 1,
     levelProgress: 0,
+    unsyncedCount: 0,
   });
 
   const calculateLevel = (totalDistanceKm: number) => {
@@ -51,6 +62,7 @@ export default function ProfileScreen() {
     const maxSpeed = records.length > 0
       ? Math.max(...records.map((r) => r.maxSpeed))
       : 0;
+    const unsyncedCount = records.filter((r) => !r.synced).length;
 
     const { level, progress } = calculateLevel(totalDistance / 1000);
 
@@ -62,6 +74,7 @@ export default function ProfileScreen() {
       maxSpeed,
       level,
       levelProgress: progress,
+      unsyncedCount,
     });
   }, []);
 
@@ -70,6 +83,71 @@ export default function ProfileScreen() {
       loadStats();
     }, [loadStats])
   );
+
+  const handleSync = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    setIsSyncing(true);
+    setSyncStatus("동기화 중...");
+
+    try {
+      const result = await fullSync(trpcUtils);
+      
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+
+      setSyncStatus(`동기화 완료: ${result.uploaded}개 업로드, ${result.downloaded}개 다운로드`);
+      await loadStats();
+
+      // Clear status after 3 seconds
+      setTimeout(() => setSyncStatus(null), 3000);
+    } catch (error) {
+      console.error("Sync error:", error);
+      setSyncStatus("동기화 실패");
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      setTimeout(() => setSyncStatus(null), 3000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    Alert.alert(
+      "로그아웃",
+      "정말 로그아웃 하시겠습니까?",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "로그아웃",
+          style: "destructive",
+          onPress: async () => {
+            setIsLoggingOut(true);
+            try {
+              await logout();
+              if (Platform.OS !== "web") {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }
+              router.replace("/login");
+            } catch (error) {
+              console.error("Logout error:", error);
+              Alert.alert("오류", "로그아웃 중 오류가 발생했습니다.");
+            } finally {
+              setIsLoggingOut(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleClearData = () => {
     if (Platform.OS !== "web") {
@@ -105,6 +183,23 @@ export default function ProfileScreen() {
     return "루키 라이더";
   };
 
+  const getUserDisplayName = () => {
+    if (user?.name) return user.name;
+    if (user?.email) return user.email.split("@")[0];
+    return "SCOOP 라이더";
+  };
+
+  const getLoginMethodIcon = () => {
+    switch (user?.loginMethod) {
+      case "google":
+        return "account-circle";
+      case "email":
+        return "email";
+      default:
+        return "person";
+    }
+  };
+
   return (
     <ScreenContainer>
       <ScrollView 
@@ -124,10 +219,13 @@ export default function ProfileScreen() {
               className="w-16 h-16 rounded-full items-center justify-center mr-4"
               style={{ backgroundColor: colors.primary }}
             >
-              <MaterialIcons name="person" size={32} color="#FFFFFF" />
+              <MaterialIcons name={getLoginMethodIcon()} size={32} color="#FFFFFF" />
             </View>
             <View className="flex-1">
-              <Text className="text-xl font-bold text-foreground">SCOOP 라이더</Text>
+              <Text className="text-xl font-bold text-foreground">{getUserDisplayName()}</Text>
+              {user?.email && (
+                <Text className="text-muted text-sm mt-0.5">{user.email}</Text>
+              )}
               <View className="flex-row items-center mt-1">
                 <View 
                   className="px-2 py-1 rounded-full mr-2"
@@ -159,6 +257,52 @@ export default function ProfileScreen() {
               다음 레벨까지 {(50 - (stats.levelProgress * 50)).toFixed(1)}km
             </Text>
           </View>
+        </View>
+
+        {/* Cloud Sync Card */}
+        <View className="mx-5 mb-6 bg-surface rounded-2xl p-5 border border-border">
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-row items-center">
+              <MaterialIcons name="cloud-sync" size={24} color={colors.primary} />
+              <Text className="text-lg font-bold text-foreground ml-2">클라우드 동기화</Text>
+            </View>
+            {stats.unsyncedCount > 0 && (
+              <View className="bg-warning px-2 py-1 rounded-full">
+                <Text className="text-white text-xs font-bold">{stats.unsyncedCount}개 미동기화</Text>
+              </View>
+            )}
+          </View>
+          
+          <Text className="text-muted text-sm mb-4">
+            주행 기록을 클라우드에 저장하여 다른 기기에서도 확인할 수 있습니다.
+          </Text>
+
+          {syncStatus && (
+            <View className="bg-background rounded-lg p-3 mb-3">
+              <Text className="text-foreground text-sm text-center">{syncStatus}</Text>
+            </View>
+          )}
+
+          <Pressable
+            onPress={handleSync}
+            disabled={isSyncing}
+            style={({ pressed }) => [
+              { 
+                opacity: pressed || isSyncing ? 0.7 : 1,
+                backgroundColor: colors.primary,
+              }
+            ]}
+            className="flex-row items-center justify-center py-3 rounded-xl"
+          >
+            {isSyncing ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <MaterialIcons name="sync" size={20} color="#FFFFFF" />
+                <Text className="text-white font-bold ml-2">지금 동기화</Text>
+              </>
+            )}
+          </Pressable>
         </View>
 
         {/* Stats Grid */}
@@ -237,6 +381,43 @@ export default function ProfileScreen() {
                 <MaterialIcons name="emoji-events" size={40} color={colors.warning} />
               </View>
             </View>
+          </View>
+        </View>
+
+        {/* Account Settings */}
+        <View className="mx-5 mb-6">
+          <Text className="text-lg font-bold text-foreground mb-3">계정</Text>
+          
+          <View className="bg-surface rounded-2xl border border-border overflow-hidden">
+            {/* Account Info */}
+            <View className="flex-row items-center p-4 border-b border-border">
+              <MaterialIcons name="account-circle" size={24} color={colors.primary} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">로그인 정보</Text>
+                <Text className="text-muted text-xs">
+                  {user?.loginMethod === "google" ? "Google 계정" : "이메일"} 로그인
+                </Text>
+              </View>
+            </View>
+
+            {/* Logout Button */}
+            <Pressable
+              onPress={handleLogout}
+              disabled={isLoggingOut}
+              style={({ pressed }) => [{ opacity: pressed || isLoggingOut ? 0.7 : 1 }]}
+              className="flex-row items-center p-4"
+            >
+              <MaterialIcons name="logout" size={24} color={colors.error} />
+              <View className="flex-1 ml-3">
+                <Text className="text-error font-medium">로그아웃</Text>
+                <Text className="text-muted text-xs">계정에서 로그아웃합니다</Text>
+              </View>
+              {isLoggingOut ? (
+                <ActivityIndicator size="small" color={colors.error} />
+              ) : (
+                <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+              )}
+            </Pressable>
           </View>
         </View>
 

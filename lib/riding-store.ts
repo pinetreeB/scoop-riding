@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GpsPoint } from "./gps-utils";
+import { trpc } from "./trpc";
 
 export interface RidingRecord {
   id: string;
@@ -11,6 +12,7 @@ export interface RidingRecord {
   startTime: string;
   endTime: string;
   gpsPoints?: GpsPoint[]; // GPS track points for GPX export
+  synced?: boolean; // Whether this record has been synced to cloud
 }
 
 export interface RidingStats {
@@ -22,7 +24,9 @@ export interface RidingStats {
 
 const STORAGE_KEY = "scoop_riding_records";
 const GPS_STORAGE_PREFIX = "scoop_gps_track_";
+const SYNC_STATUS_KEY = "scoop_sync_status";
 
+// Save riding record locally
 export async function saveRidingRecord(record: RidingRecord): Promise<void> {
   try {
     // Save GPS points separately to avoid storage limits
@@ -34,7 +38,7 @@ export async function saveRidingRecord(record: RidingRecord): Promise<void> {
     }
 
     // Save record without GPS points in main storage
-    const recordWithoutGps = { ...record };
+    const recordWithoutGps = { ...record, synced: false };
     delete recordWithoutGps.gpsPoints;
 
     const existing = await getRidingRecords();
@@ -45,6 +49,7 @@ export async function saveRidingRecord(record: RidingRecord): Promise<void> {
   }
 }
 
+// Get all local riding records
 export async function getRidingRecords(): Promise<RidingRecord[]> {
   try {
     const data = await AsyncStorage.getItem(STORAGE_KEY);
@@ -55,6 +60,7 @@ export async function getRidingRecords(): Promise<RidingRecord[]> {
   }
 }
 
+// Get a single record with GPS data
 export async function getRidingRecordWithGps(id: string): Promise<RidingRecord | null> {
   try {
     const records = await getRidingRecords();
@@ -75,6 +81,7 @@ export async function getRidingRecordWithGps(id: string): Promise<RidingRecord |
   }
 }
 
+// Delete a local record
 export async function deleteRidingRecord(id: string): Promise<void> {
   try {
     const existing = await getRidingRecords();
@@ -88,6 +95,7 @@ export async function deleteRidingRecord(id: string): Promise<void> {
   }
 }
 
+// Get riding statistics
 export async function getRidingStats(): Promise<RidingStats> {
   const records = await getRidingRecords();
   
@@ -114,6 +122,7 @@ export async function getRidingStats(): Promise<RidingStats> {
   };
 }
 
+// Format helpers
 export function formatDuration(seconds: number): string {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
@@ -136,6 +145,7 @@ export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
 
+// Clear all local records
 export async function clearAllRecords(): Promise<void> {
   try {
     // Get all records to find GPS data keys
@@ -150,5 +160,179 @@ export async function clearAllRecords(): Promise<void> {
     await AsyncStorage.removeItem(STORAGE_KEY);
   } catch (error) {
     console.error("Failed to clear all records:", error);
+  }
+}
+
+// ============================================
+// Cloud Sync Functions
+// ============================================
+
+// Sync a single record to cloud
+export async function syncRecordToCloud(
+  record: RidingRecord,
+  trpcClient: ReturnType<typeof trpc.useUtils>
+): Promise<boolean> {
+  try {
+    // Get GPS points for this record
+    const recordWithGps = await getRidingRecordWithGps(record.id);
+    const gpsPointsJson = recordWithGps?.gpsPoints 
+      ? JSON.stringify(recordWithGps.gpsPoints)
+      : undefined;
+
+    // Call API to save record
+    const result = await trpcClient.client.rides.create.mutate({
+      recordId: record.id,
+      date: record.date,
+      duration: record.duration,
+      distance: record.distance,
+      avgSpeed: record.avgSpeed,
+      maxSpeed: record.maxSpeed,
+      startTime: record.startTime,
+      endTime: record.endTime,
+      gpsPointsJson,
+    });
+
+    if (result.success) {
+      // Mark as synced locally
+      await markRecordAsSynced(record.id);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Failed to sync record to cloud:", error);
+    return false;
+  }
+}
+
+// Mark a record as synced
+async function markRecordAsSynced(id: string): Promise<void> {
+  try {
+    const records = await getRidingRecords();
+    const updated = records.map((r) => 
+      r.id === id ? { ...r, synced: true } : r
+    );
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  } catch (error) {
+    console.error("Failed to mark record as synced:", error);
+  }
+}
+
+// Sync all unsynced records to cloud
+export async function syncAllToCloud(
+  trpcClient: ReturnType<typeof trpc.useUtils>
+): Promise<{ synced: number; failed: number }> {
+  const records = await getRidingRecords();
+  const unsyncedRecords = records.filter((r) => !r.synced);
+  
+  let synced = 0;
+  let failed = 0;
+
+  for (const record of unsyncedRecords) {
+    const success = await syncRecordToCloud(record, trpcClient);
+    if (success) {
+      synced++;
+    } else {
+      failed++;
+    }
+  }
+
+  return { synced, failed };
+}
+
+// Fetch records from cloud and merge with local
+export async function fetchAndMergeFromCloud(
+  trpcClient: ReturnType<typeof trpc.useUtils>
+): Promise<{ added: number; total: number }> {
+  try {
+    // Fetch from cloud
+    const cloudRecords = await trpcClient.client.rides.list.query();
+    
+    // Get local records
+    const localRecords = await getRidingRecords();
+    const localIds = new Set(localRecords.map((r) => r.id));
+    
+    // Find records that exist in cloud but not locally
+    let added = 0;
+    for (const cloudRecord of cloudRecords) {
+      if (!localIds.has(cloudRecord.recordId)) {
+        // Convert cloud record to local format
+        const localRecord: RidingRecord = {
+          id: cloudRecord.recordId,
+          date: cloudRecord.date,
+          duration: cloudRecord.duration,
+          distance: cloudRecord.distance,
+          avgSpeed: cloudRecord.avgSpeed / 10, // Convert back from stored format
+          maxSpeed: cloudRecord.maxSpeed / 10,
+          startTime: cloudRecord.startTime?.toISOString() || "",
+          endTime: cloudRecord.endTime?.toISOString() || "",
+          synced: true,
+        };
+
+        // Save GPS points if available
+        if (cloudRecord.gpsPointsJson) {
+          try {
+            const gpsPoints = JSON.parse(cloudRecord.gpsPointsJson);
+            await AsyncStorage.setItem(
+              `${GPS_STORAGE_PREFIX}${localRecord.id}`,
+              JSON.stringify(gpsPoints)
+            );
+          } catch (e) {
+            console.error("Failed to parse GPS points:", e);
+          }
+        }
+
+        localRecords.push(localRecord);
+        added++;
+      }
+    }
+
+    // Sort by date (newest first)
+    localRecords.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+
+    // Save merged records
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(localRecords));
+
+    return { added, total: localRecords.length };
+  } catch (error) {
+    console.error("Failed to fetch and merge from cloud:", error);
+    return { added: 0, total: 0 };
+  }
+}
+
+// Full sync: upload local, download cloud, merge
+export async function fullSync(
+  trpcClient: ReturnType<typeof trpc.useUtils>
+): Promise<{ uploaded: number; downloaded: number; failed: number }> {
+  // First sync local to cloud
+  const uploadResult = await syncAllToCloud(trpcClient);
+  
+  // Then fetch and merge from cloud
+  const downloadResult = await fetchAndMergeFromCloud(trpcClient);
+
+  return {
+    uploaded: uploadResult.synced,
+    downloaded: downloadResult.added,
+    failed: uploadResult.failed,
+  };
+}
+
+// Delete record from both local and cloud
+export async function deleteRecordWithSync(
+  id: string,
+  trpcClient: ReturnType<typeof trpc.useUtils>
+): Promise<boolean> {
+  try {
+    // Delete from cloud first
+    await trpcClient.client.rides.delete.mutate({ recordId: id });
+    
+    // Then delete locally
+    await deleteRidingRecord(id);
+    
+    return true;
+  } catch (error) {
+    console.error("Failed to delete record with sync:", error);
+    // Still try to delete locally
+    await deleteRidingRecord(id);
+    return false;
   }
 }

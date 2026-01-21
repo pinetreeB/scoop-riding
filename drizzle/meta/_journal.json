@@ -15,6 +15,13 @@
       "when": 1769011739042,
       "tag": "0001_powerful_riptide",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1769012500867,
+      "tag": "0002_old_shadowcat",
+      "breakpoints": true
     }
   ]
 }

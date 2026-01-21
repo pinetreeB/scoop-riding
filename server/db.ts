@@ -50,7 +50,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod", "passwordHash"] as const;
+    const textFields = ["name", "email", "loginMethod", "passwordHash", "googleId"] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -195,6 +195,107 @@ export async function verifyUserCredentials(
     console.error("[Database] Failed to verify credentials:", error);
     return { success: false, error: "로그인 중 오류가 발생했습니다." };
   }
+}
+
+// Password Reset Functions
+
+export async function storePasswordResetToken(userId: number, token: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  const expiry = new Date();
+  expiry.setHours(expiry.getHours() + 1); // Token expires in 1 hour
+
+  await db.update(users).set({
+    passwordResetToken: token,
+    passwordResetExpiry: expiry,
+  }).where(eq(users.id, userId));
+}
+
+export async function updateUserPassword(
+  email: string,
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  const db = await getDb();
+  if (!db) {
+    return { success: false, error: "데이터베이스에 연결할 수 없습니다." };
+  }
+
+  try {
+    const user = await getUserByEmail(email);
+    if (!user) {
+      return { success: false, error: "사용자를 찾을 수 없습니다." };
+    }
+
+    const passwordHash = hashPassword(newPassword);
+
+    await db.update(users).set({
+      passwordHash,
+      passwordResetToken: null,
+      passwordResetExpiry: null,
+    }).where(eq(users.id, user.id));
+
+    return { success: true };
+  } catch (error) {
+    console.error("[Database] Failed to update password:", error);
+    return { success: false, error: "비밀번호 변경 중 오류가 발생했습니다." };
+  }
+}
+
+// Google OAuth Functions
+
+export async function getUserByGoogleId(googleId: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.googleId, googleId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createUserWithGoogle(
+  googleId: string,
+  email: string,
+  name: string
+): Promise<{ success: boolean; error?: string; userId?: number }> {
+  const db = await getDb();
+  if (!db) {
+    return { success: false, error: "데이터베이스에 연결할 수 없습니다." };
+  }
+
+  try {
+    // Generate unique openId for Google users
+    const openId = `google_${crypto.randomBytes(16).toString("hex")}`;
+
+    // Insert user
+    const result = await db.insert(users).values({
+      openId,
+      email,
+      name,
+      googleId,
+      loginMethod: "google",
+      emailVerified: true, // Google accounts are pre-verified
+      lastSignedIn: new Date(),
+    });
+
+    return { success: true, userId: result[0].insertId };
+  } catch (error) {
+    console.error("[Database] Failed to create Google user:", error);
+    return { success: false, error: "회원가입 중 오류가 발생했습니다." };
+  }
+}
+
+export async function linkGoogleAccount(userId: number, googleId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(users).set({
+    googleId,
+    loginMethod: "google",
+    lastSignedIn: new Date(),
+  }).where(eq(users.id, userId));
 }
 
 // Riding Records Functions
