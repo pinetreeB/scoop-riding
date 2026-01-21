@@ -6,6 +6,7 @@ import {
   RefreshControl,
   Pressable,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
@@ -15,17 +16,20 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import {
   getRidingRecords,
+  getRidingRecordWithGps,
   deleteRidingRecord,
   formatDuration,
   formatDistance,
   type RidingRecord,
 } from "@/lib/riding-store";
+import { saveAndShareGpx, TrackData } from "@/lib/gps-utils";
 import { useFocusEffect } from "expo-router";
 
 export default function HistoryScreen() {
   const colors = useColors();
   const [records, setRecords] = useState<RidingRecord[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [exportingId, setExportingId] = useState<string | null>(null);
 
   const loadRecords = useCallback(async () => {
     const data = await getRidingRecords();
@@ -62,6 +66,56 @@ export default function HistoryScreen() {
     ]);
   };
 
+  const handleExportGpx = async (record: RidingRecord) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    setExportingId(record.id);
+
+    try {
+      // Load full record with GPS data
+      const fullRecord = await getRidingRecordWithGps(record.id);
+
+      if (!fullRecord || !fullRecord.gpsPoints || fullRecord.gpsPoints.length === 0) {
+        Alert.alert(
+          "GPS 데이터 없음",
+          "이 주행 기록에는 GPS 경로 데이터가 없습니다."
+        );
+        setExportingId(null);
+        return;
+      }
+
+      // Create track data for GPX
+      const trackData: TrackData = {
+        points: fullRecord.gpsPoints,
+        startTime: new Date(fullRecord.startTime),
+        endTime: new Date(fullRecord.endTime),
+        name: `SCOOP 주행 - ${fullRecord.date}`,
+      };
+
+      // Generate filename
+      const dateStr = fullRecord.date.replace(/\./g, "-").replace(/\s/g, "_");
+      const filename = `scoop_ride_${dateStr}_${record.id.slice(0, 6)}`;
+
+      // Save and share GPX
+      const success = await saveAndShareGpx(trackData, filename);
+
+      if (success) {
+        if (Platform.OS !== "web") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      } else {
+        Alert.alert("내보내기 실패", "GPX 파일을 저장하는 중 오류가 발생했습니다.");
+      }
+    } catch (error) {
+      console.error("GPX export error:", error);
+      Alert.alert("오류", "GPX 파일을 내보내는 중 오류가 발생했습니다.");
+    } finally {
+      setExportingId(null);
+    }
+  };
+
   const renderItem = ({ item }: { item: RidingRecord }) => (
     <View className="bg-surface rounded-xl p-4 mb-3 mx-4">
       <View className="flex-row justify-between items-start mb-3">
@@ -81,13 +135,31 @@ export default function HistoryScreen() {
             })}
           </Text>
         </View>
-        <Pressable
-          onPress={() => handleDelete(item.id)}
-          style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
-          className="p-1"
-        >
-          <MaterialIcons name="delete-outline" size={20} color={colors.muted} />
-        </Pressable>
+        <View className="flex-row items-center">
+          {/* GPX Export Button */}
+          <Pressable
+            onPress={() => handleExportGpx(item)}
+            disabled={exportingId === item.id}
+            style={({ pressed }) => [
+              { opacity: pressed || exportingId === item.id ? 0.5 : 1 },
+            ]}
+            className="p-2 mr-1"
+          >
+            {exportingId === item.id ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <MaterialIcons name="file-download" size={22} color={colors.primary} />
+            )}
+          </Pressable>
+          {/* Delete Button */}
+          <Pressable
+            onPress={() => handleDelete(item.id)}
+            style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
+            className="p-1"
+          >
+            <MaterialIcons name="delete-outline" size={20} color={colors.muted} />
+          </Pressable>
+        </View>
       </View>
 
       <View className="flex-row justify-between">
@@ -118,6 +190,34 @@ export default function HistoryScreen() {
             {item.maxSpeed.toFixed(1)} km/h
           </Text>
         </View>
+        <View className="flex-1 items-end">
+          <Pressable
+            onPress={() => handleExportGpx(item)}
+            disabled={exportingId === item.id}
+            style={({ pressed }) => [
+              {
+                backgroundColor: colors.primary,
+                opacity: pressed || exportingId === item.id ? 0.7 : 1,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 16,
+                flexDirection: "row",
+                alignItems: "center",
+              },
+            ]}
+          >
+            {exportingId === item.id ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <MaterialIcons name="download" size={16} color="#FFFFFF" />
+                <Text style={{ color: "#FFFFFF", fontSize: 12, marginLeft: 4, fontWeight: "600" }}>
+                  GPX
+                </Text>
+              </>
+            )}
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -140,7 +240,7 @@ export default function HistoryScreen() {
       <View className="px-4 py-3 border-b border-border">
         <Text className="text-2xl font-bold text-foreground">주행 기록</Text>
         <Text className="text-sm text-muted mt-1">
-          총 {records.length}개의 기록
+          총 {records.length}개의 기록 • GPX 파일로 내보내기 가능
         </Text>
       </View>
 

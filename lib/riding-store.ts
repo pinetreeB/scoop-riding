@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { GpsPoint } from "./gps-utils";
 
 export interface RidingRecord {
   id: string;
@@ -9,6 +10,7 @@ export interface RidingRecord {
   maxSpeed: number; // km/h
   startTime: string;
   endTime: string;
+  gpsPoints?: GpsPoint[]; // GPS track points for GPX export
 }
 
 export interface RidingStats {
@@ -19,11 +21,24 @@ export interface RidingStats {
 }
 
 const STORAGE_KEY = "scoop_riding_records";
+const GPS_STORAGE_PREFIX = "scoop_gps_track_";
 
 export async function saveRidingRecord(record: RidingRecord): Promise<void> {
   try {
+    // Save GPS points separately to avoid storage limits
+    if (record.gpsPoints && record.gpsPoints.length > 0) {
+      await AsyncStorage.setItem(
+        `${GPS_STORAGE_PREFIX}${record.id}`,
+        JSON.stringify(record.gpsPoints)
+      );
+    }
+
+    // Save record without GPS points in main storage
+    const recordWithoutGps = { ...record };
+    delete recordWithoutGps.gpsPoints;
+
     const existing = await getRidingRecords();
-    const updated = [record, ...existing];
+    const updated = [recordWithoutGps, ...existing];
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch (error) {
     console.error("Failed to save riding record:", error);
@@ -40,11 +55,34 @@ export async function getRidingRecords(): Promise<RidingRecord[]> {
   }
 }
 
+export async function getRidingRecordWithGps(id: string): Promise<RidingRecord | null> {
+  try {
+    const records = await getRidingRecords();
+    const record = records.find((r) => r.id === id);
+    
+    if (!record) return null;
+
+    // Load GPS points
+    const gpsData = await AsyncStorage.getItem(`${GPS_STORAGE_PREFIX}${id}`);
+    if (gpsData) {
+      record.gpsPoints = JSON.parse(gpsData);
+    }
+
+    return record;
+  } catch (error) {
+    console.error("Failed to get riding record with GPS:", error);
+    return null;
+  }
+}
+
 export async function deleteRidingRecord(id: string): Promise<void> {
   try {
     const existing = await getRidingRecords();
     const updated = existing.filter((r) => r.id !== id);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    
+    // Also delete GPS data
+    await AsyncStorage.removeItem(`${GPS_STORAGE_PREFIX}${id}`);
   } catch (error) {
     console.error("Failed to delete riding record:", error);
   }

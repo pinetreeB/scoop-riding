@@ -3,6 +3,7 @@ import { Text, View, Pressable, Alert, BackHandler, Platform } from "react-nativ
 import { useRouter } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
+import * as Location from "expo-location";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 
 import { ScreenContainer } from "@/components/screen-container";
@@ -12,21 +13,35 @@ import {
   formatDuration,
   generateId,
 } from "@/lib/riding-store";
+import {
+  GpsPoint,
+  requestLocationPermission,
+  isLocationEnabled,
+  calculateDistance,
+  msToKmh,
+  calculateTotalDistance,
+  calculateAverageSpeed,
+  getMaxSpeed,
+} from "@/lib/gps-utils";
 
 export default function RidingScreen() {
   const router = useRouter();
   const colors = useColors();
 
-  const [isRunning, setIsRunning] = useState(true);
+  const [isRunning, setIsRunning] = useState(false);
   const [duration, setDuration] = useState(0);
   const [distance, setDistance] = useState(0);
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [maxSpeed, setMaxSpeed] = useState(0);
   const [avgSpeed, setAvgSpeed] = useState(0);
+  const [gpsStatus, setGpsStatus] = useState<"waiting" | "active" | "error">("waiting");
+  const [accuracy, setAccuracy] = useState<number | null>(null);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const startTimeRef = useRef<Date>(new Date());
-  const speedHistoryRef = useRef<number[]>([]);
+  const gpsPointsRef = useRef<GpsPoint[]>([]);
+  const lastLocationRef = useRef<Location.LocationObject | null>(null);
 
   // Keep screen awake on native platforms
   useEffect(() => {
@@ -38,33 +53,134 @@ export default function RidingScreen() {
     }
   }, []);
 
-  // Simulate speed changes for demo (in real app, use GPS)
-  const simulateSpeed = useCallback(() => {
-    const baseSpeed = 15 + Math.random() * 10;
-    const variation = (Math.random() - 0.5) * 5;
-    return Math.max(0, baseSpeed + variation);
+  // Initialize GPS
+  useEffect(() => {
+    initializeGps();
+
+    return () => {
+      stopLocationTracking();
+    };
   }, []);
 
+  const initializeGps = async () => {
+    try {
+      // Check if location services are enabled
+      const locationEnabled = await isLocationEnabled();
+      if (!locationEnabled) {
+        setGpsStatus("error");
+        Alert.alert(
+          "위치 서비스 비활성화",
+          "GPS를 사용하려면 기기의 위치 서비스를 활성화해주세요.",
+          [{ text: "확인", onPress: () => router.back() }]
+        );
+        return;
+      }
+
+      // Request permission
+      const hasPermission = await requestLocationPermission();
+      if (!hasPermission) {
+        setGpsStatus("error");
+        Alert.alert(
+          "위치 권한 필요",
+          "주행 기록을 위해 위치 권한이 필요합니다.",
+          [{ text: "확인", onPress: () => router.back() }]
+        );
+        return;
+      }
+
+      // Start location tracking
+      await startLocationTracking();
+      setGpsStatus("active");
+      setIsRunning(true);
+      startTimeRef.current = new Date();
+    } catch (error) {
+      console.error("GPS initialization error:", error);
+      setGpsStatus("error");
+      Alert.alert("GPS 오류", "GPS를 초기화하는 중 오류가 발생했습니다.");
+    }
+  };
+
+  const startLocationTracking = async () => {
+    try {
+      locationSubscriptionRef.current = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 1000, // Update every 1 second
+          distanceInterval: 1, // Update every 1 meter
+        },
+        (location) => {
+          handleLocationUpdate(location);
+        }
+      );
+    } catch (error) {
+      console.error("Error starting location tracking:", error);
+      setGpsStatus("error");
+    }
+  };
+
+  const stopLocationTracking = () => {
+    if (locationSubscriptionRef.current) {
+      locationSubscriptionRef.current.remove();
+      locationSubscriptionRef.current = null;
+    }
+  };
+
+  const handleLocationUpdate = (location: Location.LocationObject) => {
+    if (!isRunning) return;
+
+    const { latitude, longitude, altitude, speed, accuracy: locAccuracy } = location.coords;
+    const timestamp = location.timestamp;
+
+    // Update accuracy indicator
+    setAccuracy(locAccuracy);
+
+    // Create GPS point
+    const gpsPoint: GpsPoint = {
+      latitude,
+      longitude,
+      altitude: altitude ?? null,
+      timestamp,
+      speed: speed ?? null,
+      accuracy: locAccuracy ?? null,
+    };
+
+    // Add to track
+    gpsPointsRef.current.push(gpsPoint);
+
+    // Update current speed (convert m/s to km/h)
+    if (speed !== null && speed >= 0) {
+      const speedKmh = msToKmh(speed);
+      setCurrentSpeed(speedKmh);
+      setMaxSpeed((prev) => Math.max(prev, speedKmh));
+    }
+
+    // Calculate distance from last point
+    if (lastLocationRef.current) {
+      const lastCoords = lastLocationRef.current.coords;
+      const dist = calculateDistance(
+        lastCoords.latitude,
+        lastCoords.longitude,
+        latitude,
+        longitude
+      );
+      // Only add distance if accuracy is reasonable (< 20m) and distance is reasonable
+      if ((locAccuracy === null || locAccuracy < 20) && dist < 100) {
+        setDistance((prev) => prev + dist);
+      }
+    }
+
+    lastLocationRef.current = location;
+
+    // Update average speed
+    const avgSpd = calculateAverageSpeed(gpsPointsRef.current);
+    setAvgSpeed(avgSpd);
+  };
+
+  // Timer for duration
   useEffect(() => {
     if (isRunning) {
       intervalRef.current = setInterval(() => {
         setDuration((prev) => prev + 1);
-
-        // Simulate speed and distance
-        const speed = simulateSpeed();
-        setCurrentSpeed(speed);
-        speedHistoryRef.current.push(speed);
-
-        setMaxSpeed((prev) => Math.max(prev, speed));
-
-        // Calculate average speed
-        const avg =
-          speedHistoryRef.current.reduce((a, b) => a + b, 0) /
-          speedHistoryRef.current.length;
-        setAvgSpeed(avg);
-
-        // Calculate distance (speed in km/h, time in seconds)
-        setDistance((prev) => prev + (speed * 1000) / 3600);
       }, 1000);
     } else {
       if (intervalRef.current) {
@@ -77,7 +193,7 @@ export default function RidingScreen() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, simulateSpeed]);
+  }, [isRunning]);
 
   // Handle back button
   useEffect(() => {
@@ -105,6 +221,7 @@ export default function RidingScreen() {
     }
 
     if (duration < 5) {
+      stopLocationTracking();
       router.back();
       return;
     }
@@ -120,15 +237,23 @@ export default function RidingScreen() {
         {
           text: "저장",
           onPress: async () => {
+            stopLocationTracking();
+
+            // Calculate final stats from GPS data
+            const finalDistance = calculateTotalDistance(gpsPointsRef.current);
+            const finalAvgSpeed = calculateAverageSpeed(gpsPointsRef.current);
+            const finalMaxSpeed = getMaxSpeed(gpsPointsRef.current);
+
             const record = {
               id: generateId(),
               date: new Date().toLocaleDateString("ko-KR"),
               duration,
-              distance,
-              avgSpeed,
-              maxSpeed,
+              distance: finalDistance > 0 ? finalDistance : distance,
+              avgSpeed: finalAvgSpeed > 0 ? finalAvgSpeed : avgSpeed,
+              maxSpeed: finalMaxSpeed > 0 ? finalMaxSpeed : maxSpeed,
               startTime: startTimeRef.current.toISOString(),
               endTime: new Date().toISOString(),
+              gpsPoints: gpsPointsRef.current,
             };
             await saveRidingRecord(record);
             router.back();
@@ -138,6 +263,28 @@ export default function RidingScreen() {
     );
   };
 
+  const getGpsStatusColor = () => {
+    switch (gpsStatus) {
+      case "active":
+        return accuracy !== null && accuracy < 10 ? "#4CAF50" : "#FFC107";
+      case "error":
+        return "#F44336";
+      default:
+        return "#9E9E9E";
+    }
+  };
+
+  const getGpsStatusText = () => {
+    switch (gpsStatus) {
+      case "active":
+        return accuracy !== null ? `GPS ${accuracy.toFixed(0)}m` : "GPS 활성";
+      case "error":
+        return "GPS 오류";
+      default:
+        return "GPS 대기중";
+    }
+  };
+
   return (
     <ScreenContainer
       containerClassName="bg-[#1A1A1A]"
@@ -145,7 +292,7 @@ export default function RidingScreen() {
     >
       <View className="flex-1 p-4">
         {/* Header */}
-        <View className="flex-row justify-between items-center mb-8">
+        <View className="flex-row justify-between items-center mb-4">
           <Pressable
             onPress={handleStop}
             style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
@@ -153,28 +300,34 @@ export default function RidingScreen() {
           >
             <MaterialIcons name="close" size={28} color="#FFFFFF" />
           </Pressable>
-          <Text className="text-white text-lg font-semibold">주행 중</Text>
+          <View className="flex-row items-center">
+            <View
+              className="w-3 h-3 rounded-full mr-2"
+              style={{ backgroundColor: getGpsStatusColor() }}
+            />
+            <Text className="text-gray-400 text-sm">{getGpsStatusText()}</Text>
+          </View>
           <View className="w-10" />
         </View>
 
         {/* Speed Display */}
-        <View className="items-center mb-8">
-          <Text className="text-7xl font-bold text-white">
+        <View className="items-center mb-6">
+          <Text className="text-8xl font-bold text-white">
             {currentSpeed.toFixed(1)}
           </Text>
-          <Text className="text-lg text-gray-400 mt-1">km/h</Text>
+          <Text className="text-xl text-gray-400 mt-1">km/h</Text>
         </View>
 
         {/* Time Display */}
-        <View className="items-center mb-8">
-          <Text className="text-4xl font-bold text-white">
+        <View className="items-center mb-6">
+          <Text className="text-5xl font-bold text-white">
             {formatDuration(duration)}
           </Text>
           <Text className="text-sm text-gray-400 mt-1">주행 시간</Text>
         </View>
 
         {/* Stats Row */}
-        <View className="flex-row justify-around mb-8 bg-[#2A2A2A] rounded-2xl p-4">
+        <View className="flex-row justify-around mb-6 bg-[#2A2A2A] rounded-2xl p-4">
           <View className="items-center">
             <Text className="text-2xl font-bold text-white">
               {(distance / 1000).toFixed(2)}
@@ -195,6 +348,13 @@ export default function RidingScreen() {
             </Text>
             <Text className="text-xs text-gray-400 mt-1">최고 (km/h)</Text>
           </View>
+        </View>
+
+        {/* GPS Points Counter */}
+        <View className="items-center mb-4">
+          <Text className="text-gray-500 text-xs">
+            GPS 포인트: {gpsPointsRef.current.length}개 기록됨
+          </Text>
         </View>
 
         {/* Control Buttons */}

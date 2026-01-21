@@ -51,7 +51,9 @@ const config: ExpoConfig = {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
     "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "주행 중 속도와 거리를 측정하기 위해 위치 정보가 필요합니다.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "백그라운드에서도 주행 기록을 위해 위치 정보가 필요합니다."
       }
   },
   android: {
@@ -64,7 +66,12 @@ const config: ExpoConfig = {
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
-    permissions: ["POST_NOTIFICATIONS"],
+    permissions: [
+      "POST_NOTIFICATIONS",
+      "ACCESS_FINE_LOCATION",
+      "ACCESS_COARSE_LOCATION",
+      "ACCESS_BACKGROUND_LOCATION"
+    ],
     intentFilters: [
       {
         action: "VIEW",
@@ -110,6 +117,12 @@ const config: ExpoConfig = {
           backgroundColor: "#000000",
         },
       },
+    ],
+    [
+      "expo-location",
+      {
+        "locationAlwaysAndWhenInUsePermission": "주행 중 속도와 거리를 측정하기 위해 위치 정보가 필요합니다."
+      }
     ],
     [
       "expo-build-properties",
