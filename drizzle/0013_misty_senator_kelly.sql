@@ -1,0 +1,1 @@
+ALTER TABLE `friendRequests` ADD `message` text;

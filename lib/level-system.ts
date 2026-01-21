@@ -65,13 +65,7 @@ export function getLevelColor(level: number): string {
   return levelDef?.color || "#9CA3AF";
 }
 
-// Format distance for display
+// Format distance for display (숫자 형식: 5,000km)
 export function formatLevelDistance(distanceKm: number): string {
-  if (distanceKm >= 10000) {
-    return `${(distanceKm / 10000).toFixed(1)}만km`;
-  }
-  if (distanceKm >= 1000) {
-    return `${(distanceKm / 1000).toFixed(1)}천km`;
-  }
-  return `${distanceKm.toFixed(0)}km`;
+  return `${distanceKm.toLocaleString()}km`;
 }

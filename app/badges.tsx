@@ -15,7 +15,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 
-// Badge definitions with icons and descriptions
+// Badge definitions with icons and descriptions (10x increased requirements)
 const BADGE_DEFINITIONS: Record<string, { name: string; description: string; icon: string; color: string }> = {
   first_ride: {
     name: "첫 주행",
@@ -23,33 +23,33 @@ const BADGE_DEFINITIONS: Record<string, { name: string; description: string; ico
     icon: "directions-bike",
     color: "#3B82F6",
   },
-  distance_10km: {
-    name: "10km 달성",
-    description: "총 주행거리 10km를 달성했습니다",
-    icon: "speed",
-    color: "#10B981",
-  },
-  distance_50km: {
-    name: "50km 달성",
-    description: "총 주행거리 50km를 달성했습니다",
-    icon: "speed",
-    color: "#22C55E",
-  },
   distance_100km: {
     name: "100km 달성",
     description: "총 주행거리 100km를 달성했습니다",
-    icon: "emoji-events",
-    color: "#F59E0B",
+    icon: "speed",
+    color: "#10B981",
   },
   distance_500km: {
     name: "500km 달성",
     description: "총 주행거리 500km를 달성했습니다",
-    icon: "emoji-events",
-    color: "#EF4444",
+    icon: "speed",
+    color: "#22C55E",
   },
   distance_1000km: {
     name: "1,000km 달성",
     description: "총 주행거리 1,000km를 달성했습니다",
+    icon: "emoji-events",
+    color: "#F59E0B",
+  },
+  distance_5000km: {
+    name: "5,000km 달성",
+    description: "총 주행거리 5,000km를 달성했습니다",
+    icon: "emoji-events",
+    color: "#EF4444",
+  },
+  distance_10000km: {
+    name: "10,000km 달성",
+    description: "총 주행거리 10,000km를 달성했습니다",
     icon: "military-tech",
     color: "#8B5CF6",
   },
@@ -71,64 +71,16 @@ const BADGE_DEFINITIONS: Record<string, { name: string; description: string; ico
     icon: "star",
     color: "#F59E0B",
   },
-  first_challenge: {
-    name: "첫 챌린지",
-    description: "첫 번째 챌린지에 참여했습니다",
-    icon: "flag",
+  rides_500: {
+    name: "500회 주행",
+    description: "총 500회 주행을 완료했습니다",
+    icon: "star",
     color: "#EC4899",
   },
-  challenge_complete: {
-    name: "챌린지 완료",
-    description: "챌린지를 완료했습니다",
-    icon: "check-circle",
-    color: "#22C55E",
-  },
-  first_friend: {
-    name: "첫 친구",
-    description: "첫 번째 친구를 추가했습니다",
-    icon: "people",
-    color: "#6366F1",
-  },
-  social_butterfly: {
-    name: "소셜 나비",
-    description: "10명 이상의 친구를 추가했습니다",
-    icon: "groups",
-    color: "#A855F7",
-  },
-  first_post: {
-    name: "첫 게시글",
-    description: "커뮤니티에 첫 글을 작성했습니다",
-    icon: "edit",
-    color: "#F97316",
-  },
-  popular_post: {
-    name: "인기 게시글",
-    description: "게시글이 10개 이상의 좋아요를 받았습니다",
-    icon: "favorite",
-    color: "#EF4444",
-  },
-  speed_demon: {
-    name: "스피드 데몬",
-    description: "최고 속도 30km/h 이상을 기록했습니다",
-    icon: "bolt",
-    color: "#FBBF24",
-  },
-  early_bird: {
-    name: "얼리버드",
-    description: "오전 6시 이전에 주행을 시작했습니다",
-    icon: "wb-sunny",
-    color: "#FCD34D",
-  },
-  night_rider: {
-    name: "나이트 라이더",
-    description: "밤 10시 이후에 주행을 완료했습니다",
-    icon: "nightlight",
-    color: "#6366F1",
-  },
-  weekly_champion: {
-    name: "주간 챔피언",
-    description: "주간 랭킹 1위를 달성했습니다",
-    icon: "emoji-events",
+  rides_1000: {
+    name: "1,000회 주행",
+    description: "총 1,000회 주행을 완료했습니다",
+    icon: "military-tech",
     color: "#FFD700",
   },
 };

@@ -732,6 +732,7 @@ export interface FriendRequestWithUser extends FriendRequest {
   senderEmail: string | null;
   receiverName: string | null;
   receiverEmail: string | null;
+  message: string | null;
 }
 
 // Search users by name or email
@@ -813,7 +814,7 @@ export async function searchUsers(
 }
 
 // Send friend request
-export async function sendFriendRequest(senderId: number, receiverId: number): Promise<number | null> {
+export async function sendFriendRequest(senderId: number, receiverId: number, message?: string): Promise<number | null> {
   const db = await getDb();
   if (!db) return null;
 
@@ -845,6 +846,7 @@ export async function sendFriendRequest(senderId: number, receiverId: number): P
   const result = await db.insert(friendRequests).values({
     senderId,
     receiverId,
+    message: message || null,
     status: "pending",
   });
 
@@ -861,6 +863,7 @@ export async function getPendingFriendRequests(userId: number): Promise<FriendRe
       id: friendRequests.id,
       senderId: friendRequests.senderId,
       receiverId: friendRequests.receiverId,
+      message: friendRequests.message,
       status: friendRequests.status,
       createdAt: friendRequests.createdAt,
       updatedAt: friendRequests.updatedAt,
@@ -894,6 +897,7 @@ export async function getSentFriendRequests(userId: number): Promise<FriendReque
       id: friendRequests.id,
       senderId: friendRequests.senderId,
       receiverId: friendRequests.receiverId,
+      message: friendRequests.message,
       status: friendRequests.status,
       createdAt: friendRequests.createdAt,
       updatedAt: friendRequests.updatedAt,
@@ -1682,6 +1686,7 @@ export async function stopLiveLocation(userId: number): Promise<void> {
 export async function getFriendsLiveLocations(userId: number): Promise<{
   userId: number;
   name: string | null;
+  profileImageUrl: string | null;
   latitude: number;
   longitude: number;
   heading: number | null;
@@ -1719,6 +1724,7 @@ export async function getFriendsLiveLocations(userId: number): Promise<{
       speed: liveLocations.speed,
       updatedAt: liveLocations.updatedAt,
       name: users.name,
+      profileImageUrl: users.profileImageUrl,
     })
     .from(liveLocations)
     .leftJoin(users, eq(liveLocations.userId, users.id))
@@ -1730,6 +1736,7 @@ export async function getFriendsLiveLocations(userId: number): Promise<{
   return locations.map(loc => ({
     userId: loc.userId,
     name: loc.name,
+    profileImageUrl: loc.profileImageUrl,
     latitude: parseFloat(loc.latitude),
     longitude: parseFloat(loc.longitude),
     heading: loc.heading ? parseFloat(loc.heading) : null,

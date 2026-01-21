@@ -8,6 +8,7 @@ import {
   Dimensions,
   RefreshControl,
   FlatList,
+  Image,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -23,6 +24,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 interface FriendLocation {
   userId: number;
   name: string | null;
+  profileImageUrl: string | null;
   latitude: number;
   longitude: number;
   heading: number | null;
@@ -107,15 +109,22 @@ export default function FriendsMapScreen() {
         className="bg-surface rounded-2xl p-4 mb-3 border border-border"
       >
         <View className="flex-row items-center">
-          {/* Avatar */}
-          <View
-            className="w-12 h-12 rounded-full items-center justify-center mr-3"
-            style={{ backgroundColor: colors.primary }}
-          >
-            <Text className="text-white font-bold text-lg">
-              {(item.name || "?")[0].toUpperCase()}
-            </Text>
-          </View>
+          {/* Avatar with profile image */}
+          {item.profileImageUrl ? (
+            <Image
+              source={{ uri: item.profileImageUrl }}
+              style={{ width: 48, height: 48, borderRadius: 24, marginRight: 12 }}
+            />
+          ) : (
+            <View
+              className="w-12 h-12 rounded-full items-center justify-center mr-3"
+              style={{ backgroundColor: colors.primary }}
+            >
+              <Text className="text-white font-bold text-lg">
+                {(item.name || "?")[0].toUpperCase()}
+              </Text>
+            </View>
+          )}
 
           {/* Info */}
           <View className="flex-1">

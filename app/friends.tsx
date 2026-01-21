@@ -273,37 +273,45 @@ export default function FriendsScreen() {
               pendingRequestsQuery.data?.map((request) => (
                 <View
                   key={request.id}
-                  className="flex-row items-center bg-surface rounded-xl p-4 mb-3"
+                  className="bg-surface rounded-xl p-4 mb-3"
                 >
-                  <View className="w-12 h-12 rounded-full bg-primary/20 items-center justify-center mr-3">
-                    <MaterialIcons name="person" size={24} color={colors.primary} />
+                  <View className="flex-row items-center">
+                    <View className="w-12 h-12 rounded-full bg-primary/20 items-center justify-center mr-3">
+                      <MaterialIcons name="person" size={24} color={colors.primary} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-foreground font-medium">
+                        {request.senderName || request.senderEmail?.split("@")[0] || "익명"}
+                      </Text>
+                      <Text className="text-muted text-xs">
+                        {new Date(request.createdAt).toLocaleDateString("ko-KR")}
+                      </Text>
+                    </View>
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-foreground font-medium">
-                      {request.senderName || request.senderEmail?.split("@")[0] || "익명"}
-                    </Text>
-                    <Text className="text-muted text-xs">
-                      {new Date(request.createdAt).toLocaleDateString("ko-KR")}
-                    </Text>
-                  </View>
-                  <View className="flex-row gap-2">
-                    <Pressable
-                      onPress={() => handleAcceptRequest(request.id)}
-                      style={({ pressed }) => [
-                        { backgroundColor: colors.success, opacity: pressed ? 0.8 : 1 },
-                      ]}
-                      className="px-3 py-2 rounded-lg"
-                    >
-                      <Text className="text-white font-medium">수락</Text>
-                    </Pressable>
+                  {/* Message from sender */}
+                  {request.message && (
+                    <View className="mt-3 bg-background rounded-lg p-3">
+                      <Text className="text-foreground text-sm">"{request.message}"</Text>
+                    </View>
+                  )}
+                  <View className="flex-row gap-2 mt-3 justify-end">
                     <Pressable
                       onPress={() => handleRejectRequest(request.id)}
                       style={({ pressed }) => [
                         { backgroundColor: colors.error, opacity: pressed ? 0.8 : 1 },
                       ]}
-                      className="px-3 py-2 rounded-lg"
+                      className="px-4 py-2 rounded-lg"
                     >
                       <Text className="text-white font-medium">거절</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleAcceptRequest(request.id)}
+                      style={({ pressed }) => [
+                        { backgroundColor: colors.success, opacity: pressed ? 0.8 : 1 },
+                      ]}
+                      className="px-4 py-2 rounded-lg"
+                    >
+                      <Text className="text-white font-medium">수락</Text>
                     </Pressable>
                   </View>
                 </View>

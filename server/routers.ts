@@ -550,9 +550,9 @@ export const appRouter = router({
 
     // Send friend request
     sendRequest: protectedProcedure
-      .input(z.object({ receiverId: z.number() }))
+      .input(z.object({ receiverId: z.number(), message: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
-        const id = await db.sendFriendRequest(ctx.user.id, input.receiverId);
+        const id = await db.sendFriendRequest(ctx.user.id, input.receiverId, input.message);
         return { success: id !== null, id };
       }),
 

@@ -8,6 +8,8 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  Modal,
+  TextInput,
 } from "react-native";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -25,6 +27,8 @@ export default function UserProfileScreen() {
   const { isAuthenticated, user: currentUser } = useAuth();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [friendRequestMessage, setFriendRequestMessage] = useState("");
 
   // Support both 'id' and 'userId' parameters for compatibility
   const userId = parseInt(params.userId || params.id || "0");
@@ -125,7 +129,19 @@ export default function UserProfileScreen() {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    sendFriendRequestMutation.mutate({ receiverId: userId });
+    setShowMessageModal(true);
+  };
+
+  const handleConfirmFriendRequest = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    sendFriendRequestMutation.mutate({ 
+      receiverId: userId, 
+      message: friendRequestMessage.trim() || undefined 
+    });
+    setShowMessageModal(false);
+    setFriendRequestMessage("");
   };
 
   const { name, email } = params;
@@ -275,6 +291,78 @@ export default function UserProfileScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Friend Request Message Modal */}
+      <Modal
+        visible={showMessageModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMessageModal(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black/50 items-center justify-center px-6"
+          onPress={() => setShowMessageModal(false)}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-surface rounded-2xl p-6 w-full max-w-sm"
+          >
+            <View className="flex-row items-center mb-4">
+              <MaterialIcons name="person-add" size={28} color={colors.primary} />
+              <Text className="text-xl font-bold text-foreground ml-2">친구 요청</Text>
+            </View>
+            
+            <Text className="text-foreground mb-4">
+              {getUserName()}님에게 친구 요청을 보냅니다.
+              메시지를 함께 보낼 수 있습니다.
+            </Text>
+
+            <TextInput
+              value={friendRequestMessage}
+              onChangeText={setFriendRequestMessage}
+              placeholder="메시지를 입력하세요 (선택사항)"
+              placeholderTextColor={colors.muted}
+              multiline
+              numberOfLines={3}
+              maxLength={200}
+              className="bg-background rounded-xl p-4 mb-4 text-foreground"
+              style={{ 
+                color: colors.foreground, 
+                minHeight: 80,
+                textAlignVertical: 'top',
+              }}
+            />
+
+            <View className="flex-row justify-end gap-3">
+              <Pressable
+                onPress={() => {
+                  setShowMessageModal(false);
+                  setFriendRequestMessage("");
+                }}
+                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                className="px-4 py-2 rounded-lg"
+              >
+                <Text className="text-muted font-medium">취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleConfirmFriendRequest}
+                disabled={sendFriendRequestMutation.isPending}
+                style={({ pressed }) => [{ 
+                  opacity: pressed || sendFriendRequestMutation.isPending ? 0.7 : 1,
+                  backgroundColor: colors.primary,
+                }]}
+                className="px-4 py-2 rounded-lg"
+              >
+                {sendFriendRequestMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text className="text-white font-medium">요청 보내기</Text>
+                )}
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }

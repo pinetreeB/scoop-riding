@@ -9,7 +9,11 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  Image,
+  Dimensions,
 } from "react-native";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
@@ -37,6 +41,7 @@ export default function PostDetailScreen() {
   const [commentText, setCommentText] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [attachedRide, setAttachedRide] = useState<RidingRecord | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: number; name: string } | null>(null);
 
   const trpcUtils = trpc.useUtils();
 
@@ -110,10 +115,23 @@ export default function PostDetailScreen() {
       await createCommentMutation.mutateAsync({
         postId: parseInt(id),
         content: commentText.trim(),
+        parentId: replyingTo?.id,
       });
+      setReplyingTo(null);
     } finally {
       setIsSubmittingComment(false);
     }
+  };
+
+  const handleReply = (commentId: number, authorName: string) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setReplyingTo({ id: commentId, name: authorName });
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
   };
 
   const handleDeletePost = () => {
@@ -262,6 +280,57 @@ export default function PostDetailScreen() {
             {/* Content */}
             <Text className="text-foreground text-base leading-6 mb-4">{post.content}</Text>
 
+            {/* Images */}
+            {(() => {
+              const images = post.imageUrls ? (() => {
+                try {
+                  return JSON.parse(post.imageUrls);
+                } catch {
+                  return [];
+                }
+              })() : [];
+              
+              if (images.length === 0) return null;
+              
+              return (
+                <View className="mb-4 -mx-5">
+                  {images.length === 1 ? (
+                    <Image
+                      source={{ uri: images[0] }}
+                      style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.75 }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <ScrollView
+                      horizontal
+                      pagingEnabled
+                      showsHorizontalScrollIndicator={false}
+                    >
+                      {images.map((url: string, index: number) => (
+                        <Image
+                          key={index}
+                          source={{ uri: url }}
+                          style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.75 }}
+                          resizeMode="cover"
+                        />
+                      ))}
+                    </ScrollView>
+                  )}
+                  {images.length > 1 && (
+                    <View className="flex-row justify-center mt-2">
+                      {images.map((_: string, index: number) => (
+                        <View
+                          key={index}
+                          className="w-2 h-2 rounded-full mx-1"
+                          style={{ backgroundColor: index === 0 ? colors.primary : colors.border }}
+                        />
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })()}
+
             {/* Attached Ride with Route Preview */}
             {attachedRide && (
               <Pressable
@@ -332,35 +401,84 @@ export default function PostDetailScreen() {
                 <Text className="text-muted mt-2">아직 댓글이 없습니다</Text>
               </View>
             ) : (
-              commentsQuery.data?.map((comment: any) => (
-                <View key={comment.id} className="mb-4">
-                  <View className="flex-row items-start">
-                    <View className="w-8 h-8 rounded-full bg-surface items-center justify-center mr-2">
-                      <MaterialIcons name="person" size={18} color={colors.muted} />
-                    </View>
-                    <View className="flex-1">
-                      <View className="flex-row items-center">
-                        <Text className="text-foreground font-medium text-sm">
-                          {getAuthorName(comment)}
-                        </Text>
-                        <Text className="text-muted text-xs ml-2">
-                          {formatDate(comment.createdAt)}
-                        </Text>
-                        {user?.id === comment.userId && (
-                          <Pressable
-                            onPress={() => handleDeleteComment(comment.id)}
-                            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-                            className="ml-auto p-1"
-                          >
-                            <MaterialIcons name="close" size={16} color={colors.muted} />
-                          </Pressable>
-                        )}
+              (() => {
+                // Separate top-level comments and replies
+                const topLevelComments = commentsQuery.data?.filter((c: any) => !c.parentId) || [];
+                const replies = commentsQuery.data?.filter((c: any) => c.parentId) || [];
+                const repliesByParent = replies.reduce((acc: any, reply: any) => {
+                  if (!acc[reply.parentId]) acc[reply.parentId] = [];
+                  acc[reply.parentId].push(reply);
+                  return acc;
+                }, {});
+
+                return topLevelComments.map((comment: any) => (
+                  <View key={comment.id} className="mb-4">
+                    {/* Top-level comment */}
+                    <View className="flex-row items-start">
+                      <View className="w-8 h-8 rounded-full bg-surface items-center justify-center mr-2">
+                        <MaterialIcons name="person" size={18} color={colors.muted} />
                       </View>
-                      <Text className="text-foreground text-sm mt-1">{comment.content}</Text>
+                      <View className="flex-1">
+                        <View className="flex-row items-center">
+                          <Text className="text-foreground font-medium text-sm">
+                            {getAuthorName(comment)}
+                          </Text>
+                          <Text className="text-muted text-xs ml-2">
+                            {formatDate(comment.createdAt)}
+                          </Text>
+                          {user?.id === comment.userId && (
+                            <Pressable
+                              onPress={() => handleDeleteComment(comment.id)}
+                              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                              className="ml-auto p-1"
+                            >
+                              <MaterialIcons name="close" size={16} color={colors.muted} />
+                            </Pressable>
+                          )}
+                        </View>
+                        <Text className="text-foreground text-sm mt-1">{comment.content}</Text>
+                        {/* Reply button */}
+                        <Pressable
+                          onPress={() => handleReply(comment.id, getAuthorName(comment))}
+                          style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                          className="mt-1"
+                        >
+                          <Text className="text-muted text-xs">답글 달기</Text>
+                        </Pressable>
+                      </View>
                     </View>
+
+                    {/* Replies */}
+                    {repliesByParent[comment.id]?.map((reply: any) => (
+                      <View key={reply.id} className="flex-row items-start mt-3 ml-10">
+                        <View className="w-6 h-6 rounded-full bg-surface items-center justify-center mr-2">
+                          <MaterialIcons name="person" size={14} color={colors.muted} />
+                        </View>
+                        <View className="flex-1">
+                          <View className="flex-row items-center">
+                            <Text className="text-foreground font-medium text-xs">
+                              {getAuthorName(reply)}
+                            </Text>
+                            <Text className="text-muted text-xs ml-2">
+                              {formatDate(reply.createdAt)}
+                            </Text>
+                            {user?.id === reply.userId && (
+                              <Pressable
+                                onPress={() => handleDeleteComment(reply.id)}
+                                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                                className="ml-auto p-1"
+                              >
+                                <MaterialIcons name="close" size={14} color={colors.muted} />
+                              </Pressable>
+                            )}
+                          </View>
+                          <Text className="text-foreground text-xs mt-1">{reply.content}</Text>
+                        </View>
+                      </View>
+                    ))}
                   </View>
-                </View>
-              ))
+                ));
+              })()
             )}
           </View>
 
@@ -370,14 +488,28 @@ export default function PostDetailScreen() {
 
         {/* Comment Input */}
         <View
-          className="absolute bottom-0 left-0 right-0 bg-background border-t border-border px-4 py-3"
+          className="absolute bottom-0 left-0 right-0 bg-background border-t border-border px-4"
           style={{ paddingBottom: Platform.OS === "ios" ? 34 : 16 }}
         >
-          <View className="flex-row items-center">
+          {/* Reply indicator */}
+          {replyingTo && (
+            <View className="flex-row items-center justify-between py-2 border-b border-border">
+              <Text className="text-muted text-sm">
+                <Text className="text-primary font-medium">{replyingTo.name}</Text>님에게 답글 작성 중
+              </Text>
+              <Pressable
+                onPress={cancelReply}
+                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              >
+                <MaterialIcons name="close" size={18} color={colors.muted} />
+              </Pressable>
+            </View>
+          )}
+          <View className="flex-row items-center py-3">
             <TextInput
               value={commentText}
               onChangeText={setCommentText}
-              placeholder="댓글을 입력하세요..."
+              placeholder={replyingTo ? `${replyingTo.name}님에게 답글...` : "댓글을 입력하세요..."}
               placeholderTextColor={colors.muted}
               className="flex-1 bg-surface rounded-full px-4 py-2 mr-2 text-foreground"
               style={{ color: colors.foreground }}

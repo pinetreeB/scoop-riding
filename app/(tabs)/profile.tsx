@@ -34,6 +34,7 @@ export default function ProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [locationSharingEnabled, setLocationSharingEnabled] = useState(true);
   const [stats, setStats] = useState({
     totalDistance: 0,
     totalDuration: 0,
@@ -554,6 +555,42 @@ export default function ProfileScreen() {
           <Text className="text-lg font-bold text-foreground mb-3">설정</Text>
           
           <View className="bg-surface rounded-2xl border border-border overflow-hidden">
+            {/* Location Sharing */}
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                setLocationSharingEnabled(!locationSharingEnabled);
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4 border-b border-border"
+            >
+              <MaterialIcons 
+                name={locationSharingEnabled ? "location-on" : "location-off"} 
+                size={24} 
+                color={locationSharingEnabled ? colors.primary : colors.muted} 
+              />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">위치 공유</Text>
+                <Text className="text-muted text-xs">주행 중 친구에게 내 위치 공유</Text>
+              </View>
+              <View 
+                className="w-12 h-7 rounded-full items-center justify-center"
+                style={{ 
+                  backgroundColor: locationSharingEnabled ? colors.primary : colors.border,
+                  flexDirection: 'row',
+                  justifyContent: locationSharingEnabled ? 'flex-end' : 'flex-start',
+                  padding: 2,
+                }}
+              >
+                <View 
+                  className="w-6 h-6 rounded-full bg-white"
+                  style={{ backgroundColor: '#FFFFFF' }}
+                />
+              </View>
+            </Pressable>
+
             {/* Notifications */}
             <Pressable
               onPress={() => router.push("/notifications")}

@@ -187,6 +187,8 @@ export const friendRequests = mysqlTable("friendRequests", {
   senderId: int("senderId").notNull(),
   /** User who received the request */
   receiverId: int("receiverId").notNull(),
+  /** Optional message with the request */
+  message: text("message"),
   /** Status: pending, accepted, rejected */
   status: varchar("status", { length: 20 }).default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

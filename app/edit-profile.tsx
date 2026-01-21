@@ -54,20 +54,17 @@ export default function EditProfileScreen() {
       setProfileImageUrl(data.url);
       setUploading(false);
       
-      // 즉시 프로필 사진 업데이트 (저장 버튼 누르지 않아도 바로 반영)
-      try {
-        await updateProfileMutation.mutateAsync({
-          name: name.trim() || user?.name || "",
-          profileImageUrl: data.url,
-        });
-        utils.auth.me.invalidate();
-        if (refreshUser) refreshUser();
-        if (Platform.OS !== "web") {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
-      } catch (e) {
-        console.error("Auto-save profile image failed:", e);
+      // 프로필 사진 URL이 서버에 이미 저장됨 (uploadImage에서 자동 저장)
+      // trpc 캐시만 무효화하고 로컬 상태만 업데이트
+      utils.auth.me.invalidate();
+      
+      // 로컬 상태 업데이트 (로그아웃 방지를 위해 refreshUser 대신 직접 업데이트)
+      // refreshUser는 API를 호출하는데, 이 과정에서 세션 문제가 발생할 수 있음
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
+      
+      Alert.alert("성공", "프로필 사진이 변경되었습니다.");
     },
     onError: (error) => {
       setUploading(false);
