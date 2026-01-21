@@ -11,6 +11,7 @@ import {
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
+import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -27,6 +28,7 @@ import { useFocusEffect } from "expo-router";
 
 export default function HistoryScreen() {
   const colors = useColors();
+  const router = useRouter();
   const [records, setRecords] = useState<RidingRecord[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [exportingId, setExportingId] = useState<string | null>(null);
@@ -74,7 +76,6 @@ export default function HistoryScreen() {
     setExportingId(record.id);
 
     try {
-      // Load full record with GPS data
       const fullRecord = await getRidingRecordWithGps(record.id);
 
       if (!fullRecord || !fullRecord.gpsPoints || fullRecord.gpsPoints.length === 0) {
@@ -86,7 +87,6 @@ export default function HistoryScreen() {
         return;
       }
 
-      // Create track data for GPX
       const trackData: TrackData = {
         points: fullRecord.gpsPoints,
         startTime: new Date(fullRecord.startTime),
@@ -94,11 +94,9 @@ export default function HistoryScreen() {
         name: `SCOOP 주행 - ${fullRecord.date}`,
       };
 
-      // Generate filename
       const dateStr = fullRecord.date.replace(/\./g, "-").replace(/\s/g, "_");
       const filename = `scoop_ride_${dateStr}_${record.id.slice(0, 6)}`;
 
-      // Save and share GPX
       const success = await saveAndShareGpx(trackData, filename);
 
       if (success) {
@@ -116,110 +114,102 @@ export default function HistoryScreen() {
     }
   };
 
+  const handleViewDetail = (record: RidingRecord) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push(`/ride-detail?id=${record.id}`);
+  };
+
   const renderItem = ({ item }: { item: RidingRecord }) => (
-    <View className="bg-surface rounded-xl p-4 mb-3 mx-4">
-      <View className="flex-row justify-between items-start mb-3">
-        <View>
-          <Text className="text-base font-semibold text-foreground">
-            {item.date}
-          </Text>
-          <Text className="text-xs text-muted mt-1">
-            {new Date(item.startTime).toLocaleTimeString("ko-KR", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}{" "}
-            ~{" "}
-            {new Date(item.endTime).toLocaleTimeString("ko-KR", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Text>
+    <Pressable
+      onPress={() => handleViewDetail(item)}
+      style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+    >
+      <View className="bg-surface rounded-xl p-4 mb-3 mx-4">
+        <View className="flex-row justify-between items-start mb-3">
+          <View className="flex-1">
+            <Text className="text-base font-semibold text-foreground">
+              {item.date}
+            </Text>
+            <Text className="text-xs text-muted mt-1">
+              {new Date(item.startTime).toLocaleTimeString("ko-KR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}{" "}
+              ~{" "}
+              {new Date(item.endTime).toLocaleTimeString("ko-KR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </Text>
+          </View>
+          <View className="flex-row items-center">
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                handleExportGpx(item);
+              }}
+              disabled={exportingId === item.id}
+              style={({ pressed }) => [
+                { opacity: pressed || exportingId === item.id ? 0.5 : 1 },
+              ]}
+              className="p-2 mr-1"
+            >
+              {exportingId === item.id ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <MaterialIcons name="file-download" size={22} color={colors.primary} />
+              )}
+            </Pressable>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                handleDelete(item.id);
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
+              className="p-1"
+            >
+              <MaterialIcons name="delete-outline" size={20} color={colors.muted} />
+            </Pressable>
+          </View>
         </View>
-        <View className="flex-row items-center">
-          {/* GPX Export Button */}
-          <Pressable
-            onPress={() => handleExportGpx(item)}
-            disabled={exportingId === item.id}
-            style={({ pressed }) => [
-              { opacity: pressed || exportingId === item.id ? 0.5 : 1 },
-            ]}
-            className="p-2 mr-1"
-          >
-            {exportingId === item.id ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <MaterialIcons name="file-download" size={22} color={colors.primary} />
-            )}
-          </Pressable>
-          {/* Delete Button */}
-          <Pressable
-            onPress={() => handleDelete(item.id)}
-            style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
-            className="p-1"
-          >
-            <MaterialIcons name="delete-outline" size={20} color={colors.muted} />
-          </Pressable>
-        </View>
-      </View>
 
-      <View className="flex-row justify-between">
-        <View className="flex-1">
-          <Text className="text-xs text-muted">거리</Text>
-          <Text className="text-lg font-bold text-foreground">
-            {formatDistance(item.distance)}
-          </Text>
+        <View className="flex-row justify-between">
+          <View className="flex-1">
+            <Text className="text-xs text-muted">거리</Text>
+            <Text className="text-lg font-bold text-foreground">
+              {formatDistance(item.distance)}
+            </Text>
+          </View>
+          <View className="flex-1">
+            <Text className="text-xs text-muted">시간</Text>
+            <Text className="text-lg font-bold text-foreground">
+              {formatDuration(item.duration)}
+            </Text>
+          </View>
+          <View className="flex-1">
+            <Text className="text-xs text-muted">평균 속도</Text>
+            <Text className="text-lg font-bold text-primary">
+              {item.avgSpeed.toFixed(1)} km/h
+            </Text>
+          </View>
         </View>
-        <View className="flex-1">
-          <Text className="text-xs text-muted">시간</Text>
-          <Text className="text-lg font-bold text-foreground">
-            {formatDuration(item.duration)}
-          </Text>
-        </View>
-        <View className="flex-1">
-          <Text className="text-xs text-muted">평균 속도</Text>
-          <Text className="text-lg font-bold text-primary">
-            {item.avgSpeed.toFixed(1)} km/h
-          </Text>
-        </View>
-      </View>
 
-      <View className="flex-row mt-3 pt-3 border-t border-border">
-        <View className="flex-1">
-          <Text className="text-xs text-muted">최고 속도</Text>
-          <Text className="text-sm font-semibold text-foreground">
-            {item.maxSpeed.toFixed(1)} km/h
-          </Text>
-        </View>
-        <View className="flex-1 items-end">
-          <Pressable
-            onPress={() => handleExportGpx(item)}
-            disabled={exportingId === item.id}
-            style={({ pressed }) => [
-              {
-                backgroundColor: colors.primary,
-                opacity: pressed || exportingId === item.id ? 0.7 : 1,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 16,
-                flexDirection: "row",
-                alignItems: "center",
-              },
-            ]}
-          >
-            {exportingId === item.id ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <MaterialIcons name="download" size={16} color="#FFFFFF" />
-                <Text style={{ color: "#FFFFFF", fontSize: 12, marginLeft: 4, fontWeight: "600" }}>
-                  GPX
-                </Text>
-              </>
-            )}
-          </Pressable>
+        <View className="flex-row mt-3 pt-3 border-t border-border items-center">
+          <View className="flex-1">
+            <Text className="text-xs text-muted">최고 속도</Text>
+            <Text className="text-sm font-semibold text-foreground">
+              {item.maxSpeed.toFixed(1)} km/h
+            </Text>
+          </View>
+          <View className="flex-row items-center">
+            <Text className="text-xs text-muted mr-1">상세보기</Text>
+            <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+          </View>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 
   const ListEmptyComponent = () => (
@@ -240,7 +230,7 @@ export default function HistoryScreen() {
       <View className="px-4 py-3 border-b border-border">
         <Text className="text-2xl font-bold text-foreground">주행 기록</Text>
         <Text className="text-sm text-muted mt-1">
-          총 {records.length}개의 기록 • GPX 파일로 내보내기 가능
+          총 {records.length}개의 기록 • 탭하여 상세 보기
         </Text>
       </View>
 

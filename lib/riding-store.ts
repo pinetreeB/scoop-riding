@@ -135,3 +135,20 @@ export function formatSpeed(kmh: number): string {
 export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
+
+export async function clearAllRecords(): Promise<void> {
+  try {
+    // Get all records to find GPS data keys
+    const records = await getRidingRecords();
+    
+    // Delete all GPS data
+    for (const record of records) {
+      await AsyncStorage.removeItem(`${GPS_STORAGE_PREFIX}${record.id}`);
+    }
+    
+    // Clear main records
+    await AsyncStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.error("Failed to clear all records:", error);
+  }
+}

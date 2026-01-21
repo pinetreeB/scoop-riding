@@ -3,6 +3,16 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
 
+// GPS filtering constants
+export const GPS_CONSTANTS = {
+  MIN_SPEED_THRESHOLD: 1.0, // km/h - speeds below this are considered stationary
+  MIN_ACCURACY_THRESHOLD: 30, // meters - ignore points with worse accuracy
+  MAX_SPEED_JUMP: 40, // km/h - maximum allowed speed change between readings
+  MAX_DISTANCE_JUMP: 50, // meters - maximum allowed distance between consecutive points
+  MIN_TIME_BETWEEN_POINTS: 500, // ms - minimum time between valid points
+  BACKWARD_MOVEMENT_THRESHOLD: 5, // meters - detect backward movement
+};
+
 export interface GpsPoint {
   latitude: number;
   longitude: number;
@@ -31,12 +41,22 @@ export async function requestLocationPermission(): Promise<boolean> {
       return false;
     }
 
-    // For background location (optional, for future use)
-    // const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
-
     return true;
   } catch (error) {
     console.error("Error requesting location permission:", error);
+    return false;
+  }
+}
+
+/**
+ * Request background location permission
+ */
+export async function requestBackgroundLocationPermission(): Promise<boolean> {
+  try {
+    const { status } = await Location.requestBackgroundPermissionsAsync();
+    return status === "granted";
+  } catch (error) {
+    console.error("Error requesting background location permission:", error);
     return false;
   }
 }
@@ -89,12 +109,152 @@ export function msToKmh(ms: number): number {
 }
 
 /**
+ * Convert speed from km/h to m/s
+ */
+export function kmhToMs(kmh: number): number {
+  return kmh / 3.6;
+}
+
+/**
+ * Calculate bearing between two points (in degrees)
+ */
+export function calculateBearing(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const dLon = toRad(lon2 - lon1);
+  const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+  const x =
+    Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+    Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+  const bearing = Math.atan2(y, x);
+  return ((bearing * 180) / Math.PI + 360) % 360;
+}
+
+/**
+ * Check if movement is backward relative to previous direction
+ */
+export function isBackwardMovement(
+  prevBearing: number | null,
+  currentBearing: number
+): boolean {
+  if (prevBearing === null) return false;
+  
+  let diff = Math.abs(currentBearing - prevBearing);
+  if (diff > 180) diff = 360 - diff;
+  
+  // If direction changed more than 150 degrees, it's likely backward movement
+  return diff > 150;
+}
+
+/**
+ * Validate a GPS point against previous points to detect GPS drift/jumps
+ */
+export function validateGpsPoint(
+  newPoint: GpsPoint,
+  lastValidPoint: GpsPoint | null,
+  lastBearing: number | null
+): { isValid: boolean; reason?: string; newBearing?: number } {
+  // Check accuracy
+  if (newPoint.accuracy !== null && newPoint.accuracy > GPS_CONSTANTS.MIN_ACCURACY_THRESHOLD) {
+    return { isValid: false, reason: "accuracy_too_low" };
+  }
+
+  // Check speed threshold (1 km/h minimum)
+  const speedKmh = newPoint.speed !== null ? msToKmh(newPoint.speed) : 0;
+  if (speedKmh < GPS_CONSTANTS.MIN_SPEED_THRESHOLD) {
+    return { isValid: false, reason: "speed_below_threshold" };
+  }
+
+  if (!lastValidPoint) {
+    return { isValid: true };
+  }
+
+  // Check time between points
+  const timeDiff = newPoint.timestamp - lastValidPoint.timestamp;
+  if (timeDiff < GPS_CONSTANTS.MIN_TIME_BETWEEN_POINTS) {
+    return { isValid: false, reason: "too_soon" };
+  }
+
+  // Calculate distance from last point
+  const distance = calculateDistance(
+    lastValidPoint.latitude,
+    lastValidPoint.longitude,
+    newPoint.latitude,
+    newPoint.longitude
+  );
+
+  // Check for unrealistic distance jump
+  const maxExpectedDistance = (timeDiff / 1000) * (GPS_CONSTANTS.MAX_SPEED_JUMP / 3.6);
+  if (distance > Math.max(GPS_CONSTANTS.MAX_DISTANCE_JUMP, maxExpectedDistance)) {
+    return { isValid: false, reason: "distance_jump" };
+  }
+
+  // Calculate bearing
+  const newBearing = calculateBearing(
+    lastValidPoint.latitude,
+    lastValidPoint.longitude,
+    newPoint.latitude,
+    newPoint.longitude
+  );
+
+  // Check for backward movement (only if distance is significant)
+  if (distance > GPS_CONSTANTS.BACKWARD_MOVEMENT_THRESHOLD && lastBearing !== null) {
+    if (isBackwardMovement(lastBearing, newBearing)) {
+      return { isValid: false, reason: "backward_movement" };
+    }
+  }
+
+  // Check for unrealistic speed jump
+  if (lastValidPoint.speed !== null && newPoint.speed !== null) {
+    const lastSpeedKmh = msToKmh(lastValidPoint.speed);
+    const speedDiff = Math.abs(speedKmh - lastSpeedKmh);
+    if (speedDiff > GPS_CONSTANTS.MAX_SPEED_JUMP) {
+      return { isValid: false, reason: "speed_jump" };
+    }
+  }
+
+  return { isValid: true, newBearing };
+}
+
+/**
+ * Filter GPS points to remove noise and invalid data
+ * Returns only valid points for recording
+ */
+export function filterGpsPoints(points: GpsPoint[]): GpsPoint[] {
+  if (points.length === 0) return [];
+
+  const filtered: GpsPoint[] = [];
+  let lastValidPoint: GpsPoint | null = null;
+  let lastBearing: number | null = null;
+
+  for (const point of points) {
+    const validation = validateGpsPoint(point, lastValidPoint, lastBearing);
+    
+    if (validation.isValid) {
+      filtered.push(point);
+      lastValidPoint = point;
+      if (validation.newBearing !== undefined) {
+        lastBearing = validation.newBearing;
+      }
+    }
+  }
+
+  return filtered;
+}
+
+/**
  * Generate GPX XML content from track data
  */
 export function generateGpxContent(track: TrackData): string {
   const formatDate = (date: Date) => date.toISOString();
 
-  const trackPoints = track.points
+  // Filter points before generating GPX
+  const filteredPoints = filterGpsPoints(track.points);
+
+  const trackPoints = filteredPoints
     .map((point) => {
       const ele = point.altitude !== null ? `      <ele>${point.altitude.toFixed(1)}</ele>\n` : "";
       const time = `      <time>${new Date(point.timestamp).toISOString()}</time>\n`;
@@ -181,31 +341,35 @@ export async function saveAndShareGpx(
 }
 
 /**
- * Calculate total distance from GPS points
+ * Calculate total distance from GPS points (with filtering)
  */
 export function calculateTotalDistance(points: GpsPoint[]): number {
-  if (points.length < 2) return 0;
+  // Filter points first to remove invalid data
+  const filteredPoints = filterGpsPoints(points);
+  
+  if (filteredPoints.length < 2) return 0;
 
   let totalDistance = 0;
-  for (let i = 1; i < points.length; i++) {
+  for (let i = 1; i < filteredPoints.length; i++) {
     totalDistance += calculateDistance(
-      points[i - 1].latitude,
-      points[i - 1].longitude,
-      points[i].latitude,
-      points[i].longitude
+      filteredPoints[i - 1].latitude,
+      filteredPoints[i - 1].longitude,
+      filteredPoints[i].latitude,
+      filteredPoints[i].longitude
     );
   }
   return totalDistance;
 }
 
 /**
- * Calculate average speed from GPS points (km/h)
+ * Calculate average speed from GPS points (km/h) - only from valid moving points
  */
 export function calculateAverageSpeed(points: GpsPoint[]): number {
   if (points.length === 0) return 0;
 
+  // Only include points with speed >= 1 km/h
   const validSpeeds = points
-    .filter((p) => p.speed !== null && p.speed >= 0)
+    .filter((p) => p.speed !== null && msToKmh(p.speed) >= GPS_CONSTANTS.MIN_SPEED_THRESHOLD)
     .map((p) => msToKmh(p.speed!));
 
   if (validSpeeds.length === 0) return 0;
@@ -219,11 +383,58 @@ export function calculateAverageSpeed(points: GpsPoint[]): number {
 export function getMaxSpeed(points: GpsPoint[]): number {
   if (points.length === 0) return 0;
 
+  // Filter out unrealistic speeds
   const validSpeeds = points
-    .filter((p) => p.speed !== null && p.speed >= 0)
+    .filter((p) => {
+      if (p.speed === null) return false;
+      const speedKmh = msToKmh(p.speed);
+      // Exclude speeds below threshold and unrealistically high speeds (> 100 km/h for e-scooter)
+      return speedKmh >= GPS_CONSTANTS.MIN_SPEED_THRESHOLD && speedKmh <= 100;
+    })
     .map((p) => msToKmh(p.speed!));
 
   if (validSpeeds.length === 0) return 0;
 
   return Math.max(...validSpeeds);
+}
+
+/**
+ * Get the center point of a set of GPS coordinates
+ */
+export function getCenterPoint(points: GpsPoint[]): { latitude: number; longitude: number } | null {
+  if (points.length === 0) return null;
+
+  const sumLat = points.reduce((sum, p) => sum + p.latitude, 0);
+  const sumLon = points.reduce((sum, p) => sum + p.longitude, 0);
+
+  return {
+    latitude: sumLat / points.length,
+    longitude: sumLon / points.length,
+  };
+}
+
+/**
+ * Get bounding box for a set of GPS points
+ */
+export function getBoundingBox(points: GpsPoint[]): {
+  minLat: number;
+  maxLat: number;
+  minLon: number;
+  maxLon: number;
+} | null {
+  if (points.length === 0) return null;
+
+  let minLat = points[0].latitude;
+  let maxLat = points[0].latitude;
+  let minLon = points[0].longitude;
+  let maxLon = points[0].longitude;
+
+  for (const point of points) {
+    minLat = Math.min(minLat, point.latitude);
+    maxLat = Math.max(maxLat, point.latitude);
+    minLon = Math.min(minLon, point.longitude);
+    maxLon = Math.max(maxLon, point.longitude);
+  }
+
+  return { minLat, maxLat, minLon, maxLon };
 }

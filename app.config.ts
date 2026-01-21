@@ -121,7 +121,9 @@ const config: ExpoConfig = {
     [
       "expo-location",
       {
-        "locationAlwaysAndWhenInUsePermission": "주행 중 속도와 거리를 측정하기 위해 위치 정보가 필요합니다."
+        "locationAlwaysAndWhenInUsePermission": "주행 중 속도와 거리를 측정하기 위해 위치 정보가 필요합니다.",
+        "isAndroidBackgroundLocationEnabled": true,
+        "isIosBackgroundLocationEnabled": true
       }
     ],
     [

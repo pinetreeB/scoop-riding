@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, useCallback } from "react";
-import { Text, View, Pressable, Alert, BackHandler, Platform } from "react-native";
+import { useEffect, useState, useRef } from "react";
+import { Text, View, Pressable, Alert, BackHandler, Platform, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
@@ -8,6 +8,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import { RideMap } from "@/components/ride-map";
 import {
   saveRidingRecord,
   formatDuration,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/riding-store";
 import {
   GpsPoint,
+  GPS_CONSTANTS,
   requestLocationPermission,
   isLocationEnabled,
   calculateDistance,
@@ -22,19 +24,22 @@ import {
   calculateTotalDistance,
   calculateAverageSpeed,
   getMaxSpeed,
+  validateGpsPoint,
+  calculateBearing,
 } from "@/lib/gps-utils";
+import {
+  startBackgroundLocationTracking,
+  stopBackgroundLocationTracking,
+  requestBackgroundLocationPermission,
+} from "@/lib/background-location";
 
-// Speed filtering constants - relaxed for better recording
-const MIN_ACCURACY_FOR_SPEED = 50; // Increased from 15m to 50m - more lenient
-const MIN_SPEED_THRESHOLD = 0.5; // Lowered from 1.5 to 0.5 km/h - detect slower movement
-const SPEED_SMOOTHING_SAMPLES = 3; // Number of samples for moving average
-const MAX_SPEED_JUMP = 50; // Increased from 30 to 50 km/h - allow faster acceleration
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function RidingScreen() {
   const router = useRouter();
   const colors = useColors();
 
-  const [isRunning, setIsRunning] = useState(true); // Start as true immediately
+  const [isRunning, setIsRunning] = useState(true);
   const [duration, setDuration] = useState(0);
   const [distance, setDistance] = useState(0);
   const [currentSpeed, setCurrentSpeed] = useState(0);
@@ -43,24 +48,26 @@ export default function RidingScreen() {
   const [gpsStatus, setGpsStatus] = useState<"waiting" | "active" | "error">("waiting");
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [gpsPointCount, setGpsPointCount] = useState(0);
+  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [gpsPoints, setGpsPoints] = useState<GpsPoint[]>([]);
+  const [showMap, setShowMap] = useState(true);
+  const [isBackgroundEnabled, setIsBackgroundEnabled] = useState(false);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const startTimeRef = useRef<Date>(new Date());
   const gpsPointsRef = useRef<GpsPoint[]>([]);
-  const lastLocationRef = useRef<Location.LocationObject | null>(null);
-  const isRunningRef = useRef(true); // Use ref to avoid stale closure
+  const lastValidPointRef = useRef<GpsPoint | null>(null);
+  const lastBearingRef = useRef<number | null>(null);
+  const isRunningRef = useRef(true);
   
-  // Speed filtering refs
   const speedHistoryRef = useRef<number[]>([]);
-  const lastValidSpeedRef = useRef<number>(0);
+  const SPEED_SMOOTHING_SAMPLES = 3;
 
-  // Keep isRunningRef in sync with isRunning state
   useEffect(() => {
     isRunningRef.current = isRunning;
   }, [isRunning]);
 
-  // Keep screen awake on native platforms
   useEffect(() => {
     if (Platform.OS !== "web") {
       activateKeepAwakeAsync();
@@ -70,17 +77,18 @@ export default function RidingScreen() {
     }
   }, []);
 
-  // Initialize GPS
   useEffect(() => {
     startTimeRef.current = new Date();
     initializeGps();
 
     return () => {
       stopLocationTracking();
+      if (Platform.OS !== "web") {
+        stopBackgroundLocationTracking();
+      }
     };
   }, []);
 
-  // Timer for duration - start immediately
   useEffect(() => {
     intervalRef.current = setInterval(() => {
       if (isRunningRef.current) {
@@ -97,7 +105,6 @@ export default function RidingScreen() {
 
   const initializeGps = async () => {
     try {
-      // Check if location services are enabled
       const locationEnabled = await isLocationEnabled();
       if (!locationEnabled) {
         setGpsStatus("error");
@@ -109,7 +116,6 @@ export default function RidingScreen() {
         return;
       }
 
-      // Request permission
       const hasPermission = await requestLocationPermission();
       if (!hasPermission) {
         setGpsStatus("error");
@@ -121,7 +127,16 @@ export default function RidingScreen() {
         return;
       }
 
-      // Start location tracking
+      // Request background location permission on native
+      if (Platform.OS !== "web") {
+        const hasBackgroundPermission = await requestBackgroundLocationPermission();
+        if (hasBackgroundPermission) {
+          setIsBackgroundEnabled(true);
+          // Start background tracking
+          await startBackgroundLocationTracking(handleLocationUpdate);
+        }
+      }
+
       await startLocationTracking();
       setGpsStatus("active");
     } catch (error) {
@@ -136,8 +151,8 @@ export default function RidingScreen() {
       locationSubscriptionRef.current = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.BestForNavigation,
-          timeInterval: 1000, // Update every 1 second
-          distanceInterval: 0, // Update regardless of distance (was 1m)
+          timeInterval: 1000,
+          distanceInterval: 1,
         },
         (location) => {
           handleLocationUpdate(location);
@@ -156,117 +171,84 @@ export default function RidingScreen() {
     }
   };
 
-  /**
-   * Filter and smooth GPS speed to remove noise and spikes
-   */
-  const filterSpeed = (rawSpeedKmh: number, locAccuracy: number | null): number => {
-    // If GPS accuracy is very poor (> 50m), use last valid speed
-    if (locAccuracy !== null && locAccuracy > MIN_ACCURACY_FOR_SPEED) {
-      return lastValidSpeedRef.current;
-    }
-
-    // If speed is below threshold, consider as stationary
-    if (rawSpeedKmh < MIN_SPEED_THRESHOLD) {
-      speedHistoryRef.current = []; // Reset history when stationary
-      lastValidSpeedRef.current = 0;
+  const smoothSpeed = (rawSpeedKmh: number): number => {
+    if (rawSpeedKmh < GPS_CONSTANTS.MIN_SPEED_THRESHOLD) {
+      speedHistoryRef.current = [];
       return 0;
     }
 
-    // Filter out unrealistic speed jumps
-    const lastSpeed = lastValidSpeedRef.current;
-    if (lastSpeed > 0 && Math.abs(rawSpeedKmh - lastSpeed) > MAX_SPEED_JUMP) {
-      // Speed jump too large, likely GPS error - use smoothed value
-      return lastValidSpeedRef.current;
-    }
-
-    // Add to history for smoothing
     speedHistoryRef.current.push(rawSpeedKmh);
     
-    // Keep only recent samples
     if (speedHistoryRef.current.length > SPEED_SMOOTHING_SAMPLES) {
       speedHistoryRef.current.shift();
     }
 
-    // Calculate moving average
-    const smoothedSpeed = speedHistoryRef.current.reduce((a, b) => a + b, 0) / 
-                          speedHistoryRef.current.length;
-
-    lastValidSpeedRef.current = smoothedSpeed;
-    return smoothedSpeed;
+    return speedHistoryRef.current.reduce((a, b) => a + b, 0) / speedHistoryRef.current.length;
   };
 
   const handleLocationUpdate = (location: Location.LocationObject) => {
-    // Use ref instead of state to avoid stale closure
     if (!isRunningRef.current) return;
 
     const { latitude, longitude, altitude, speed, accuracy: locAccuracy } = location.coords;
     const timestamp = location.timestamp;
 
-    // Update accuracy indicator
     setAccuracy(locAccuracy);
+    setCurrentLocation({ latitude, longitude });
 
-    // Convert raw speed to km/h and apply filtering
-    const rawSpeedKmh = speed !== null && speed >= 0 ? msToKmh(speed) : 0;
-    const filteredSpeedKmh = filterSpeed(rawSpeedKmh, locAccuracy);
-
-    // Create GPS point - store raw data for accurate GPX export
     const gpsPoint: GpsPoint = {
       latitude,
       longitude,
       altitude: altitude ?? null,
       timestamp,
-      speed: speed ?? null, // Store raw speed in m/s
+      speed: speed ?? null,
       accuracy: locAccuracy ?? null,
     };
 
-    // Add point with more lenient accuracy check (< 100m instead of 30m)
-    if (locAccuracy === null || locAccuracy < 100) {
+    const rawSpeedKmh = speed !== null && speed >= 0 ? msToKmh(speed) : 0;
+    const displaySpeed = smoothSpeed(rawSpeedKmh);
+    setCurrentSpeed(displaySpeed);
+
+    const validation = validateGpsPoint(gpsPoint, lastValidPointRef.current, lastBearingRef.current);
+
+    if (validation.isValid) {
       gpsPointsRef.current.push(gpsPoint);
+      setGpsPoints([...gpsPointsRef.current]);
       setGpsPointCount(gpsPointsRef.current.length);
-    }
 
-    // Update current speed display
-    setCurrentSpeed(filteredSpeedKmh);
-    
-    // Update max speed if we're moving
-    if (filteredSpeedKmh > MIN_SPEED_THRESHOLD) {
-      setMaxSpeed((prev) => Math.max(prev, filteredSpeedKmh));
-    }
+      if (rawSpeedKmh >= GPS_CONSTANTS.MIN_SPEED_THRESHOLD) {
+        setMaxSpeed((prev) => Math.max(prev, rawSpeedKmh));
+      }
 
-    // Calculate distance from last point
-    if (lastLocationRef.current) {
-      const lastCoords = lastLocationRef.current.coords;
-      const dist = calculateDistance(
-        lastCoords.latitude,
-        lastCoords.longitude,
-        latitude,
-        longitude
-      );
-      
-      // More lenient distance calculation:
-      // 1. GPS accuracy < 50m (was 20m)
-      // 2. Distance < 200m per update (was 100m)
-      // 3. Either moving OR distance > 2m (to catch slow movement)
-      if ((locAccuracy === null || locAccuracy < 50) && 
-          dist < 200 && 
-          (filteredSpeedKmh > MIN_SPEED_THRESHOLD || dist > 2)) {
+      if (lastValidPointRef.current) {
+        const dist = calculateDistance(
+          lastValidPointRef.current.latitude,
+          lastValidPointRef.current.longitude,
+          latitude,
+          longitude
+        );
         setDistance((prev) => prev + dist);
       }
-    }
 
-    lastLocationRef.current = location;
+      if (lastValidPointRef.current) {
+        lastBearingRef.current = calculateBearing(
+          lastValidPointRef.current.latitude,
+          lastValidPointRef.current.longitude,
+          latitude,
+          longitude
+        );
+      }
+      lastValidPointRef.current = gpsPoint;
 
-    // Update average speed (from all points with valid speed)
-    const validPoints = gpsPointsRef.current.filter(
-      (p) => p.speed !== null && p.speed > 0
-    );
-    if (validPoints.length > 0) {
-      const avgSpd = validPoints.reduce((sum, p) => sum + msToKmh(p.speed!), 0) / validPoints.length;
-      setAvgSpeed(avgSpd);
+      const validPoints = gpsPointsRef.current.filter(
+        (p) => p.speed !== null && msToKmh(p.speed) >= GPS_CONSTANTS.MIN_SPEED_THRESHOLD
+      );
+      if (validPoints.length > 0) {
+        const avgSpd = validPoints.reduce((sum, p) => sum + msToKmh(p.speed!), 0) / validPoints.length;
+        setAvgSpeed(avgSpd);
+      }
     }
   };
 
-  // Handle back button
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
@@ -293,6 +275,9 @@ export default function RidingScreen() {
 
     if (duration < 5) {
       stopLocationTracking();
+      if (Platform.OS !== "web") {
+        stopBackgroundLocationTracking();
+      }
       router.back();
       return;
     }
@@ -309,8 +294,10 @@ export default function RidingScreen() {
           text: "저장",
           onPress: async () => {
             stopLocationTracking();
+            if (Platform.OS !== "web") {
+              await stopBackgroundLocationTracking();
+            }
 
-            // Calculate final stats from GPS data
             const finalDistance = calculateTotalDistance(gpsPointsRef.current);
             const finalAvgSpeed = calculateAverageSpeed(gpsPointsRef.current);
             const finalMaxSpeed = getMaxSpeed(gpsPointsRef.current);
@@ -338,10 +325,10 @@ export default function RidingScreen() {
     switch (gpsStatus) {
       case "active":
         if (accuracy === null) return "#4CAF50";
-        if (accuracy < 10) return "#4CAF50"; // Excellent
-        if (accuracy < 30) return "#8BC34A"; // Good
-        if (accuracy < 50) return "#FFC107"; // Fair
-        return "#FF9800"; // Poor but usable
+        if (accuracy < 10) return "#4CAF50";
+        if (accuracy < 20) return "#8BC34A";
+        if (accuracy < 30) return "#FFC107";
+        return "#FF9800";
       case "error":
         return "#F44336";
       default:
@@ -352,7 +339,8 @@ export default function RidingScreen() {
   const getGpsStatusText = () => {
     switch (gpsStatus) {
       case "active":
-        return accuracy !== null ? `GPS ${accuracy.toFixed(0)}m` : "GPS 활성";
+        const bgText = isBackgroundEnabled ? " (BG)" : "";
+        return accuracy !== null ? `GPS ${accuracy.toFixed(0)}m${bgText}` : `GPS 활성${bgText}`;
       case "error":
         return "GPS 오류";
       default:
@@ -365,9 +353,9 @@ export default function RidingScreen() {
       containerClassName="bg-[#1A1A1A]"
       edges={["top", "bottom", "left", "right"]}
     >
-      <View className="flex-1 p-4">
+      <View className="flex-1">
         {/* Header */}
-        <View className="flex-row justify-between items-center mb-4">
+        <View className="flex-row justify-between items-center px-4 py-2">
           <Pressable
             onPress={handleStop}
             style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
@@ -382,27 +370,55 @@ export default function RidingScreen() {
             />
             <Text className="text-gray-400 text-sm">{getGpsStatusText()}</Text>
           </View>
-          <View className="w-10" />
+          <Pressable
+            onPress={() => setShowMap(!showMap)}
+            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+            className="p-2"
+          >
+            <MaterialIcons 
+              name={showMap ? "map" : "speed"} 
+              size={24} 
+              color="#FFFFFF" 
+            />
+          </Pressable>
         </View>
 
-        {/* Speed Display */}
-        <View className="items-center mb-6">
-          <Text className="text-8xl font-bold text-white">
-            {currentSpeed.toFixed(1)}
-          </Text>
-          <Text className="text-xl text-gray-400 mt-1">km/h</Text>
-        </View>
+        {/* Map or Speed Display */}
+        {showMap && Platform.OS !== "web" ? (
+          <View className="flex-1 mx-4 mb-4 rounded-2xl overflow-hidden">
+            <RideMap
+              gpsPoints={gpsPoints}
+              currentLocation={currentLocation}
+              isLive={true}
+              showCurrentLocation={false}
+            />
+            {/* Speed overlay on map */}
+            <View className="absolute bottom-4 left-4 bg-black/70 rounded-xl px-4 py-2">
+              <Text className="text-4xl font-bold text-white">
+                {currentSpeed.toFixed(1)}
+              </Text>
+              <Text className="text-xs text-gray-300">km/h</Text>
+            </View>
+          </View>
+        ) : (
+          <View className="items-center py-8">
+            <Text className="text-8xl font-bold text-white">
+              {currentSpeed.toFixed(1)}
+            </Text>
+            <Text className="text-xl text-gray-400 mt-1">km/h</Text>
+          </View>
+        )}
 
         {/* Time Display */}
-        <View className="items-center mb-6">
-          <Text className="text-5xl font-bold text-white">
+        <View className="items-center mb-4">
+          <Text className="text-4xl font-bold text-white">
             {formatDuration(duration)}
           </Text>
           <Text className="text-sm text-gray-400 mt-1">주행 시간</Text>
         </View>
 
         {/* Stats Row */}
-        <View className="flex-row justify-around mb-6 bg-[#2A2A2A] rounded-2xl p-4">
+        <View className="flex-row justify-around mx-4 mb-4 bg-[#2A2A2A] rounded-2xl p-4">
           <View className="items-center">
             <Text className="text-2xl font-bold text-white">
               {(distance / 1000).toFixed(2)}
@@ -426,15 +442,14 @@ export default function RidingScreen() {
         </View>
 
         {/* GPS Points Counter */}
-        <View className="items-center mb-4">
+        <View className="items-center mb-2">
           <Text className="text-gray-500 text-xs">
             GPS 포인트: {gpsPointCount}개 기록됨
           </Text>
         </View>
 
         {/* Control Buttons */}
-        <View className="flex-row justify-center items-center mt-auto mb-8">
-          {/* Stop Button */}
+        <View className="flex-row justify-center items-center py-4 mb-4">
           <Pressable
             onPress={handleStop}
             style={({ pressed }) => [
@@ -448,7 +463,6 @@ export default function RidingScreen() {
             <MaterialIcons name="stop" size={28} color="#FFFFFF" />
           </Pressable>
 
-          {/* Pause/Resume Button */}
           <Pressable
             onPress={handlePauseResume}
             style={({ pressed }) => [
@@ -467,7 +481,6 @@ export default function RidingScreen() {
             />
           </Pressable>
 
-          {/* Placeholder for symmetry */}
           <View className="w-16 h-16 ml-8" />
         </View>
       </View>
