@@ -24,17 +24,17 @@ import {
   getMaxSpeed,
 } from "@/lib/gps-utils";
 
-// Speed filtering constants
-const MIN_ACCURACY_FOR_SPEED = 15; // Minimum GPS accuracy (meters) to trust speed reading
-const MIN_SPEED_THRESHOLD = 1.5; // Minimum speed in km/h to consider as moving (below this = stationary)
+// Speed filtering constants - relaxed for better recording
+const MIN_ACCURACY_FOR_SPEED = 50; // Increased from 15m to 50m - more lenient
+const MIN_SPEED_THRESHOLD = 0.5; // Lowered from 1.5 to 0.5 km/h - detect slower movement
 const SPEED_SMOOTHING_SAMPLES = 3; // Number of samples for moving average
-const MAX_SPEED_JUMP = 30; // Maximum speed change in km/h between readings (filter spikes)
+const MAX_SPEED_JUMP = 50; // Increased from 30 to 50 km/h - allow faster acceleration
 
 export default function RidingScreen() {
   const router = useRouter();
   const colors = useColors();
 
-  const [isRunning, setIsRunning] = useState(false);
+  const [isRunning, setIsRunning] = useState(true); // Start as true immediately
   const [duration, setDuration] = useState(0);
   const [distance, setDistance] = useState(0);
   const [currentSpeed, setCurrentSpeed] = useState(0);
@@ -42,16 +42,23 @@ export default function RidingScreen() {
   const [avgSpeed, setAvgSpeed] = useState(0);
   const [gpsStatus, setGpsStatus] = useState<"waiting" | "active" | "error">("waiting");
   const [accuracy, setAccuracy] = useState<number | null>(null);
+  const [gpsPointCount, setGpsPointCount] = useState(0);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const startTimeRef = useRef<Date>(new Date());
   const gpsPointsRef = useRef<GpsPoint[]>([]);
   const lastLocationRef = useRef<Location.LocationObject | null>(null);
+  const isRunningRef = useRef(true); // Use ref to avoid stale closure
   
   // Speed filtering refs
   const speedHistoryRef = useRef<number[]>([]);
   const lastValidSpeedRef = useRef<number>(0);
+
+  // Keep isRunningRef in sync with isRunning state
+  useEffect(() => {
+    isRunningRef.current = isRunning;
+  }, [isRunning]);
 
   // Keep screen awake on native platforms
   useEffect(() => {
@@ -65,10 +72,26 @@ export default function RidingScreen() {
 
   // Initialize GPS
   useEffect(() => {
+    startTimeRef.current = new Date();
     initializeGps();
 
     return () => {
       stopLocationTracking();
+    };
+  }, []);
+
+  // Timer for duration - start immediately
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      if (isRunningRef.current) {
+        setDuration((prev) => prev + 1);
+      }
+    }, 1000);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     };
   }, []);
 
@@ -101,8 +124,6 @@ export default function RidingScreen() {
       // Start location tracking
       await startLocationTracking();
       setGpsStatus("active");
-      setIsRunning(true);
-      startTimeRef.current = new Date();
     } catch (error) {
       console.error("GPS initialization error:", error);
       setGpsStatus("error");
@@ -116,7 +137,7 @@ export default function RidingScreen() {
         {
           accuracy: Location.Accuracy.BestForNavigation,
           timeInterval: 1000, // Update every 1 second
-          distanceInterval: 1, // Update every 1 meter
+          distanceInterval: 0, // Update regardless of distance (was 1m)
         },
         (location) => {
           handleLocationUpdate(location);
@@ -138,9 +159,9 @@ export default function RidingScreen() {
   /**
    * Filter and smooth GPS speed to remove noise and spikes
    */
-  const filterSpeed = (rawSpeedKmh: number, accuracy: number | null): number => {
-    // If GPS accuracy is poor, don't trust the speed reading
-    if (accuracy !== null && accuracy > MIN_ACCURACY_FOR_SPEED) {
+  const filterSpeed = (rawSpeedKmh: number, locAccuracy: number | null): number => {
+    // If GPS accuracy is very poor (> 50m), use last valid speed
+    if (locAccuracy !== null && locAccuracy > MIN_ACCURACY_FOR_SPEED) {
       return lastValidSpeedRef.current;
     }
 
@@ -175,7 +196,8 @@ export default function RidingScreen() {
   };
 
   const handleLocationUpdate = (location: Location.LocationObject) => {
-    if (!isRunning) return;
+    // Use ref instead of state to avoid stale closure
+    if (!isRunningRef.current) return;
 
     const { latitude, longitude, altitude, speed, accuracy: locAccuracy } = location.coords;
     const timestamp = location.timestamp;
@@ -187,25 +209,26 @@ export default function RidingScreen() {
     const rawSpeedKmh = speed !== null && speed >= 0 ? msToKmh(speed) : 0;
     const filteredSpeedKmh = filterSpeed(rawSpeedKmh, locAccuracy);
 
-    // Create GPS point with filtered speed for storage
+    // Create GPS point - store raw data for accurate GPX export
     const gpsPoint: GpsPoint = {
       latitude,
       longitude,
       altitude: altitude ?? null,
       timestamp,
-      speed: filteredSpeedKmh > 0 ? filteredSpeedKmh / 3.6 : 0, // Store as m/s
+      speed: speed ?? null, // Store raw speed in m/s
       accuracy: locAccuracy ?? null,
     };
 
-    // Only add point if accuracy is reasonable
-    if (locAccuracy === null || locAccuracy < 30) {
+    // Add point with more lenient accuracy check (< 100m instead of 30m)
+    if (locAccuracy === null || locAccuracy < 100) {
       gpsPointsRef.current.push(gpsPoint);
+      setGpsPointCount(gpsPointsRef.current.length);
     }
 
     // Update current speed display
     setCurrentSpeed(filteredSpeedKmh);
     
-    // Only update max speed if we're actually moving
+    // Update max speed if we're moving
     if (filteredSpeedKmh > MIN_SPEED_THRESHOLD) {
       setMaxSpeed((prev) => Math.max(prev, filteredSpeedKmh));
     }
@@ -220,47 +243,28 @@ export default function RidingScreen() {
         longitude
       );
       
-      // Only add distance if:
-      // 1. GPS accuracy is reasonable (< 20m)
-      // 2. Distance is reasonable (< 100m per second)
-      // 3. We're actually moving (filtered speed > threshold)
-      if ((locAccuracy === null || locAccuracy < 20) && 
-          dist < 100 && 
-          filteredSpeedKmh > MIN_SPEED_THRESHOLD) {
+      // More lenient distance calculation:
+      // 1. GPS accuracy < 50m (was 20m)
+      // 2. Distance < 200m per update (was 100m)
+      // 3. Either moving OR distance > 2m (to catch slow movement)
+      if ((locAccuracy === null || locAccuracy < 50) && 
+          dist < 200 && 
+          (filteredSpeedKmh > MIN_SPEED_THRESHOLD || dist > 2)) {
         setDistance((prev) => prev + dist);
       }
     }
 
     lastLocationRef.current = location;
 
-    // Update average speed (only from valid points)
+    // Update average speed (from all points with valid speed)
     const validPoints = gpsPointsRef.current.filter(
-      (p) => p.speed !== null && msToKmh(p.speed) > MIN_SPEED_THRESHOLD
+      (p) => p.speed !== null && p.speed > 0
     );
     if (validPoints.length > 0) {
       const avgSpd = validPoints.reduce((sum, p) => sum + msToKmh(p.speed!), 0) / validPoints.length;
       setAvgSpeed(avgSpd);
     }
   };
-
-  // Timer for duration
-  useEffect(() => {
-    if (isRunning) {
-      intervalRef.current = setInterval(() => {
-        setDuration((prev) => prev + 1);
-      }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isRunning]);
 
   // Handle back button
   useEffect(() => {
@@ -306,7 +310,7 @@ export default function RidingScreen() {
           onPress: async () => {
             stopLocationTracking();
 
-            // Calculate final stats from GPS data (using filtered points)
+            // Calculate final stats from GPS data
             const finalDistance = calculateTotalDistance(gpsPointsRef.current);
             const finalAvgSpeed = calculateAverageSpeed(gpsPointsRef.current);
             const finalMaxSpeed = getMaxSpeed(gpsPointsRef.current);
@@ -333,7 +337,11 @@ export default function RidingScreen() {
   const getGpsStatusColor = () => {
     switch (gpsStatus) {
       case "active":
-        return accuracy !== null && accuracy < 10 ? "#4CAF50" : "#FFC107";
+        if (accuracy === null) return "#4CAF50";
+        if (accuracy < 10) return "#4CAF50"; // Excellent
+        if (accuracy < 30) return "#8BC34A"; // Good
+        if (accuracy < 50) return "#FFC107"; // Fair
+        return "#FF9800"; // Poor but usable
       case "error":
         return "#F44336";
       default:
@@ -420,7 +428,7 @@ export default function RidingScreen() {
         {/* GPS Points Counter */}
         <View className="items-center mb-4">
           <Text className="text-gray-500 text-xs">
-            GPS 포인트: {gpsPointsRef.current.length}개 기록됨
+            GPS 포인트: {gpsPointCount}개 기록됨
           </Text>
         </View>
 

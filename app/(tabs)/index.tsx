@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Text, View, Pressable, ScrollView, RefreshControl } from "react-native";
+import { Text, View, Pressable, ScrollView, RefreshControl, Image } from "react-native";
 import { useRouter } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
@@ -67,15 +67,17 @@ export default function HomeScreen() {
         }
       >
         <View className="flex-1 p-4">
-          {/* Header */}
+          {/* Header with Logo */}
           <View className="items-center mb-6 mt-2">
-            <Text className="text-3xl font-bold text-primary">SCOOP</Text>
+            <View className="flex-row items-center">
+              <Text className="text-3xl font-bold text-primary">SCOOP</Text>
+            </View>
             <Text className="text-sm text-muted mt-1">전동킥보드 주행기록</Text>
           </View>
 
-          {/* Stats Cards */}
+          {/* Stats Cards - 2x2 Grid */}
           <View className="flex-row flex-wrap justify-between mb-6">
-            <View className="w-[48%] bg-surface rounded-2xl p-4 mb-3">
+            <View className="w-[48%] bg-[#FFF5E6] rounded-2xl p-4 mb-3 border border-[#FFE0B2]">
               <View className="flex-row items-center mb-2">
                 <MaterialIcons name="straighten" size={20} color={colors.primary} />
                 <Text className="text-sm text-muted ml-2">총 거리</Text>
@@ -85,7 +87,7 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            <View className="w-[48%] bg-surface rounded-2xl p-4 mb-3">
+            <View className="w-[48%] bg-[#FFF5E6] rounded-2xl p-4 mb-3 border border-[#FFE0B2]">
               <View className="flex-row items-center mb-2">
                 <MaterialIcons name="access-time" size={20} color={colors.primary} />
                 <Text className="text-sm text-muted ml-2">총 시간</Text>
@@ -95,7 +97,7 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            <View className="w-[48%] bg-surface rounded-2xl p-4">
+            <View className="w-[48%] bg-[#FFF5E6] rounded-2xl p-4 border border-[#FFE0B2]">
               <View className="flex-row items-center mb-2">
                 <MaterialIcons name="repeat" size={20} color={colors.primary} />
                 <Text className="text-sm text-muted ml-2">주행 횟수</Text>
@@ -105,7 +107,7 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            <View className="w-[48%] bg-surface rounded-2xl p-4">
+            <View className="w-[48%] bg-[#FFF5E6] rounded-2xl p-4 border border-[#FFE0B2]">
               <View className="flex-row items-center mb-2">
                 <MaterialIcons name="speed" size={20} color={colors.primary} />
                 <Text className="text-sm text-muted ml-2">평균 속도</Text>
@@ -116,7 +118,7 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Start Riding Button */}
+          {/* Start Riding Button - Large Circle */}
           <View className="items-center mb-8">
             <Pressable
               onPress={handleStartRiding}
@@ -125,21 +127,21 @@ export default function HomeScreen() {
                   backgroundColor: colors.primary,
                   transform: [{ scale: pressed ? 0.97 : 1 }],
                   opacity: pressed ? 0.9 : 1,
-                  width: 144,
-                  height: 144,
-                  borderRadius: 72,
+                  width: 160,
+                  height: 160,
+                  borderRadius: 80,
                   alignItems: "center",
                   justifyContent: "center",
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 8,
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: 0.4,
+                  shadowRadius: 12,
+                  elevation: 10,
                 },
               ]}
             >
-              <MaterialIcons name="play-arrow" size={64} color="#FFFFFF" />
-              <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 18, marginTop: 4 }}>
+              <MaterialIcons name="play-arrow" size={72} color="#FFFFFF" />
+              <Text style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 18, marginTop: 0 }}>
                 주행 시작
               </Text>
             </Pressable>
@@ -154,7 +156,7 @@ export default function HomeScreen() {
               {recentRides.map((ride) => (
                 <View
                   key={ride.id}
-                  className="bg-surface rounded-xl p-4 mb-2 flex-row justify-between items-center"
+                  className="bg-surface rounded-xl p-4 mb-2 flex-row justify-between items-center border border-border"
                 >
                   <View>
                     <Text className="text-sm text-muted">{ride.date}</Text>
@@ -177,8 +179,8 @@ export default function HomeScreen() {
 
           {recentRides.length === 0 && (
             <View className="items-center py-8">
-              <MaterialIcons name="directions-bike" size={48} color={colors.muted} />
-              <Text className="text-muted mt-2 text-center">
+              <MaterialIcons name="electric-scooter" size={56} color={colors.muted} />
+              <Text className="text-muted mt-3 text-center leading-6">
                 아직 주행 기록이 없습니다.{"\n"}주행을 시작해보세요!
               </Text>
             </View>
