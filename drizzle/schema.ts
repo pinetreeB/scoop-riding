@@ -60,6 +60,8 @@ export const ridingRecords = mysqlTable("ridingRecords", {
   endTime: timestamp("endTime"),
   /** GPS points as JSON string */
   gpsPointsJson: text("gpsPointsJson"),
+  /** Scooter used for this ride (optional) */
+  scooterId: int("scooterId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

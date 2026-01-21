@@ -9,7 +9,7 @@ import { useColors } from "@/hooks/use-colors";
 import { RideMap } from "@/components/ride-map";
 import {
   RidingRecord,
-  getRidingRecords,
+  getRidingRecordWithGps,
   deleteRidingRecord,
   formatDuration,
 } from "@/lib/riding-store";
@@ -31,9 +31,11 @@ export default function RideDetailScreen() {
   }, [id]);
 
   const loadRecord = async () => {
-    const records = await getRidingRecords();
-    const found = records.find((r) => r.id === id);
-    setRecord(found || null);
+    if (!id) return;
+    // Use getRidingRecordWithGps to load GPS data separately
+    const found = await getRidingRecordWithGps(id);
+    setRecord(found);
+    console.log("[RideDetail] Loaded record:", id, "GPS points:", found?.gpsPoints?.length || 0);
   };
 
   const handleExportGpx = async () => {
@@ -138,9 +140,17 @@ export default function RideDetailScreen() {
           </Pressable>
         </View>
 
-        {/* Date */}
+        {/* Date and Scooter */}
         <View className="px-4 py-3">
-          <Text className="text-sm text-muted">{record.date}</Text>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm text-muted">{record.date}</Text>
+            {record.scooterName && (
+              <View className="flex-row items-center bg-primary/10 px-3 py-1 rounded-full">
+                <MaterialIcons name="electric-scooter" size={14} color={colors.primary} />
+                <Text className="text-primary text-xs font-medium ml-1">{record.scooterName}</Text>
+              </View>
+            )}
+          </View>
           {record.startTime && (
             <Text className="text-xs text-muted mt-1">
               {new Date(record.startTime).toLocaleTimeString("ko-KR", {

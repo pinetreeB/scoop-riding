@@ -292,8 +292,8 @@ export default function ScootersScreen() {
             {scooters.map((scooter: any) => (
               <Pressable
                 key={scooter.id}
-                onPress={() => handleEditScooter(scooter)}
-                onLongPress={() => handleSetDefault(scooter)}
+                onPress={() => router.push(`/scooter-stats?id=${scooter.id}`)}
+                onLongPress={() => handleEditScooter(scooter)}
                 style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
                 className="bg-surface rounded-2xl p-4 mb-3 border border-border"
               >
@@ -351,7 +351,7 @@ export default function ScootersScreen() {
             ))}
 
             <Text className="text-muted text-xs text-center mt-2 mb-4">
-              길게 눌러서 기본 기체로 설정
+              탭하여 통계 보기 • 길게 눌러서 수정
             </Text>
           </View>
         )}

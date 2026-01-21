@@ -13,7 +13,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -22,9 +22,13 @@ import {
   cancelAllNotifications,
   scheduleRideReminder,
   getScheduledNotifications,
+  cancelNotification,
 } from "@/lib/notifications";
 
 const NOTIFICATION_SETTINGS_KEY = "@scoop_notification_settings";
+
+// Check if we're in Expo Go
+const isExpoGo = Constants.appOwnership === "expo";
 
 interface NotificationSettings {
   enabled: boolean;
@@ -62,9 +66,19 @@ export default function NotificationsScreen() {
         setSettings({ ...defaultSettings, ...JSON.parse(stored) });
       }
 
-      // Check permission status
-      const { status } = await Notifications.getPermissionsAsync();
-      setPermissionStatus(status);
+      // Check permission status - skip in Expo Go
+      if (!isExpoGo && Platform.OS !== "web") {
+        try {
+          const Notifications = await import("expo-notifications");
+          const { status } = await Notifications.getPermissionsAsync();
+          setPermissionStatus(status);
+        } catch (e) {
+          console.log("[Notifications] Permission check skipped");
+          setPermissionStatus("unavailable");
+        }
+      } else {
+        setPermissionStatus("unavailable");
+      }
     } catch (error) {
       console.error("Failed to load notification settings:", error);
     } finally {
@@ -81,16 +95,18 @@ export default function NotificationsScreen() {
       await AsyncStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(newSettings));
       setSettings(newSettings);
 
-      // Update scheduled notifications
-      if (newSettings.rideReminder && newSettings.enabled) {
-        await cancelAllNotifications();
-        await scheduleRideReminder(newSettings.reminderHour, newSettings.reminderMinute);
-      } else if (!newSettings.rideReminder) {
-        // Cancel ride reminders
-        const scheduled = await getScheduledNotifications();
-        for (const notification of scheduled) {
-          if (notification.content.data?.type === "ride_reminder") {
-            await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+      // Update scheduled notifications - skip in Expo Go
+      if (!isExpoGo && Platform.OS !== "web") {
+        if (newSettings.rideReminder && newSettings.enabled) {
+          await cancelAllNotifications();
+          await scheduleRideReminder(newSettings.reminderHour, newSettings.reminderMinute);
+        } else if (!newSettings.rideReminder) {
+          // Cancel ride reminders
+          const scheduled = await getScheduledNotifications();
+          for (const notification of scheduled) {
+            if (notification.content?.data?.type === "ride_reminder") {
+              await cancelNotification(notification.identifier);
+            }
           }
         }
       }
@@ -114,18 +130,32 @@ export default function NotificationsScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
+    if (isExpoGo) {
+      Alert.alert(
+        "Expo Go 제한",
+        "푸시 알림은 Expo Go에서 지원되지 않습니다. 개발 빌드를 사용해주세요.",
+        [{ text: "확인" }]
+      );
+      return;
+    }
+
     const token = await registerForPushNotificationsAsync();
     if (token) {
-      const { status } = await Notifications.getPermissionsAsync();
-      setPermissionStatus(status);
-      
-      if (status === "granted") {
-        const newSettings = { ...settings, enabled: true };
-        saveSettings(newSettings);
+      try {
+        const Notifications = await import("expo-notifications");
+        const { status } = await Notifications.getPermissionsAsync();
+        setPermissionStatus(status);
         
-        if (Platform.OS !== "web") {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (status === "granted") {
+          const newSettings = { ...settings, enabled: true };
+          saveSettings(newSettings);
+          
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
         }
+      } catch (e) {
+        console.log("[Notifications] Permission check failed");
       }
     } else {
       Alert.alert(
@@ -134,8 +164,6 @@ export default function NotificationsScreen() {
         [
           { text: "취소", style: "cancel" },
           { text: "설정으로 이동", onPress: () => {
-            // On iOS, this would open settings
-            // For now, just show a message
             Alert.alert("안내", "기기 설정 > 앱 > SCOOP > 알림에서 권한을 허용해주세요.");
           }},
         ]
@@ -152,6 +180,8 @@ export default function NotificationsScreen() {
       </ScreenContainer>
     );
   }
+
+  const showExpoGoWarning = isExpoGo || permissionStatus === "unavailable";
 
   return (
     <ScreenContainer>
@@ -172,8 +202,23 @@ export default function NotificationsScreen() {
           <Text className="text-2xl font-bold text-foreground">알림 설정</Text>
         </View>
 
+        {/* Expo Go Warning */}
+        {showExpoGoWarning && (
+          <View className="mx-5 mb-4 p-4 rounded-2xl" style={{ backgroundColor: colors.warning + "20" }}>
+            <View className="flex-row items-center mb-2">
+              <MaterialIcons name="info" size={20} color={colors.warning} />
+              <Text className="text-foreground font-medium ml-2">알림 기능 제한</Text>
+            </View>
+            <Text className="text-muted text-sm">
+              {isExpoGo 
+                ? "Expo Go에서는 푸시 알림이 지원되지 않습니다. 개발 빌드에서 사용 가능합니다."
+                : "현재 환경에서 알림 기능을 사용할 수 없습니다."}
+            </Text>
+          </View>
+        )}
+
         {/* Permission Status */}
-        {permissionStatus !== "granted" && (
+        {!showExpoGoWarning && permissionStatus !== "granted" && (
           <View className="mx-5 mb-4 p-4 rounded-2xl" style={{ backgroundColor: colors.warning + "20" }}>
             <View className="flex-row items-center mb-2">
               <MaterialIcons name="warning" size={20} color={colors.warning} />
@@ -210,6 +255,7 @@ export default function NotificationsScreen() {
                 onValueChange={() => handleToggle("enabled")}
                 trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor="#FFFFFF"
+                disabled={showExpoGoWarning}
               />
             </View>
           </View>
@@ -232,7 +278,7 @@ export default function NotificationsScreen() {
               <Switch
                 value={settings.rideComplete && settings.enabled}
                 onValueChange={() => handleToggle("rideComplete")}
-                disabled={!settings.enabled}
+                disabled={!settings.enabled || showExpoGoWarning}
                 trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor="#FFFFFF"
               />
@@ -250,7 +296,7 @@ export default function NotificationsScreen() {
               <Switch
                 value={settings.weeklyReport && settings.enabled}
                 onValueChange={() => handleToggle("weeklyReport")}
-                disabled={!settings.enabled}
+                disabled={!settings.enabled || showExpoGoWarning}
                 trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor="#FFFFFF"
               />
@@ -268,7 +314,7 @@ export default function NotificationsScreen() {
               <Switch
                 value={settings.newRecord && settings.enabled}
                 onValueChange={() => handleToggle("newRecord")}
-                disabled={!settings.enabled}
+                disabled={!settings.enabled || showExpoGoWarning}
                 trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor="#FFFFFF"
               />
@@ -286,7 +332,7 @@ export default function NotificationsScreen() {
               <Switch
                 value={settings.levelUp && settings.enabled}
                 onValueChange={() => handleToggle("levelUp")}
-                disabled={!settings.enabled}
+                disabled={!settings.enabled || showExpoGoWarning}
                 trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor="#FFFFFF"
               />
@@ -314,7 +360,7 @@ export default function NotificationsScreen() {
               <Switch
                 value={settings.rideReminder && settings.enabled}
                 onValueChange={() => handleToggle("rideReminder")}
-                disabled={!settings.enabled}
+                disabled={!settings.enabled || showExpoGoWarning}
                 trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor="#FFFFFF"
               />
@@ -327,8 +373,9 @@ export default function NotificationsScreen() {
           <View className="flex-row items-start">
             <MaterialIcons name="info-outline" size={20} color={colors.muted} />
             <Text className="text-muted text-sm ml-2 flex-1">
-              알림은 앱이 백그라운드에 있거나 종료된 상태에서도 받을 수 있습니다. 
-              기기 설정에서 SCOOP 앱의 알림이 허용되어 있어야 합니다.
+              {isExpoGo 
+                ? "Expo Go 환경에서는 알림 설정이 저장되지만, 실제 알림은 개발 빌드에서만 작동합니다."
+                : "알림은 앱이 백그라운드에 있거나 종료된 상태에서도 받을 수 있습니다. 기기 설정에서 SCOOP 앱의 알림이 허용되어 있어야 합니다."}
             </Text>
           </View>
         </View>

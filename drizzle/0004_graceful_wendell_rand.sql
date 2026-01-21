@@ -1,0 +1,1 @@
+ALTER TABLE `ridingRecords` ADD `scooterId` int;

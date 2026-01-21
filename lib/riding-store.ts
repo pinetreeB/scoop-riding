@@ -13,6 +13,8 @@ export interface RidingRecord {
   endTime: string;
   gpsPoints?: GpsPoint[]; // GPS track points for GPX export
   synced?: boolean; // Whether this record has been synced to cloud
+  scooterId?: number; // Scooter used for this ride
+  scooterName?: string; // Scooter name (for display)
 }
 
 export interface RidingStats {

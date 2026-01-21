@@ -1,45 +1,81 @@
-import * as Notifications from "expo-notifications";
-import * as Device from "expo-device";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 
-// Configure notification handler
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Lazy load expo-notifications to avoid Expo Go errors
+let Notifications: typeof import("expo-notifications") | null = null;
+let Device: typeof import("expo-device") | null = null;
+
+// Check if we're in Expo Go
+const isExpoGo = Constants.appOwnership === "expo";
+
+// Initialize notifications module only if not in Expo Go or on web
+async function getNotificationsModule() {
+  if (Notifications) return Notifications;
+  
+  // Skip on web or in Expo Go (push notifications not supported)
+  if (Platform.OS === "web" || isExpoGo) {
+    console.log("[Notifications] Skipping - not supported in this environment");
+    return null;
+  }
+  
+  try {
+    Notifications = await import("expo-notifications");
+    Device = await import("expo-device");
+    
+    // Configure notification handler
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+    
+    return Notifications;
+  } catch (error) {
+    console.log("[Notifications] Failed to load module:", error);
+    return null;
+  }
+}
 
 // Register for push notifications
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
+  const notif = await getNotificationsModule();
+  if (!notif || !Device) {
+    console.log("[Notifications] Module not available");
+    return null;
+  }
+
   let token: string | null = null;
 
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
-      name: "SCOOP 알림",
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#FF6D00",
-    });
+    try {
+      await notif.setNotificationChannelAsync("default", {
+        name: "SCOOP 알림",
+        importance: notif.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: "#FF6D00",
+      });
 
-    await Notifications.setNotificationChannelAsync("riding", {
-      name: "주행 알림",
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#FF6D00",
-    });
+      await notif.setNotificationChannelAsync("riding", {
+        name: "주행 알림",
+        importance: notif.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: "#FF6D00",
+      });
+    } catch (e) {
+      console.log("[Notifications] Channel setup error:", e);
+    }
   }
 
   if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    const { status: existingStatus } = await notif.getPermissionsAsync();
     let finalStatus = existingStatus;
 
     if (existingStatus !== "granted") {
-      const { status } = await Notifications.requestPermissionsAsync();
+      const { status } = await notif.requestPermissionsAsync();
       finalStatus = status;
     }
 
@@ -51,7 +87,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     try {
       const projectId = Constants.expoConfig?.extra?.eas?.projectId;
       if (projectId) {
-        const pushToken = await Notifications.getExpoPushTokenAsync({ projectId });
+        const pushToken = await notif.getExpoPushTokenAsync({ projectId });
         token = pushToken.data;
       }
     } catch (error) {
@@ -69,34 +105,66 @@ export async function scheduleLocalNotification(
   title: string,
   body: string,
   data?: Record<string, unknown>,
-  trigger?: Notifications.NotificationTriggerInput
+  trigger?: any
 ): Promise<string> {
-  const identifier = await Notifications.scheduleNotificationAsync({
-    content: {
-      title,
-      body,
-      data,
-      sound: true,
-    },
-    trigger: trigger || null, // null means immediate
-  });
+  const notif = await getNotificationsModule();
+  if (!notif) {
+    console.log("[Notifications] Local notification skipped - module not available");
+    return "";
+  }
 
-  return identifier;
+  try {
+    const identifier = await notif.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        data,
+        sound: true,
+      },
+      trigger: trigger || null, // null means immediate
+    });
+    return identifier;
+  } catch (error) {
+    console.log("[Notifications] Schedule error:", error);
+    return "";
+  }
 }
 
 // Cancel a scheduled notification
 export async function cancelNotification(identifier: string): Promise<void> {
-  await Notifications.cancelScheduledNotificationAsync(identifier);
+  const notif = await getNotificationsModule();
+  if (!notif || !identifier) return;
+  
+  try {
+    await notif.cancelScheduledNotificationAsync(identifier);
+  } catch (error) {
+    console.log("[Notifications] Cancel error:", error);
+  }
 }
 
 // Cancel all scheduled notifications
 export async function cancelAllNotifications(): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  const notif = await getNotificationsModule();
+  if (!notif) return;
+  
+  try {
+    await notif.cancelAllScheduledNotificationsAsync();
+  } catch (error) {
+    console.log("[Notifications] Cancel all error:", error);
+  }
 }
 
 // Get all scheduled notifications
-export async function getScheduledNotifications(): Promise<Notifications.NotificationRequest[]> {
-  return Notifications.getAllScheduledNotificationsAsync();
+export async function getScheduledNotifications(): Promise<any[]> {
+  const notif = await getNotificationsModule();
+  if (!notif) return [];
+  
+  try {
+    return await notif.getAllScheduledNotificationsAsync();
+  } catch (error) {
+    console.log("[Notifications] Get scheduled error:", error);
+    return [];
+  }
 }
 
 // Riding-specific notifications
@@ -189,24 +257,31 @@ export async function scheduleRideReminder(
   minute: number,
   weekdays: number[] = [1, 2, 3, 4, 5] // Mon-Fri by default
 ): Promise<string[]> {
+  const notif = await getNotificationsModule();
+  if (!notif) return [];
+
   const identifiers: string[] = [];
 
   for (const weekday of weekdays) {
-    const identifier = await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "오늘도 라이딩 어때요? 🛴",
-        body: "좋은 날씨에 전동킥보드 타고 나가보세요!",
-        data: { type: "ride_reminder" },
-        sound: true,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-        weekday,
-        hour,
-        minute,
-      },
-    });
-    identifiers.push(identifier);
+    try {
+      const identifier = await notif.scheduleNotificationAsync({
+        content: {
+          title: "오늘도 라이딩 어때요? 🛴",
+          body: "좋은 날씨에 전동킥보드 타고 나가보세요!",
+          data: { type: "ride_reminder" },
+          sound: true,
+        },
+        trigger: {
+          type: notif.SchedulableTriggerInputTypes.WEEKLY,
+          weekday,
+          hour,
+          minute,
+        },
+      });
+      identifiers.push(identifier);
+    } catch (error) {
+      console.log("[Notifications] Schedule reminder error:", error);
+    }
   }
 
   return identifiers;

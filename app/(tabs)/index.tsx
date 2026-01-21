@@ -82,7 +82,8 @@ export default function HomeScreen() {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    router.push("/riding");
+    // Navigate to scooter selection screen before riding
+    router.push("/select-scooter");
   };
 
   const handleViewHistory = () => {

@@ -33,6 +33,7 @@ import {
   stopBackgroundLocationTracking,
   requestBackgroundLocationPermission,
 } from "@/lib/background-location";
+import { getSelectedScooter, type SelectedScooter } from "@/app/select-scooter";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -53,6 +54,7 @@ export default function RidingScreen() {
   const [gpsPoints, setGpsPoints] = useState<GpsPoint[]>([]);
   const [showMap, setShowMap] = useState(true);
   const [isBackgroundEnabled, setIsBackgroundEnabled] = useState(false);
+  const [selectedScooter, setSelectedScooter] = useState<SelectedScooter | null>(null);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
@@ -68,6 +70,11 @@ export default function RidingScreen() {
   useEffect(() => {
     isRunningRef.current = isRunning;
   }, [isRunning]);
+
+  // Load selected scooter on mount
+  useEffect(() => {
+    getSelectedScooter().then(setSelectedScooter);
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== "web") {
@@ -320,6 +327,8 @@ export default function RidingScreen() {
               startTime: startTimeRef.current.toISOString(),
               endTime: new Date().toISOString(),
               gpsPoints: gpsPointsRef.current,
+              scooterId: selectedScooter?.id,
+              scooterName: selectedScooter?.name,
             };
             await saveRidingRecord(record);
 
