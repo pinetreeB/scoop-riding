@@ -32,3 +32,7 @@
 - [x] 백그라운드 GPS 추적 기능
 - [x] LOOP 앱 스타일 홈 화면 UI 개선
 - [x] LOOP 앱 스타일 트래킹 관리 화면 (프로필 화면으로 통합)
+
+- [x] react-native-maps 제거 (Expo Go 호환성 문제)
+- [x] WebView 기반 지도 컴포넌트로 교체 (OpenStreetMap + Leaflet)
+- [x] 주행 화면 및 상세 화면 지도 업데이트

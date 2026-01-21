@@ -161,7 +161,7 @@ export default function RideDetailScreen() {
         </View>
 
         {/* Map */}
-        {hasGpsData && Platform.OS !== "web" ? (
+        {hasGpsData ? (
           <View className="mx-4 h-64 rounded-2xl overflow-hidden mb-4">
             <RideMap
               gpsPoints={gpsPoints}

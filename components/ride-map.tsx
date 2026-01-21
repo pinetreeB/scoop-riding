@@ -1,28 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { View, StyleSheet, Platform, Text } from "react-native";
-import { GpsPoint, getBoundingBox, getCenterPoint } from "@/lib/gps-utils";
+import { View, StyleSheet, Platform, Text, ActivityIndicator } from "react-native";
+import { WebView } from "react-native-webview";
+import { GpsPoint, getBoundingBox } from "@/lib/gps-utils";
 import { useColors } from "@/hooks/use-colors";
-
-// Conditionally import react-native-maps only on native platforms
-let MapView: any = null;
-let Polyline: any = null;
-let Marker: any = null;
-let PROVIDER_GOOGLE: any = null;
-
-if (Platform.OS !== "web") {
-  const Maps = require("react-native-maps");
-  MapView = Maps.default;
-  Polyline = Maps.Polyline;
-  Marker = Maps.Marker;
-  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
-}
-
-interface Region {
-  latitude: number;
-  longitude: number;
-  latitudeDelta: number;
-  longitudeDelta: number;
-}
 
 interface RideMapProps {
   gpsPoints: GpsPoint[];
@@ -40,153 +20,223 @@ export function RideMap({
   style,
 }: RideMapProps) {
   const colors = useColors();
-  const mapRef = useRef<any>(null);
-  const [region, setRegion] = useState<Region | null>(null);
+  const webViewRef = useRef<WebView>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Calculate initial region from GPS points
-  useEffect(() => {
+  // Calculate center and zoom from GPS points
+  const getMapCenter = () => {
     if (gpsPoints.length > 0) {
       const boundingBox = getBoundingBox(gpsPoints);
       if (boundingBox) {
-        const latDelta = Math.max(0.01, (boundingBox.maxLat - boundingBox.minLat) * 1.5);
-        const lonDelta = Math.max(0.01, (boundingBox.maxLon - boundingBox.minLon) * 1.5);
-        
-        setRegion({
-          latitude: (boundingBox.minLat + boundingBox.maxLat) / 2,
-          longitude: (boundingBox.minLon + boundingBox.maxLon) / 2,
-          latitudeDelta: latDelta,
-          longitudeDelta: lonDelta,
-        });
+        return {
+          lat: (boundingBox.minLat + boundingBox.maxLat) / 2,
+          lng: (boundingBox.minLon + boundingBox.maxLon) / 2,
+          zoom: calculateZoom(boundingBox),
+        };
       }
-    } else if (currentLocation) {
-      setRegion({
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
     }
-  }, [gpsPoints.length === 0 ? currentLocation : null]);
+    if (currentLocation) {
+      return {
+        lat: currentLocation.latitude,
+        lng: currentLocation.longitude,
+        zoom: 16,
+      };
+    }
+    // Default to Seoul
+    return { lat: 37.5665, lng: 126.978, zoom: 12 };
+  };
 
-  // Follow current location in live mode
+  const calculateZoom = (boundingBox: { minLat: number; maxLat: number; minLon: number; maxLon: number }) => {
+    const latDiff = boundingBox.maxLat - boundingBox.minLat;
+    const lonDiff = boundingBox.maxLon - boundingBox.minLon;
+    const maxDiff = Math.max(latDiff, lonDiff);
+    
+    if (maxDiff < 0.005) return 17;
+    if (maxDiff < 0.01) return 16;
+    if (maxDiff < 0.02) return 15;
+    if (maxDiff < 0.05) return 14;
+    if (maxDiff < 0.1) return 13;
+    if (maxDiff < 0.2) return 12;
+    return 11;
+  };
+
+  const center = getMapCenter();
+
+  // Generate HTML for the map using OpenStreetMap + Leaflet (free, no API key needed)
+  const generateMapHtml = () => {
+    const pathCoords = gpsPoints.map(p => `[${p.latitude}, ${p.longitude}]`).join(",");
+    const startPoint = gpsPoints.length > 0 ? gpsPoints[0] : null;
+    const endPoint = gpsPoints.length > 1 ? gpsPoints[gpsPoints.length - 1] : null;
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    #map { width: 100%; height: 100%; }
+    .start-marker {
+      width: 20px;
+      height: 20px;
+      background: #4CAF50;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .end-marker {
+      width: 20px;
+      height: 20px;
+      background: #F44336;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .current-marker {
+      width: 24px;
+      height: 24px;
+      background: ${colors.primary};
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 109, 0, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(255, 109, 0, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 109, 0, 0); }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const map = L.map('map', {
+      zoomControl: false,
+      attributionControl: false
+    }).setView([${center.lat}, ${center.lng}], ${center.zoom});
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Draw path
+    const pathCoords = [${pathCoords}];
+    if (pathCoords.length > 1) {
+      const polyline = L.polyline(pathCoords, {
+        color: '${colors.primary}',
+        weight: 4,
+        opacity: 0.9,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+      
+      // Fit bounds to path
+      map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
+    }
+
+    // Start marker
+    ${startPoint ? `
+    const startIcon = L.divIcon({
+      className: 'start-marker-wrapper',
+      html: '<div class="start-marker"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+    L.marker([${startPoint.latitude}, ${startPoint.longitude}], { icon: startIcon }).addTo(map);
+    ` : ''}
+
+    // End marker
+    ${endPoint && !isLive ? `
+    const endIcon = L.divIcon({
+      className: 'end-marker-wrapper',
+      html: '<div class="end-marker"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+    L.marker([${endPoint.latitude}, ${endPoint.longitude}], { icon: endIcon }).addTo(map);
+    ` : ''}
+
+    // Current location marker (for live mode)
+    ${isLive && currentLocation ? `
+    const currentIcon = L.divIcon({
+      className: 'current-marker-wrapper',
+      html: '<div class="current-marker"></div>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+    const currentMarker = L.marker([${currentLocation.latitude}, ${currentLocation.longitude}], { icon: currentIcon }).addTo(map);
+    map.setView([${currentLocation.latitude}, ${currentLocation.longitude}], 16);
+    ` : ''}
+
+    // Function to update current location (called from React Native)
+    window.updateCurrentLocation = function(lat, lng) {
+      if (typeof currentMarker !== 'undefined') {
+        currentMarker.setLatLng([lat, lng]);
+        map.setView([lat, lng], map.getZoom());
+      }
+    };
+
+    // Function to add point to path (called from React Native)
+    window.addPathPoint = function(lat, lng) {
+      if (typeof polyline !== 'undefined') {
+        polyline.addLatLng([lat, lng]);
+      }
+    };
+  </script>
+</body>
+</html>
+    `;
+  };
+
+  // Update map when location changes in live mode
   useEffect(() => {
-    if (isLive && currentLocation && mapRef.current) {
-      mapRef.current.animateToRegion({
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
-        latitudeDelta: 0.005,
-        longitudeDelta: 0.005,
-      }, 500);
+    if (isLive && currentLocation && webViewRef.current) {
+      webViewRef.current.injectJavaScript(`
+        if (window.updateCurrentLocation) {
+          window.updateCurrentLocation(${currentLocation.latitude}, ${currentLocation.longitude});
+        }
+        true;
+      `);
     }
   }, [isLive, currentLocation]);
 
-  // Web fallback - show placeholder
-  if (Platform.OS === "web") {
+  // No GPS points and no current location - show placeholder
+  if (gpsPoints.length === 0 && !currentLocation) {
     return (
       <View style={[styles.container, style, { backgroundColor: colors.surface }]}>
-        <View style={styles.webPlaceholder}>
+        <View style={styles.placeholder}>
           <Text style={{ color: colors.muted, textAlign: "center" }}>
-            지도는 모바일 앱에서만 표시됩니다.
-          </Text>
-          <Text style={{ color: colors.muted, textAlign: "center", fontSize: 12, marginTop: 8 }}>
-            GPS 포인트: {gpsPoints.length}개
+            GPS 데이터가 없습니다
           </Text>
         </View>
       </View>
     );
   }
 
-  // Convert GPS points to coordinates for polyline
-  const coordinates = gpsPoints.map((point) => ({
-    latitude: point.latitude,
-    longitude: point.longitude,
-  }));
-
-  // Get start and end points
-  const startPoint = gpsPoints.length > 0 ? gpsPoints[0] : null;
-  const endPoint = gpsPoints.length > 1 ? gpsPoints[gpsPoints.length - 1] : null;
-
-  if (!region && !currentLocation) {
-    return (
-      <View style={[styles.container, style, { backgroundColor: colors.surface }]} />
-    );
-  }
-
   return (
     <View style={[styles.container, style]}>
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-        initialRegion={region || {
-          latitude: currentLocation?.latitude || 37.5665,
-          longitude: currentLocation?.longitude || 126.9780,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }}
-        showsUserLocation={showCurrentLocation}
-        showsMyLocationButton={false}
-        showsCompass={false}
-        showsScale={false}
-        rotateEnabled={false}
-        pitchEnabled={false}
-      >
-        {/* Route polyline */}
-        {coordinates.length > 1 && (
-          <Polyline
-            coordinates={coordinates}
-            strokeColor={colors.primary}
-            strokeWidth={4}
-            lineCap="round"
-            lineJoin="round"
-          />
-        )}
-
-        {/* Start marker */}
-        {startPoint && (
-          <Marker
-            coordinate={{
-              latitude: startPoint.latitude,
-              longitude: startPoint.longitude,
-            }}
-            anchor={{ x: 0.5, y: 0.5 }}
-          >
-            <View style={[styles.markerStart, { borderColor: colors.primary }]}>
-              <View style={[styles.markerInner, { backgroundColor: "#4CAF50" }]} />
-            </View>
-          </Marker>
-        )}
-
-        {/* End marker (only if different from start) */}
-        {endPoint && !isLive && (
-          <Marker
-            coordinate={{
-              latitude: endPoint.latitude,
-              longitude: endPoint.longitude,
-            }}
-            anchor={{ x: 0.5, y: 0.5 }}
-          >
-            <View style={[styles.markerEnd, { borderColor: colors.primary }]}>
-              <View style={[styles.markerInner, { backgroundColor: "#F44336" }]} />
-            </View>
-          </Marker>
-        )}
-
-        {/* Current location marker in live mode */}
-        {isLive && currentLocation && (
-          <Marker
-            coordinate={{
-              latitude: currentLocation.latitude,
-              longitude: currentLocation.longitude,
-            }}
-            anchor={{ x: 0.5, y: 0.5 }}
-          >
-            <View style={styles.currentLocationMarker}>
-              <View style={[styles.currentLocationInner, { backgroundColor: colors.primary }]} />
-            </View>
-          </Marker>
-        )}
-      </MapView>
+      {isLoading && (
+        <View style={[styles.loadingOverlay, { backgroundColor: colors.surface }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ color: colors.muted, marginTop: 8 }}>지도 로딩 중...</Text>
+        </View>
+      )}
+      <WebView
+        ref={webViewRef}
+        source={{ html: generateMapHtml() }}
+        style={styles.webview}
+        scrollEnabled={false}
+        onLoadEnd={() => setIsLoading(false)}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        startInLoadingState={false}
+        scalesPageToFit={true}
+        originWhitelist={["*"]}
+      />
     </View>
   );
 }
@@ -197,51 +247,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: "hidden",
   },
-  map: {
+  webview: {
     flex: 1,
+    backgroundColor: "transparent",
   },
-  webPlaceholder: {
+  placeholder: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
   },
-  markerStart: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "white",
-    borderWidth: 2,
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-  },
-  markerEnd: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "white",
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  markerInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  currentLocationMarker: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 109, 0, 0.3)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  currentLocationInner: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: "white",
+    zIndex: 10,
   },
 });

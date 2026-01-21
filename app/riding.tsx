@@ -384,7 +384,7 @@ export default function RidingScreen() {
         </View>
 
         {/* Map or Speed Display */}
-        {showMap && Platform.OS !== "web" ? (
+        {showMap ? (
           <View className="flex-1 mx-4 mb-4 rounded-2xl overflow-hidden">
             <RideMap
               gpsPoints={gpsPoints}
