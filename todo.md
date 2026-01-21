@@ -36,3 +36,9 @@
 - [x] react-native-maps 제거 (Expo Go 호환성 문제)
 - [x] WebView 기반 지도 컴포넌트로 교체 (OpenStreetMap + Leaflet)
 - [x] 주행 화면 및 상세 화면 지도 업데이트
+
+- [x] 백엔드 인증 API 구현 (회원가입/로그인)
+- [x] 로그인 화면 UI 구현
+- [x] 회원가입 화면 UI 구현
+- [x] 인증 상태 관리 (Context/Hook)
+- [x] 로그인 필수 라우팅 적용
