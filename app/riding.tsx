@@ -24,6 +24,12 @@ import {
   getMaxSpeed,
 } from "@/lib/gps-utils";
 
+// Speed filtering constants
+const MIN_ACCURACY_FOR_SPEED = 15; // Minimum GPS accuracy (meters) to trust speed reading
+const MIN_SPEED_THRESHOLD = 1.5; // Minimum speed in km/h to consider as moving (below this = stationary)
+const SPEED_SMOOTHING_SAMPLES = 3; // Number of samples for moving average
+const MAX_SPEED_JUMP = 30; // Maximum speed change in km/h between readings (filter spikes)
+
 export default function RidingScreen() {
   const router = useRouter();
   const colors = useColors();
@@ -42,6 +48,10 @@ export default function RidingScreen() {
   const startTimeRef = useRef<Date>(new Date());
   const gpsPointsRef = useRef<GpsPoint[]>([]);
   const lastLocationRef = useRef<Location.LocationObject | null>(null);
+  
+  // Speed filtering refs
+  const speedHistoryRef = useRef<number[]>([]);
+  const lastValidSpeedRef = useRef<number>(0);
 
   // Keep screen awake on native platforms
   useEffect(() => {
@@ -125,6 +135,45 @@ export default function RidingScreen() {
     }
   };
 
+  /**
+   * Filter and smooth GPS speed to remove noise and spikes
+   */
+  const filterSpeed = (rawSpeedKmh: number, accuracy: number | null): number => {
+    // If GPS accuracy is poor, don't trust the speed reading
+    if (accuracy !== null && accuracy > MIN_ACCURACY_FOR_SPEED) {
+      return lastValidSpeedRef.current;
+    }
+
+    // If speed is below threshold, consider as stationary
+    if (rawSpeedKmh < MIN_SPEED_THRESHOLD) {
+      speedHistoryRef.current = []; // Reset history when stationary
+      lastValidSpeedRef.current = 0;
+      return 0;
+    }
+
+    // Filter out unrealistic speed jumps
+    const lastSpeed = lastValidSpeedRef.current;
+    if (lastSpeed > 0 && Math.abs(rawSpeedKmh - lastSpeed) > MAX_SPEED_JUMP) {
+      // Speed jump too large, likely GPS error - use smoothed value
+      return lastValidSpeedRef.current;
+    }
+
+    // Add to history for smoothing
+    speedHistoryRef.current.push(rawSpeedKmh);
+    
+    // Keep only recent samples
+    if (speedHistoryRef.current.length > SPEED_SMOOTHING_SAMPLES) {
+      speedHistoryRef.current.shift();
+    }
+
+    // Calculate moving average
+    const smoothedSpeed = speedHistoryRef.current.reduce((a, b) => a + b, 0) / 
+                          speedHistoryRef.current.length;
+
+    lastValidSpeedRef.current = smoothedSpeed;
+    return smoothedSpeed;
+  };
+
   const handleLocationUpdate = (location: Location.LocationObject) => {
     if (!isRunning) return;
 
@@ -134,24 +183,31 @@ export default function RidingScreen() {
     // Update accuracy indicator
     setAccuracy(locAccuracy);
 
-    // Create GPS point
+    // Convert raw speed to km/h and apply filtering
+    const rawSpeedKmh = speed !== null && speed >= 0 ? msToKmh(speed) : 0;
+    const filteredSpeedKmh = filterSpeed(rawSpeedKmh, locAccuracy);
+
+    // Create GPS point with filtered speed for storage
     const gpsPoint: GpsPoint = {
       latitude,
       longitude,
       altitude: altitude ?? null,
       timestamp,
-      speed: speed ?? null,
+      speed: filteredSpeedKmh > 0 ? filteredSpeedKmh / 3.6 : 0, // Store as m/s
       accuracy: locAccuracy ?? null,
     };
 
-    // Add to track
-    gpsPointsRef.current.push(gpsPoint);
+    // Only add point if accuracy is reasonable
+    if (locAccuracy === null || locAccuracy < 30) {
+      gpsPointsRef.current.push(gpsPoint);
+    }
 
-    // Update current speed (convert m/s to km/h)
-    if (speed !== null && speed >= 0) {
-      const speedKmh = msToKmh(speed);
-      setCurrentSpeed(speedKmh);
-      setMaxSpeed((prev) => Math.max(prev, speedKmh));
+    // Update current speed display
+    setCurrentSpeed(filteredSpeedKmh);
+    
+    // Only update max speed if we're actually moving
+    if (filteredSpeedKmh > MIN_SPEED_THRESHOLD) {
+      setMaxSpeed((prev) => Math.max(prev, filteredSpeedKmh));
     }
 
     // Calculate distance from last point
@@ -163,17 +219,28 @@ export default function RidingScreen() {
         latitude,
         longitude
       );
-      // Only add distance if accuracy is reasonable (< 20m) and distance is reasonable
-      if ((locAccuracy === null || locAccuracy < 20) && dist < 100) {
+      
+      // Only add distance if:
+      // 1. GPS accuracy is reasonable (< 20m)
+      // 2. Distance is reasonable (< 100m per second)
+      // 3. We're actually moving (filtered speed > threshold)
+      if ((locAccuracy === null || locAccuracy < 20) && 
+          dist < 100 && 
+          filteredSpeedKmh > MIN_SPEED_THRESHOLD) {
         setDistance((prev) => prev + dist);
       }
     }
 
     lastLocationRef.current = location;
 
-    // Update average speed
-    const avgSpd = calculateAverageSpeed(gpsPointsRef.current);
-    setAvgSpeed(avgSpd);
+    // Update average speed (only from valid points)
+    const validPoints = gpsPointsRef.current.filter(
+      (p) => p.speed !== null && msToKmh(p.speed) > MIN_SPEED_THRESHOLD
+    );
+    if (validPoints.length > 0) {
+      const avgSpd = validPoints.reduce((sum, p) => sum + msToKmh(p.speed!), 0) / validPoints.length;
+      setAvgSpeed(avgSpd);
+    }
   };
 
   // Timer for duration
@@ -239,7 +306,7 @@ export default function RidingScreen() {
           onPress: async () => {
             stopLocationTracking();
 
-            // Calculate final stats from GPS data
+            // Calculate final stats from GPS data (using filtered points)
             const finalDistance = calculateTotalDistance(gpsPointsRef.current);
             const finalAvgSpeed = calculateAverageSpeed(gpsPointsRef.current);
             const finalMaxSpeed = getMaxSpeed(gpsPointsRef.current);
