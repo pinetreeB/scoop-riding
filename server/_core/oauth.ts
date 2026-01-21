@@ -129,8 +129,24 @@ export function registerOAuthRoutes(app: Express) {
   });
 
   app.post("/api/auth/logout", (req: Request, res: Response) => {
+    console.log("[Auth] Logout request received");
     const cookieOptions = getSessionCookieOptions(req);
-    res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    console.log("[Auth] Cookie options for logout:", cookieOptions);
+    
+    // Clear the session cookie with proper options
+    res.clearCookie(COOKIE_NAME, {
+      ...cookieOptions,
+      maxAge: 0,
+    });
+    
+    // Also set an expired cookie explicitly to ensure removal
+    res.cookie(COOKIE_NAME, "", {
+      ...cookieOptions,
+      maxAge: 0,
+      expires: new Date(0),
+    });
+    
+    console.log("[Auth] Logout successful, cookie cleared");
     res.json({ success: true });
   });
 

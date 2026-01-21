@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -322,4 +322,109 @@ export async function deleteRidingRecord(recordId: string, userId: number): Prom
   await db.delete(ridingRecords)
     .where(eq(ridingRecords.recordId, recordId));
   return true;
+}
+
+// Scooter (기체) Management Functions
+
+export async function getUserScooters(userId: number): Promise<Scooter[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(scooters).where(eq(scooters.userId, userId));
+}
+
+export async function getScooterById(scooterId: number, userId: number): Promise<Scooter | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(scooters)
+    .where(and(eq(scooters.id, scooterId), eq(scooters.userId, userId)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createScooter(data: InsertScooter): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  // If this is the first scooter for the user, make it default
+  const existingScooters = await getUserScooters(data.userId);
+  if (existingScooters.length === 0) {
+    data.isDefault = true;
+  }
+
+  const result = await db.insert(scooters).values(data);
+  return result[0].insertId;
+}
+
+export async function updateScooter(
+  scooterId: number,
+  userId: number,
+  data: Partial<InsertScooter>
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.update(scooters)
+    .set({ ...data, updatedAt: new Date() })
+    .where(and(eq(scooters.id, scooterId), eq(scooters.userId, userId)));
+  return true;
+}
+
+export async function deleteScooter(scooterId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.delete(scooters)
+    .where(and(eq(scooters.id, scooterId), eq(scooters.userId, userId)));
+  return true;
+}
+
+export async function setDefaultScooter(scooterId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // First, unset all defaults for this user
+  await db.update(scooters)
+    .set({ isDefault: false })
+    .where(eq(scooters.userId, userId));
+
+  // Then set the new default
+  await db.update(scooters)
+    .set({ isDefault: true })
+    .where(and(eq(scooters.id, scooterId), eq(scooters.userId, userId)));
+
+  return true;
+}
+
+export async function updateScooterStats(
+  scooterId: number,
+  userId: number,
+  distanceToAdd: number
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const scooter = await getScooterById(scooterId, userId);
+  if (!scooter) return false;
+
+  await db.update(scooters)
+    .set({
+      totalDistance: scooter.totalDistance + distanceToAdd,
+      totalRides: scooter.totalRides + 1,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(scooters.id, scooterId), eq(scooters.userId, userId)));
+
+  return true;
+}
+
+export async function getDefaultScooter(userId: number): Promise<Scooter | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(scooters)
+    .where(and(eq(scooters.userId, userId), eq(scooters.isDefault, true)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
 }

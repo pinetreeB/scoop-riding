@@ -90,17 +90,21 @@ export function useAuth(options?: UseAuthOptions) {
   }, []);
 
   const logout = useCallback(async () => {
+    console.log("[useAuth] logout called");
     try {
       await Api.logout();
+      console.log("[useAuth] API logout successful");
     } catch (err) {
       console.error("[Auth] Logout API call failed:", err);
       // Continue with logout even if API call fails
-    } finally {
-      await Auth.removeSessionToken();
-      await Auth.clearUserInfo();
-      setUser(null);
-      setError(null);
     }
+    
+    // Clear local state and storage
+    await Auth.removeSessionToken();
+    await Auth.clearUserInfo();
+    setUser(null);
+    setError(null);
+    console.log("[useAuth] Local state cleared");
   }, []);
 
   const isAuthenticated = useMemo(() => Boolean(user), [user]);

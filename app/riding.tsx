@@ -14,6 +14,7 @@ import {
   formatDuration,
   generateId,
 } from "@/lib/riding-store";
+import { notifyRideCompleted } from "@/lib/notifications";
 import {
   GpsPoint,
   GPS_CONSTANTS,
@@ -305,18 +306,30 @@ export default function RidingScreen() {
             const finalAvgSpeed = calculateAverageSpeed(gpsPointsRef.current);
             const finalMaxSpeed = getMaxSpeed(gpsPointsRef.current);
 
+            const finalDist = finalDistance > 0 ? finalDistance : distance;
+            const finalAvg = finalAvgSpeed > 0 ? finalAvgSpeed : avgSpeed;
+            const finalMax = finalMaxSpeed > 0 ? finalMaxSpeed : maxSpeed;
+
             const record = {
               id: generateId(),
               date: new Date().toLocaleDateString("ko-KR"),
               duration,
-              distance: finalDistance > 0 ? finalDistance : distance,
-              avgSpeed: finalAvgSpeed > 0 ? finalAvgSpeed : avgSpeed,
-              maxSpeed: finalMaxSpeed > 0 ? finalMaxSpeed : maxSpeed,
+              distance: finalDist,
+              avgSpeed: finalAvg,
+              maxSpeed: finalMax,
               startTime: startTimeRef.current.toISOString(),
               endTime: new Date().toISOString(),
               gpsPoints: gpsPointsRef.current,
             };
             await saveRidingRecord(record);
+
+            // Send ride completion notification
+            try {
+              await notifyRideCompleted(finalDist, duration, finalAvg);
+            } catch (e) {
+              console.log("[Riding] Notification error:", e);
+            }
+
             router.back();
           },
         },

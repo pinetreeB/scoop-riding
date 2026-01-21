@@ -22,6 +22,13 @@
       "when": 1769012500867,
       "tag": "0002_old_shadowcat",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1769014007861,
+      "tag": "0003_loving_falcon",
+      "breakpoints": true
     }
   ]
 }

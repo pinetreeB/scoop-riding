@@ -312,6 +312,108 @@ export const appRouter = router({
         return { success };
       }),
   }),
+
+  // Scooter (기체) management (protected - requires login)
+  scooters: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserScooters(ctx.user.id);
+    }),
+
+    get: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return db.getScooterById(input.id, ctx.user.id);
+      }),
+
+    getDefault: protectedProcedure.query(async ({ ctx }) => {
+      return db.getDefaultScooter(ctx.user.id);
+    }),
+
+    create: protectedProcedure
+      .input(
+        z.object({
+          name: z.string().min(1, "기체 이름을 입력해주세요.").max(100),
+          brand: z.string().max(100).optional(),
+          model: z.string().max(100).optional(),
+          serialNumber: z.string().max(100).optional(),
+          purchaseDate: z.string().optional(),
+          initialOdometer: z.number().min(0).default(0),
+          color: z.string().max(20).optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const result = await db.createScooter({
+          userId: ctx.user.id,
+          name: input.name,
+          brand: input.brand,
+          model: input.model,
+          serialNumber: input.serialNumber,
+          purchaseDate: input.purchaseDate ? new Date(input.purchaseDate) : undefined,
+          initialOdometer: input.initialOdometer,
+          color: input.color,
+          notes: input.notes,
+        });
+        return { success: true, id: result };
+      }),
+
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          name: z.string().min(1).max(100).optional(),
+          brand: z.string().max(100).optional(),
+          model: z.string().max(100).optional(),
+          serialNumber: z.string().max(100).optional(),
+          purchaseDate: z.string().optional(),
+          initialOdometer: z.number().min(0).optional(),
+          color: z.string().max(20).optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { id, ...data } = input;
+        const updateData: Record<string, unknown> = {};
+        
+        if (data.name !== undefined) updateData.name = data.name;
+        if (data.brand !== undefined) updateData.brand = data.brand;
+        if (data.model !== undefined) updateData.model = data.model;
+        if (data.serialNumber !== undefined) updateData.serialNumber = data.serialNumber;
+        if (data.purchaseDate !== undefined) updateData.purchaseDate = new Date(data.purchaseDate);
+        if (data.initialOdometer !== undefined) updateData.initialOdometer = data.initialOdometer;
+        if (data.color !== undefined) updateData.color = data.color;
+        if (data.notes !== undefined) updateData.notes = data.notes;
+
+        const success = await db.updateScooter(id, ctx.user.id, updateData);
+        return { success };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.deleteScooter(input.id, ctx.user.id);
+        return { success };
+      }),
+
+    setDefault: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.setDefaultScooter(input.id, ctx.user.id);
+        return { success };
+      }),
+
+    updateStats: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          distanceToAdd: z.number().min(0),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.updateScooterStats(input.id, ctx.user.id, input.distanceToAdd);
+        return { success };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

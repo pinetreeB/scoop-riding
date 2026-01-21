@@ -421,11 +421,45 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* My Scooters */}
+        <View className="mx-5 mb-6">
+          <Text className="text-lg font-bold text-foreground mb-3">내 기체</Text>
+          
+          <View className="bg-surface rounded-2xl border border-border overflow-hidden">
+            <Pressable
+              onPress={() => router.push("/scooters")}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4"
+            >
+              <MaterialIcons name="electric-scooter" size={24} color={colors.primary} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">기체 관리</Text>
+                <Text className="text-muted text-xs">전동킥보드 등록 및 관리</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+          </View>
+        </View>
+
         {/* Settings */}
         <View className="mx-5 mb-6">
           <Text className="text-lg font-bold text-foreground mb-3">설정</Text>
           
           <View className="bg-surface rounded-2xl border border-border overflow-hidden">
+            {/* Notifications */}
+            <Pressable
+              onPress={() => router.push("/notifications")}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4 border-b border-border"
+            >
+              <MaterialIcons name="notifications-none" size={24} color={colors.primary} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">알림 설정</Text>
+                <Text className="text-muted text-xs">주행 완료, 기록 달성 알림</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+
             {/* App Info */}
             <Pressable
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}

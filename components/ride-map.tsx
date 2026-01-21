@@ -63,7 +63,7 @@ export function RideMap({
 
   const center = getMapCenter();
 
-  // Generate HTML for the map using OpenStreetMap + Leaflet
+  // Generate HTML for the map using OpenStreetMap + Leaflet with rotation plugin
   const generateMapHtml = useMemo(() => {
     const pathCoords = gpsPoints.map(p => `[${p.latitude}, ${p.longitude}]`).join(",");
     const startPoint = gpsPoints.length > 0 ? gpsPoints[0] : null;
@@ -80,7 +80,21 @@ export function RideMap({
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; }
-    #map { width: 100%; height: 100%; }
+    #map-wrapper {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+    #map {
+      width: 150%;
+      height: 150%;
+      position: absolute;
+      top: -25%;
+      left: -25%;
+      transform-origin: center center;
+      transition: transform 0.3s ease-out;
+    }
     .leaflet-container {
       background: #f5f5f5;
     }
@@ -100,72 +114,96 @@ export function RideMap({
       border-radius: 50%;
       box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
-    /* Navigation arrow marker */
+    /* Navigation arrow marker - always pointing up */
     .arrow-marker {
       width: 0;
       height: 0;
-      border-left: 12px solid transparent;
-      border-right: 12px solid transparent;
-      border-bottom: 28px solid ${colors.primary};
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
-      transform-origin: center center;
-      transition: transform 0.3s ease-out;
+      border-left: 14px solid transparent;
+      border-right: 14px solid transparent;
+      border-bottom: 32px solid ${colors.primary};
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
     }
     .arrow-marker::after {
       content: '';
       position: absolute;
-      top: 8px;
-      left: -6px;
+      top: 10px;
+      left: -7px;
       width: 0;
       height: 0;
-      border-left: 6px solid transparent;
-      border-right: 6px solid transparent;
-      border-bottom: 14px solid white;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-bottom: 16px solid white;
     }
     /* Pulsing circle around arrow */
     .arrow-container {
       position: relative;
-      width: 50px;
-      height: 50px;
+      width: 60px;
+      height: 60px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
     .pulse-ring {
       position: absolute;
-      width: 40px;
-      height: 40px;
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
-      background: rgba(255, 109, 0, 0.2);
+      background: rgba(255, 109, 0, 0.25);
       animation: pulse-ring 2s infinite;
     }
+    .pulse-ring-2 {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(255, 109, 0, 0.15);
+      animation: pulse-ring 2s infinite 0.5s;
+    }
     @keyframes pulse-ring {
-      0% { transform: scale(0.8); opacity: 1; }
-      100% { transform: scale(1.5); opacity: 0; }
+      0% { transform: scale(0.6); opacity: 1; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+    /* Direction indicator at top of screen */
+    .direction-indicator {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 1000;
+      display: ${isLive ? 'block' : 'none'};
     }
   </style>
 </head>
 <body>
-  <div id="map"></div>
+  <div class="direction-indicator" id="direction">N</div>
+  <div id="map-wrapper">
+    <div id="map"></div>
+  </div>
   <script>
     // State variables
     let currentMarker = null;
     let polyline = null;
     let currentHeading = ${initialHeading};
+    let targetHeading = ${initialHeading};
+    let displayHeading = ${initialHeading};
     let targetLat = ${currentLocation?.latitude || center.lat};
     let targetLng = ${currentLocation?.longitude || center.lng};
     let currentLat = targetLat;
     let currentLng = targetLng;
     let isLiveMode = ${isLive};
     let animationFrame = null;
+    let mapRotation = 0;
 
     // Initialize map
     const map = L.map('map', {
       zoomControl: false,
       attributionControl: false,
-      rotate: true,
-      rotateControl: false,
-      touchRotate: false,
     }).setView([${center.lat}, ${center.lng}], ${isLive ? 17 : center.zoom});
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -210,23 +248,21 @@ export function RideMap({
     L.marker([${endPoint.latitude}, ${endPoint.longitude}], { icon: endIcon }).addTo(map);
     ` : ''}
 
-    // Create arrow marker for live mode
+    // Create arrow marker for live mode - arrow always points UP
     ${isLive && currentLocation ? `
-    function createArrowIcon(heading) {
-      return L.divIcon({
-        className: 'arrow-marker-wrapper',
-        html: '<div class="arrow-container"><div class="pulse-ring"></div><div class="arrow-marker" id="arrow" style="transform: rotate(' + heading + 'deg)"></div></div>',
-        iconSize: [50, 50],
-        iconAnchor: [25, 25]
-      });
-    }
+    const arrowIcon = L.divIcon({
+      className: 'arrow-marker-wrapper',
+      html: '<div class="arrow-container"><div class="pulse-ring"></div><div class="pulse-ring-2"></div><div class="arrow-marker"></div></div>',
+      iconSize: [60, 60],
+      iconAnchor: [30, 30]
+    });
 
     currentMarker = L.marker([${currentLocation.latitude}, ${currentLocation.longitude}], { 
-      icon: createArrowIcon(${initialHeading}),
+      icon: arrowIcon,
       zIndexOffset: 1000
     }).addTo(map);
     
-    // Set initial view with rotation
+    // Set initial view
     map.setView([${currentLocation.latitude}, ${currentLocation.longitude}], 17);
     ` : ''}
 
@@ -235,11 +271,39 @@ export function RideMap({
       return start + (end - start) * factor;
     }
 
-    // Normalize angle difference
+    // Normalize angle to -180 to 180
     function normalizeAngle(angle) {
       while (angle > 180) angle -= 360;
       while (angle < -180) angle += 360;
       return angle;
+    }
+
+    // Smooth angle interpolation
+    function lerpAngle(start, end, factor) {
+      let diff = normalizeAngle(end - start);
+      return start + diff * factor;
+    }
+
+    // Get compass direction from heading
+    function getDirection(heading) {
+      const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+      const index = Math.round(((heading % 360) + 360) % 360 / 45) % 8;
+      return directions[index];
+    }
+
+    // Rotate the map container
+    function rotateMap(heading) {
+      const mapEl = document.getElementById('map');
+      if (mapEl) {
+        // Rotate map in opposite direction so arrow points up
+        mapEl.style.transform = 'rotate(' + (-heading) + 'deg)';
+      }
+      
+      // Update direction indicator
+      const dirEl = document.getElementById('direction');
+      if (dirEl) {
+        dirEl.textContent = getDirection(heading);
+      }
     }
 
     // Animation loop for smooth updates
@@ -247,16 +311,23 @@ export function RideMap({
       if (!isLiveMode) return;
 
       // Smooth position interpolation
-      const positionFactor = 0.15;
+      const positionFactor = 0.12;
       currentLat = lerp(currentLat, targetLat, positionFactor);
       currentLng = lerp(currentLng, targetLng, positionFactor);
+
+      // Smooth heading interpolation
+      const headingFactor = 0.08;
+      displayHeading = lerpAngle(displayHeading, targetHeading, headingFactor);
 
       // Update marker position
       if (currentMarker) {
         currentMarker.setLatLng([currentLat, currentLng]);
       }
 
-      // Smooth map pan to follow marker
+      // Rotate map to keep arrow pointing up
+      rotateMap(displayHeading);
+
+      // Smooth map pan to follow marker (center of visible area)
       const mapCenter = map.getCenter();
       const newCenterLat = lerp(mapCenter.lat, currentLat, positionFactor);
       const newCenterLng = lerp(mapCenter.lng, currentLng, positionFactor);
@@ -277,13 +348,7 @@ export function RideMap({
       targetLng = lng;
       
       if (typeof heading === 'number' && !isNaN(heading)) {
-        currentHeading = heading;
-        
-        // Update arrow rotation
-        const arrowEl = document.getElementById('arrow');
-        if (arrowEl) {
-          arrowEl.style.transform = 'rotate(' + heading + 'deg)';
-        }
+        targetHeading = heading;
       }
     };
 

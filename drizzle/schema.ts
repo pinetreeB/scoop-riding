@@ -65,3 +65,39 @@ export const ridingRecords = mysqlTable("ridingRecords", {
 
 export type RidingRecord = typeof ridingRecords.$inferSelect;
 export type InsertRidingRecord = typeof ridingRecords.$inferInsert;
+
+/**
+ * Scooter (기체) management table
+ */
+export const scooters = mysqlTable("scooters", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User who owns this scooter */
+  userId: int("userId").notNull(),
+  /** Scooter name (user-defined) */
+  name: varchar("name", { length: 100 }).notNull(),
+  /** Manufacturer/Brand */
+  brand: varchar("brand", { length: 100 }),
+  /** Model name */
+  model: varchar("model", { length: 100 }),
+  /** Serial number */
+  serialNumber: varchar("serialNumber", { length: 100 }),
+  /** Purchase date */
+  purchaseDate: timestamp("purchaseDate"),
+  /** Initial odometer reading in meters */
+  initialOdometer: int("initialOdometer").default(0).notNull(),
+  /** Total distance ridden with this scooter (accumulated from rides) in meters */
+  totalDistance: int("totalDistance").default(0).notNull(),
+  /** Total ride count */
+  totalRides: int("totalRides").default(0).notNull(),
+  /** Whether this is the default/active scooter */
+  isDefault: boolean("isDefault").default(false).notNull(),
+  /** Scooter color for UI */
+  color: varchar("color", { length: 20 }).default("#FF6D00"),
+  /** Notes */
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Scooter = typeof scooters.$inferSelect;
+export type InsertScooter = typeof scooters.$inferInsert;
