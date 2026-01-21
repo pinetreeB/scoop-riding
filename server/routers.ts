@@ -11,8 +11,14 @@ import { ENV } from "./_core/env";
 const JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret || "scoop-riding-secret-key-change-in-production");
 
 // Generate session token
-async function generateSessionToken(userId: number, openId: string): Promise<string> {
-  const token = await new jose.SignJWT({ userId, openId })
+// Must include openId, appId, and name to be compatible with SDK verifySession
+async function generateSessionToken(userId: number, openId: string, name: string = ""): Promise<string> {
+  const token = await new jose.SignJWT({ 
+    userId, 
+    openId,
+    appId: ENV.appId || "scoop-riding",
+    name: name || "User"
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("30d")
@@ -78,8 +84,8 @@ export const appRouter = router({
           return { success: false, error: "회원가입 후 사용자 정보를 찾을 수 없습니다." };
         }
 
-        // Generate session token
-        const token = await generateSessionToken(user.id, user.openId);
+        // Generate session token with user name
+        const token = await generateSessionToken(user.id, user.openId, user.name || "");
 
         // Set cookie for web
         const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -119,8 +125,8 @@ export const appRouter = router({
 
         const user = result.user;
 
-        // Generate session token
-        const token = await generateSessionToken(user.id, user.openId);
+        // Generate session token with user name
+        const token = await generateSessionToken(user.id, user.openId, user.name || "");
 
         // Set cookie for web
         const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -238,8 +244,8 @@ export const appRouter = router({
           return { success: false, error: "사용자 정보를 찾을 수 없습니다." };
         }
 
-        // Generate session token
-        const token = await generateSessionToken(user.id, user.openId);
+        // Generate session token with user name
+        const token = await generateSessionToken(user.id, user.openId, user.name || "");
 
         // Set cookie for web
         const cookieOptions = getSessionCookieOptions(ctx.req);

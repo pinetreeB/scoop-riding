@@ -209,14 +209,11 @@ export default function LoginScreen() {
           <View className="flex-1 px-6 pt-12">
             {/* Logo and Title */}
             <View className="items-center mb-10">
-              <View
-                className="w-20 h-20 rounded-2xl items-center justify-center mb-4"
-                style={{ backgroundColor: colors.primary }}
-              >
-                <MaterialIcons name="electric-scooter" size={48} color="#FFFFFF" />
-              </View>
-              <Text className="text-3xl font-bold text-foreground">SCOOP</Text>
-              <Text className="text-muted mt-2">전동킥보드 주행기록</Text>
+              <Image
+                source={require("@/assets/images/scoop-logo.jpg")}
+                style={{ width: 180, height: 180, borderRadius: 16 }}
+                resizeMode="contain"
+              />
             </View>
 
             {/* Login Form */}

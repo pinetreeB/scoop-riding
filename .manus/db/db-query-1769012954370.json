@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, email, name, loginMethod, passwordHash IS NOT NULL as hasPassword FROM users LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, email, name, loginMethod, passwordHash IS NOT NULL as hasPassword FROM users LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "email": "tmd7221@gmail.com",
+      "name": "소나무군",
+      "loginMethod": "email",
+      "hasPassword": "1"
+    },
+    {
+      "id": "2",
+      "email": "mylee7221@naver.com",
+      "name": "소나무군",
+      "loginMethod": "email",
+      "hasPassword": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\tloginMethod\thasPassword\n1\ttmd7221@gmail.com\t소나무군\temail\t1\n2\tmylee7221@naver.com\t소나무군\temail\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1773
+}

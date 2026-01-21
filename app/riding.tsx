@@ -48,7 +48,7 @@ export default function RidingScreen() {
   const [gpsStatus, setGpsStatus] = useState<"waiting" | "active" | "error">("waiting");
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [gpsPointCount, setGpsPointCount] = useState(0);
-  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number; heading?: number } | null>(null);
   const [gpsPoints, setGpsPoints] = useState<GpsPoint[]>([]);
   const [showMap, setShowMap] = useState(true);
   const [isBackgroundEnabled, setIsBackgroundEnabled] = useState(false);
@@ -193,7 +193,10 @@ export default function RidingScreen() {
     const timestamp = location.timestamp;
 
     setAccuracy(locAccuracy);
-    setCurrentLocation({ latitude, longitude });
+    
+    // Calculate heading from bearing if available
+    const heading = lastBearingRef.current ?? (location.coords.heading ?? 0);
+    setCurrentLocation({ latitude, longitude, heading });
 
     const gpsPoint: GpsPoint = {
       latitude,
