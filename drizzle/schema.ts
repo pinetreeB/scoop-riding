@@ -1,4 +1,4 @@
-import { boolean, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -30,6 +30,8 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  /** Profile image URL (S3 or external) */
+  profileImageUrl: varchar("profileImageUrl", { length: 500 }),
 });
 
 export type User = typeof users.$inferSelect;
@@ -239,3 +241,90 @@ export const postImages = mysqlTable("postImages", {
 
 export type PostImage = typeof postImages.$inferSelect;
 export type InsertPostImage = typeof postImages.$inferInsert;
+
+/**
+ * Post views table (track unique views per user)
+ */
+export const postViews = mysqlTable("postViews", {
+  id: int("id").autoincrement().primaryKey(),
+  postId: int("postId").notNull(),
+  userId: int("userId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PostView = typeof postViews.$inferSelect;
+export type InsertPostView = typeof postViews.$inferInsert;
+
+
+/**
+ * Notifications table
+ */
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User who receives the notification */
+  userId: int("userId").notNull(),
+  /** Type of notification */
+  type: varchar("type", { length: 50 }).notNull(), // friend_request, friend_accepted, like, comment, follow
+  /** Title of the notification */
+  title: varchar("title", { length: 200 }).notNull(),
+  /** Body/message of the notification */
+  body: varchar("body", { length: 500 }),
+  /** Related entity type (post, user, etc.) */
+  entityType: varchar("entityType", { length: 50 }),
+  /** Related entity ID */
+  entityId: int("entityId"),
+  /** User who triggered the notification */
+  actorId: int("actorId"),
+  /** Whether the notification has been read */
+  isRead: boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
+/**
+ * Challenges table
+ */
+export const challenges = mysqlTable("challenges", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Challenge creator */
+  creatorId: int("creatorId").notNull(),
+  /** Challenge title */
+  title: varchar("title", { length: 200 }).notNull(),
+  /** Challenge description */
+  description: text("description"),
+  /** Challenge type: distance, rides, duration */
+  type: varchar("type", { length: 50 }).notNull(),
+  /** Target value (km, count, minutes) */
+  targetValue: decimal("targetValue", { precision: 10, scale: 2 }).notNull(),
+  /** Start date */
+  startDate: timestamp("startDate").notNull(),
+  /** End date */
+  endDate: timestamp("endDate").notNull(),
+  /** Is public challenge */
+  isPublic: boolean("isPublic").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Challenge = typeof challenges.$inferSelect;
+export type InsertChallenge = typeof challenges.$inferInsert;
+
+/**
+ * Challenge participants table
+ */
+export const challengeParticipants = mysqlTable("challengeParticipants", {
+  id: int("id").autoincrement().primaryKey(),
+  challengeId: int("challengeId").notNull(),
+  userId: int("userId").notNull(),
+  /** Current progress value */
+  progress: decimal("progress", { precision: 10, scale: 2 }).default("0").notNull(),
+  /** Completion status */
+  isCompleted: boolean("isCompleted").default(false).notNull(),
+  completedAt: timestamp("completedAt"),
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+});
+
+export type ChallengeParticipant = typeof challengeParticipants.$inferSelect;
+export type InsertChallengeParticipant = typeof challengeParticipants.$inferInsert;

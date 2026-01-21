@@ -11,6 +11,7 @@ interface AuthContextType {
   login: (user: Auth.User, token?: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -149,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     refresh: fetchUser,
+    refreshUser: fetchUser,
   }), [user, loading, error, isAuthenticated, login, logout, fetchUser]);
 
   return (

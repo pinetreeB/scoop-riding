@@ -215,14 +215,36 @@ export default function ProfileScreen() {
         {/* Profile Card */}
         <View className="mx-5 mb-6 bg-surface rounded-2xl p-5 border border-border">
           <View className="flex-row items-center mb-4">
-            <View 
-              className="w-16 h-16 rounded-full items-center justify-center mr-4"
-              style={{ backgroundColor: colors.primary }}
+            <Pressable
+              onPress={() => router.push("/edit-profile" as never)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
             >
-              <MaterialIcons name={getLoginMethodIcon()} size={32} color="#FFFFFF" />
-            </View>
+              {user?.profileImageUrl ? (
+                <Image
+                  source={{ uri: user.profileImageUrl }}
+                  style={{ width: 64, height: 64, borderRadius: 32, marginRight: 16 }}
+                />
+              ) : (
+                <View 
+                  className="w-16 h-16 rounded-full items-center justify-center mr-4"
+                  style={{ backgroundColor: colors.primary }}
+                >
+                  <Text className="text-white text-2xl font-bold">
+                    {getUserDisplayName().charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
             <View className="flex-1">
-              <Text className="text-xl font-bold text-foreground">{getUserDisplayName()}</Text>
+              <View className="flex-row items-center justify-between">
+                <Text className="text-xl font-bold text-foreground">{getUserDisplayName()}</Text>
+                <Pressable
+                  onPress={() => router.push("/edit-profile" as never)}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <MaterialIcons name="edit" size={20} color={colors.muted} />
+                </Pressable>
+              </View>
               {user?.email && (
                 <Text className="text-muted text-sm mt-0.5">{user.email}</Text>
               )}
@@ -444,12 +466,40 @@ export default function ProfileScreen() {
             <Pressable
               onPress={() => router.push("/ranking" as any)}
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-              className="flex-row items-center p-4"
+              className="flex-row items-center p-4 border-b border-border"
             >
               <MaterialIcons name="leaderboard" size={24} color={colors.warning} />
               <View className="flex-1 ml-3">
                 <Text className="text-foreground font-medium">랭킹</Text>
                 <Text className="text-muted text-xs">주간/월간 주행 랭킹</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+
+            {/* Challenges */}
+            <Pressable
+              onPress={() => router.push("/challenges" as any)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4 border-b border-border"
+            >
+              <MaterialIcons name="emoji-events" size={24} color={colors.success} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">챌린지</Text>
+                <Text className="text-muted text-xs">친구들과 함께하는 주행 챌린지</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+
+            {/* Notifications */}
+            <Pressable
+              onPress={() => router.push("/notifications-center" as any)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4"
+            >
+              <MaterialIcons name="notifications" size={24} color={colors.primary} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">알림</Text>
+                <Text className="text-muted text-xs">친구 요청, 댓글, 좋아요 알림</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>

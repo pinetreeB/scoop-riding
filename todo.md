@@ -83,3 +83,11 @@
 - [x] 팔로우/팔로워 시스템 - follows 테이블, user-profile 화면
 - [x] 커뮤니티 이미지 첨부 기능 - expo-image-picker, S3 업로드
 - [x] 주행 랭킹 기능 (주간/월간) - app/ranking.tsx
+
+- [x] 커뮤니티 탭 인스타 스타일로 개선 (정보량 증가, 이미지 갤러리)
+- [x] 좋아요 반응 속도 개선 (Optimistic Update 적용)
+- [x] 조회수 중복 방지 (postViews 테이블로 1계정당 1카운트)
+- [x] 랭킹 시스템 메인 화면으로 이동 (통계 아래 배치)
+- [x] 프로필 사진 설정 기능 (edit-profile 화면)
+- [x] 알림 센터 구현 (notifications-center 화면)
+- [x] 주행 챌린지 기능 (challenges, create-challenge, challenge-detail 화면)

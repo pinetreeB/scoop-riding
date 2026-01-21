@@ -657,6 +657,50 @@ export const appRouter = router({
       }),
   }),
 
+  // User profile
+  profile: router({
+    // Update profile
+    update: protectedProcedure
+      .input(
+        z.object({
+          name: z.string().min(1).max(50).optional(),
+          profileImageUrl: z.string().url().optional().nullable(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.updateUserProfile(ctx.user.id, input);
+        return { success };
+      }),
+
+    // Upload profile image
+    uploadImage: protectedProcedure
+      .input(
+        z.object({
+          base64: z.string(),
+          filename: z.string(),
+          contentType: z.string().default("image/jpeg"),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { storagePut } = await import("./storage");
+        const buffer = Buffer.from(input.base64, "base64");
+        const key = `profiles/${ctx.user.id}/${Date.now()}-${input.filename}`;
+        const result = await storagePut(key, buffer, input.contentType);
+        
+        // Update user profile with new image URL
+        await db.updateUserProfile(ctx.user.id, { profileImageUrl: result.url });
+        
+        return { url: result.url, key: result.key };
+      }),
+
+    // Get user profile by ID
+    getById: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getUserById(input.userId);
+      }),
+  }),
+
   // Ranking
   ranking: router({
     // Get weekly ranking
@@ -671,6 +715,92 @@ export const appRouter = router({
       .input(z.object({ limit: z.number().min(1).max(100).default(50) }).optional())
       .query(async ({ input }) => {
         return db.getRanking("monthly", input?.limit ?? 50);
+      }),
+  }),
+
+  // Notifications
+  notifications: router({
+    // Get user notifications
+    list: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(100).default(50) }).optional())
+      .query(async ({ ctx, input }) => {
+        return db.getUserNotifications(ctx.user.id, input?.limit ?? 50);
+      }),
+
+    // Mark notification as read
+    markAsRead: protectedProcedure
+      .input(z.object({ notificationId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.markNotificationAsRead(input.notificationId, ctx.user.id);
+        return { success };
+      }),
+
+    // Mark all as read
+    markAllAsRead: protectedProcedure.mutation(async ({ ctx }) => {
+      const success = await db.markAllNotificationsAsRead(ctx.user.id);
+      return { success };
+    }),
+
+    // Get unread count
+    unreadCount: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUnreadNotificationCount(ctx.user.id);
+    }),
+  }),
+
+  // Challenges
+  challenges: router({
+    // Get public challenges
+    list: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(100).default(20) }).optional())
+      .query(async ({ ctx, input }) => {
+        return db.getPublicChallenges(ctx.user.id, input?.limit ?? 20);
+      }),
+
+    // Get user's challenges
+    mine: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserChallenges(ctx.user.id);
+    }),
+
+    // Create challenge
+    create: protectedProcedure
+      .input(
+        z.object({
+          title: z.string().min(1).max(200),
+          description: z.string().max(1000).optional(),
+          type: z.enum(["distance", "rides", "duration"]),
+          targetValue: z.number().positive(),
+          startDate: z.string(),
+          endDate: z.string(),
+          isPublic: z.boolean().default(true),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const challengeId = await db.createChallenge({
+          creatorId: ctx.user.id,
+          title: input.title,
+          description: input.description,
+          type: input.type,
+          targetValue: input.targetValue,
+          startDate: new Date(input.startDate),
+          endDate: new Date(input.endDate),
+          isPublic: input.isPublic,
+        });
+        return { success: !!challengeId, challengeId };
+      }),
+
+    // Join challenge
+    join: protectedProcedure
+      .input(z.object({ challengeId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.joinChallenge(input.challengeId, ctx.user.id);
+        return { success };
+      }),
+
+    // Get leaderboard
+    leaderboard: protectedProcedure
+      .input(z.object({ challengeId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getChallengeLeaderboard(input.challengeId);
       }),
   }),
 });

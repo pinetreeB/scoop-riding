@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -506,10 +506,22 @@ export async function getPostById(postId: number, userId?: number): Promise<Post
   const db = await getDb();
   if (!db) return null;
 
-  // Increment view count
-  await db.update(posts)
-    .set({ viewCount: sql`${posts.viewCount} + 1` })
-    .where(eq(posts.id, postId));
+  // Check if user has already viewed this post (only count once per user)
+  if (userId) {
+    const existingView = await db
+      .select()
+      .from(postViews)
+      .where(and(eq(postViews.postId, postId), eq(postViews.userId, userId)))
+      .limit(1);
+    
+    if (existingView.length === 0) {
+      // First view by this user - record it and increment count
+      await db.insert(postViews).values({ postId, userId });
+      await db.update(posts)
+        .set({ viewCount: sql`${posts.viewCount} + 1` })
+        .where(eq(posts.id, postId));
+    }
+  }
 
   const result = await db
     .select({
@@ -1222,4 +1234,390 @@ export async function getRanking(
     .map((user, index) => ({ ...user, rank: index + 1 }));
 
   return ranking;
+}
+
+
+// ==================== Profile Functions ====================
+
+// Update user profile
+export async function updateUserProfile(
+  userId: number,
+  data: { name?: string; profileImageUrl?: string | null }
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.update(users)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+  
+  return true;
+}
+
+// Get user by ID
+export async function getUserById(userId: number): Promise<{
+  id: number;
+  name: string | null;
+  email: string | null;
+  profileImageUrl: string | null;
+  createdAt: Date;
+} | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      profileImageUrl: users.profileImageUrl,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+
+// ==================== Notification Functions ====================
+
+export interface NotificationWithActor extends Notification {
+  actorName: string | null;
+  actorProfileImageUrl: string | null;
+}
+
+// Create notification
+export async function createNotification(data: {
+  userId: number;
+  type: string;
+  title: string;
+  body?: string;
+  entityType?: string;
+  entityId?: number;
+  actorId?: number;
+}): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(notifications).values({
+    userId: data.userId,
+    type: data.type,
+    title: data.title,
+    body: data.body || null,
+    entityType: data.entityType || null,
+    entityId: data.entityId || null,
+    actorId: data.actorId || null,
+    isRead: false,
+  });
+
+  return result[0].insertId;
+}
+
+// Get user notifications
+export async function getUserNotifications(
+  userId: number,
+  limit: number = 50
+): Promise<NotificationWithActor[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      id: notifications.id,
+      userId: notifications.userId,
+      type: notifications.type,
+      title: notifications.title,
+      body: notifications.body,
+      entityType: notifications.entityType,
+      entityId: notifications.entityId,
+      actorId: notifications.actorId,
+      isRead: notifications.isRead,
+      createdAt: notifications.createdAt,
+      actorName: users.name,
+      actorProfileImageUrl: users.profileImageUrl,
+    })
+    .from(notifications)
+    .leftJoin(users, eq(notifications.actorId, users.id))
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit);
+
+  return result;
+}
+
+// Mark notification as read
+export async function markNotificationAsRead(notificationId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.update(notifications)
+    .set({ isRead: true })
+    .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)));
+
+  return true;
+}
+
+// Mark all notifications as read
+export async function markAllNotificationsAsRead(userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.update(notifications)
+    .set({ isRead: true })
+    .where(eq(notifications.userId, userId));
+
+  return true;
+}
+
+// Get unread notification count
+export async function getUnreadNotificationCount(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const result = await db
+    .select()
+    .from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+
+  return result.length;
+}
+
+// ==================== Challenge Functions ====================
+
+export interface ChallengeWithCreator extends Challenge {
+  creatorName: string | null;
+  participantCount: number;
+  userProgress?: number;
+  userCompleted?: boolean;
+}
+
+// Create challenge
+export async function createChallenge(data: {
+  creatorId: number;
+  title: string;
+  description?: string;
+  type: string;
+  targetValue: number;
+  startDate: Date;
+  endDate: Date;
+  isPublic?: boolean;
+}): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(challenges).values({
+    creatorId: data.creatorId,
+    title: data.title,
+    description: data.description || null,
+    type: data.type,
+    targetValue: data.targetValue.toString(),
+    startDate: data.startDate,
+    endDate: data.endDate,
+    isPublic: data.isPublic ?? true,
+  });
+
+  // Auto-join creator
+  const challengeId = result[0].insertId;
+  await db.insert(challengeParticipants).values({
+    challengeId,
+    userId: data.creatorId,
+    progress: "0",
+    isCompleted: false,
+  });
+
+  return challengeId;
+}
+
+// Get public challenges
+export async function getPublicChallenges(userId: number, limit: number = 20): Promise<ChallengeWithCreator[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const now = new Date();
+
+  const result = await db
+    .select({
+      id: challenges.id,
+      creatorId: challenges.creatorId,
+      title: challenges.title,
+      description: challenges.description,
+      type: challenges.type,
+      targetValue: challenges.targetValue,
+      startDate: challenges.startDate,
+      endDate: challenges.endDate,
+      isPublic: challenges.isPublic,
+      createdAt: challenges.createdAt,
+      updatedAt: challenges.updatedAt,
+      creatorName: users.name,
+    })
+    .from(challenges)
+    .leftJoin(users, eq(challenges.creatorId, users.id))
+    .where(
+      and(
+        eq(challenges.isPublic, true),
+        sql`${challenges.endDate} >= ${now}`
+      )
+    )
+    .orderBy(desc(challenges.createdAt))
+    .limit(limit);
+
+  // Get participant counts and user progress
+  const challengesWithCounts = await Promise.all(
+    result.map(async (challenge) => {
+      const participants = await db
+        .select()
+        .from(challengeParticipants)
+        .where(eq(challengeParticipants.challengeId, challenge.id));
+
+      const userParticipant = participants.find(p => p.userId === userId);
+
+      return {
+        ...challenge,
+        participantCount: participants.length,
+        userProgress: userParticipant ? parseFloat(userParticipant.progress) : undefined,
+        userCompleted: userParticipant?.isCompleted,
+      };
+    })
+  );
+
+  return challengesWithCounts;
+}
+
+// Join challenge
+export async function joinChallenge(challengeId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Check if already joined
+  const existing = await db
+    .select()
+    .from(challengeParticipants)
+    .where(and(eq(challengeParticipants.challengeId, challengeId), eq(challengeParticipants.userId, userId)))
+    .limit(1);
+
+  if (existing.length > 0) return false;
+
+  await db.insert(challengeParticipants).values({
+    challengeId,
+    userId,
+    progress: "0",
+    isCompleted: false,
+  });
+
+  return true;
+}
+
+// Update challenge progress
+export async function updateChallengeProgress(
+  challengeId: number,
+  userId: number,
+  progress: number
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Get challenge target
+  const challenge = await db
+    .select()
+    .from(challenges)
+    .where(eq(challenges.id, challengeId))
+    .limit(1);
+
+  if (challenge.length === 0) return false;
+
+  const targetValue = parseFloat(challenge[0].targetValue);
+  const isCompleted = progress >= targetValue;
+
+  await db.update(challengeParticipants)
+    .set({
+      progress: progress.toString(),
+      isCompleted,
+      completedAt: isCompleted ? new Date() : null,
+    })
+    .where(and(eq(challengeParticipants.challengeId, challengeId), eq(challengeParticipants.userId, userId)));
+
+  return true;
+}
+
+// Get user's challenges
+export async function getUserChallenges(userId: number): Promise<ChallengeWithCreator[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const userParticipations = await db
+    .select()
+    .from(challengeParticipants)
+    .where(eq(challengeParticipants.userId, userId));
+
+  if (userParticipations.length === 0) return [];
+
+  const challengeIds = userParticipations.map(p => p.challengeId);
+
+  const result = await db
+    .select({
+      id: challenges.id,
+      creatorId: challenges.creatorId,
+      title: challenges.title,
+      description: challenges.description,
+      type: challenges.type,
+      targetValue: challenges.targetValue,
+      startDate: challenges.startDate,
+      endDate: challenges.endDate,
+      isPublic: challenges.isPublic,
+      createdAt: challenges.createdAt,
+      updatedAt: challenges.updatedAt,
+      creatorName: users.name,
+    })
+    .from(challenges)
+    .leftJoin(users, eq(challenges.creatorId, users.id))
+    .where(sql`${challenges.id} IN (${sql.join(challengeIds.map(id => sql`${id}`), sql`, `)})`);
+
+  // Add user progress
+  const challengesWithProgress = result.map((challenge) => {
+    const participation = userParticipations.find(p => p.challengeId === challenge.id);
+    return {
+      ...challenge,
+      participantCount: 0,
+      userProgress: participation ? parseFloat(participation.progress) : 0,
+      userCompleted: participation?.isCompleted || false,
+    };
+  });
+
+  return challengesWithProgress;
+}
+
+// Get challenge leaderboard
+export async function getChallengeLeaderboard(challengeId: number): Promise<{
+  userId: number;
+  name: string | null;
+  progress: number;
+  isCompleted: boolean;
+  rank: number;
+}[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const participants = await db
+    .select({
+      userId: challengeParticipants.userId,
+      progress: challengeParticipants.progress,
+      isCompleted: challengeParticipants.isCompleted,
+      name: users.name,
+    })
+    .from(challengeParticipants)
+    .leftJoin(users, eq(challengeParticipants.userId, users.id))
+    .where(eq(challengeParticipants.challengeId, challengeId));
+
+  return participants
+    .map(p => ({
+      userId: p.userId,
+      name: p.name,
+      progress: parseFloat(p.progress),
+      isCompleted: p.isCompleted,
+      rank: 0,
+    }))
+    .sort((a, b) => b.progress - a.progress)
+    .map((p, i) => ({ ...p, rank: i + 1 }));
 }

@@ -6,6 +6,7 @@ import {
   ScrollView,
   Platform,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -13,6 +14,8 @@ import * as Haptics from "expo-haptics";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import { useAuth } from "@/hooks/use-auth";
+import { trpc } from "@/lib/trpc";
 import {
   getRidingRecords,
   formatDuration,
@@ -23,6 +26,7 @@ import {
 export default function HomeScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { user, isAuthenticated } = useAuth();
   const [stats, setStats] = useState({
     totalDistance: 0,
     totalDuration: 0,
@@ -32,9 +36,19 @@ export default function HomeScreen() {
     weeklyDuration: 0,
     weeklyRides: 0,
     weeklyAvgSpeed: 0,
+    monthlyDistance: 0,
+    monthlyDuration: 0,
+    monthlyRides: 0,
+    monthlyAvgSpeed: 0,
   });
   const [recentRides, setRecentRides] = useState<RidingRecord[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month" | "all">("week");
+
+  // Fetch ranking data
+  const weeklyRankingQuery = trpc.ranking.getWeekly.useQuery(
+    { limit: 3 },
+    { enabled: isAuthenticated }
+  );
 
   const loadStats = useCallback(async () => {
     const records = await getRidingRecords();
@@ -58,6 +72,18 @@ export default function HomeScreen() {
       ? weeklyRecords.reduce((sum, r) => sum + r.avgSpeed, 0) / weeklyRecords.length
       : 0;
 
+    // Calculate monthly stats
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const monthlyRecords = records.filter(
+      (r) => new Date(r.startTime) >= oneMonthAgo
+    );
+    const monthlyDistance = monthlyRecords.reduce((sum, r) => sum + r.distance, 0);
+    const monthlyDuration = monthlyRecords.reduce((sum, r) => sum + r.duration, 0);
+    const monthlyAvgSpeed = monthlyRecords.length > 0
+      ? monthlyRecords.reduce((sum, r) => sum + r.avgSpeed, 0) / monthlyRecords.length
+      : 0;
+
     setStats({
       totalDistance,
       totalDuration,
@@ -67,6 +93,10 @@ export default function HomeScreen() {
       weeklyDuration,
       weeklyRides: weeklyRecords.length,
       weeklyAvgSpeed,
+      monthlyDistance,
+      monthlyDuration,
+      monthlyRides: monthlyRecords.length,
+      monthlyAvgSpeed,
     });
 
     setRecentRides(records.slice(0, 3));
@@ -93,6 +123,13 @@ export default function HomeScreen() {
     router.push("/history");
   };
 
+  const handleViewRanking = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push("/ranking" as any);
+  };
+
   const getDisplayStats = () => {
     switch (selectedPeriod) {
       case "week":
@@ -103,12 +140,11 @@ export default function HomeScreen() {
           avgSpeed: stats.weeklyAvgSpeed,
         };
       case "month":
-        // For now, use total stats for month (could be improved)
         return {
-          distance: stats.totalDistance,
-          duration: stats.totalDuration,
-          rides: stats.totalRides,
-          avgSpeed: stats.avgSpeed,
+          distance: stats.monthlyDistance,
+          duration: stats.monthlyDuration,
+          rides: stats.monthlyRides,
+          avgSpeed: stats.monthlyAvgSpeed,
         };
       case "all":
       default:
@@ -122,6 +158,19 @@ export default function HomeScreen() {
   };
 
   const displayStats = getDisplayStats();
+
+  const getRankIcon = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return { color: "#FFD700" };
+      case 2:
+        return { color: "#C0C0C0" };
+      case 3:
+        return { color: "#CD7F32" };
+      default:
+        return { color: colors.muted };
+    }
+  };
 
   return (
     <ScreenContainer>
@@ -287,6 +336,95 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
+
+        {/* Weekly Ranking Section */}
+        {isAuthenticated && (
+          <View className="mx-5 mb-4">
+            <View className="flex-row justify-between items-center mb-3">
+              <View className="flex-row items-center">
+                <MaterialIcons name="emoji-events" size={20} color="#FFD700" />
+                <Text className="text-lg font-bold text-foreground ml-1">주간 랭킹</Text>
+              </View>
+              <Pressable onPress={handleViewRanking}>
+                <Text className="text-primary text-sm">전체보기</Text>
+              </Pressable>
+            </View>
+
+            <View className="bg-surface rounded-2xl border border-border overflow-hidden">
+              {weeklyRankingQuery.isLoading ? (
+                <View className="py-8 items-center">
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              ) : weeklyRankingQuery.data && weeklyRankingQuery.data.length > 0 ? (
+                weeklyRankingQuery.data.map((item, index) => {
+                  const isCurrentUser = user?.id === item.userId;
+                  const rankStyle = getRankIcon(item.rank);
+                  
+                  return (
+                    <Pressable
+                      key={item.userId}
+                      onPress={() => router.push(`/user-profile?userId=${item.userId}` as any)}
+                      style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+                    >
+                      <View
+                        className={`flex-row items-center px-4 py-3 ${
+                          index < 2 ? "border-b border-border" : ""
+                        }`}
+                        style={isCurrentUser ? { backgroundColor: `${colors.primary}10` } : {}}
+                      >
+                        {/* Rank */}
+                        <View className="w-8 items-center">
+                          {item.rank <= 3 ? (
+                            <MaterialIcons
+                              name="emoji-events"
+                              size={20}
+                              color={rankStyle.color}
+                            />
+                          ) : (
+                            <Text className="text-muted font-bold">{item.rank}</Text>
+                          )}
+                        </View>
+
+                        {/* User Info */}
+                        <View className="flex-1 ml-3">
+                          <View className="flex-row items-center">
+                            <Text
+                              className="font-semibold"
+                              style={{ color: isCurrentUser ? colors.primary : colors.foreground }}
+                            >
+                              {item.name || "익명 라이더"}
+                            </Text>
+                            {isCurrentUser && (
+                              <View
+                                className="ml-2 px-1.5 py-0.5 rounded"
+                                style={{ backgroundColor: colors.primary }}
+                              >
+                                <Text className="text-white text-xs font-medium">나</Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text className="text-muted text-xs">{item.totalRides}회 주행</Text>
+                        </View>
+
+                        {/* Distance */}
+                        <View className="items-end">
+                          <Text className="text-foreground font-bold">
+                            {(item.totalDistance / 1000).toFixed(1)}
+                          </Text>
+                          <Text className="text-muted text-xs">km</Text>
+                        </View>
+                      </View>
+                    </Pressable>
+                  );
+                })
+              ) : (
+                <View className="py-6 items-center">
+                  <Text className="text-muted text-sm">아직 랭킹 데이터가 없습니다</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Recent Rides */}
         {recentRides.length > 0 && (

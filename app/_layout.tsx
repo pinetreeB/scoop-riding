@@ -75,6 +75,11 @@ function RootLayoutContent() {
         <Stack.Screen name="friends" options={{ presentation: "card" }} />
         <Stack.Screen name="ranking" options={{ presentation: "card" }} />
         <Stack.Screen name="user-profile" options={{ presentation: "card" }} />
+        <Stack.Screen name="edit-profile" options={{ presentation: "modal" }} />
+        <Stack.Screen name="notifications-center" options={{ presentation: "card" }} />
+        <Stack.Screen name="challenges" options={{ presentation: "card" }} />
+        <Stack.Screen name="challenge-detail" options={{ presentation: "card" }} />
+        <Stack.Screen name="create-challenge" options={{ presentation: "modal" }} />
       </Stack>
       <StatusBar style="auto" />
     </>
