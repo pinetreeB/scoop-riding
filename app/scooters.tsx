@@ -332,7 +332,7 @@ export default function ScootersScreen() {
                         </Text>
                       </View>
                       <View className="flex-row items-center">
-                        <MaterialIcons name="directions-bike" size={14} color={colors.muted} />
+                        <MaterialIcons name="electric-scooter" size={14} color={colors.muted} />
                         <Text className="text-muted text-xs ml-1">{scooter.totalRides || 0}회</Text>
                       </View>
                     </View>

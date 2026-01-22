@@ -56,9 +56,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "프로필",
+          title: "설정",
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="person" size={size} color={color} />
+            <MaterialIcons name="settings" size={size} color={color} />
           ),
         }}
       />

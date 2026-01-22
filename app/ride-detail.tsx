@@ -10,9 +10,10 @@ import { RideMap } from "@/components/ride-map";
 import {
   RidingRecord,
   getRidingRecordWithGps,
-  deleteRidingRecord,
+  deleteRecordEverywhere,
   formatDuration,
 } from "@/lib/riding-store";
+import { trpc } from "@/lib/trpc";
 import {
   GpsPoint,
   saveAndShareGpx,
@@ -100,10 +101,12 @@ export default function RideDetailScreen() {
     }
   };
 
+  const trpcUtils = trpc.useUtils();
+
   const handleDelete = () => {
     Alert.alert(
       "기록 삭제",
-      "이 주행 기록을 삭제하시겠습니까?",
+      "이 주행 기록을 삭제하시겠습니까?\n클라우드에서도 삭제됩니다.",
       [
         { text: "취소", style: "cancel" },
         {
@@ -111,7 +114,7 @@ export default function RideDetailScreen() {
           style: "destructive",
           onPress: async () => {
             if (record) {
-              await deleteRidingRecord(record.id);
+              await deleteRecordEverywhere(record.id, trpcUtils);
               if (Platform.OS !== "web") {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               }

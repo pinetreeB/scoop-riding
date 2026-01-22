@@ -8,6 +8,7 @@ import {
   Platform,
   Image,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
@@ -43,10 +44,13 @@ export default function ProfileScreen() {
     totalRides: 0,
     avgSpeed: 0,
     maxSpeed: 0,
+    maxSpeedRecordId: null as string | null,
+    maxSpeedRecordDate: null as string | null,
     level: 1,
     levelProgress: 0,
     unsyncedCount: 0,
   });
+  const [showMaxSpeedModal, setShowMaxSpeedModal] = useState(false);
 
   // Level calculation now uses centralized level-system module
 
@@ -58,9 +62,19 @@ export default function ProfileScreen() {
     const avgSpeed = records.length > 0
       ? records.reduce((sum, r) => sum + r.avgSpeed, 0) / records.length
       : 0;
-    const maxSpeed = records.length > 0
-      ? Math.max(...records.map((r) => r.maxSpeed))
-      : 0;
+    
+    // Find max speed and the record it came from
+    let maxSpeed = 0;
+    let maxSpeedRecordId: string | null = null;
+    let maxSpeedRecordDate: string | null = null;
+    for (const r of records) {
+      if (r.maxSpeed > maxSpeed) {
+        maxSpeed = r.maxSpeed;
+        maxSpeedRecordId = r.id;
+        maxSpeedRecordDate = r.date;
+      }
+    }
+    
     const unsyncedCount = records.filter((r) => !r.synced).length;
 
     const { level, progress } = calculateLevel(totalDistance / 1000);
@@ -71,6 +85,8 @@ export default function ProfileScreen() {
       totalRides: records.length,
       avgSpeed,
       maxSpeed,
+      maxSpeedRecordId,
+      maxSpeedRecordDate,
       level,
       levelProgress: progress,
       unsyncedCount,
@@ -267,9 +283,16 @@ export default function ProfileScreen() {
                 }}
               />
             </View>
-            <Text className="text-muted text-xs mt-1">
-              다음 레벨까지 {(50 - (stats.levelProgress * 50)).toFixed(1)}km
-            </Text>
+            <View className="flex-row justify-between mt-1">
+              <Text className="text-muted text-xs">
+                현재: {(stats.totalDistance / 1000).toFixed(1)}km
+              </Text>
+              {stats.level < 7 && (
+                <Text className="text-muted text-xs">
+                  다음 레벨까지 {calculateLevel(stats.totalDistance / 1000).nextLevelDistance.toLocaleString()}km
+                </Text>
+              )}
+            </View>
           </View>
         </View>
 
@@ -380,13 +403,27 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            {/* Max Speed */}
-            <View className="w-full mb-3">
+            {/* Max Speed - Clickable */}
+            <Pressable
+              className="w-full mb-3"
+              onPress={() => {
+                if (stats.maxSpeedRecordId) {
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  setShowMaxSpeedModal(true);
+                }
+              }}
+              style={({ pressed }) => [{ opacity: pressed && stats.maxSpeedRecordId ? 0.8 : 1 }]}
+            >
               <View className="bg-surface rounded-xl p-4 border border-border flex-row items-center">
                 <View className="flex-1">
                   <View className="flex-row items-center mb-2">
                     <MaterialIcons name="bolt" size={20} color={colors.warning} />
                     <Text className="text-muted text-xs ml-2">최고 속도</Text>
+                    {stats.maxSpeedRecordId && (
+                      <MaterialIcons name="chevron-right" size={16} color={colors.muted} style={{ marginLeft: 4 }} />
+                    )}
                   </View>
                   <Text className="text-3xl font-bold text-foreground">
                     {stats.maxSpeed.toFixed(1)} <Text className="text-lg text-muted">km/h</Text>
@@ -394,7 +431,7 @@ export default function ProfileScreen() {
                 </View>
                 <MaterialIcons name="emoji-events" size={40} color={colors.warning} />
               </View>
-            </View>
+            </Pressable>
           </View>
         </View>
 
@@ -711,6 +748,78 @@ export default function ProfileScreen() {
           <Text className="text-muted text-xs mt-1">© 2024 SCOOP. All rights reserved.</Text>
         </View>
       </ScrollView>
+
+      {/* Max Speed Detail Modal */}
+      <Modal
+        visible={showMaxSpeedModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMaxSpeedModal(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black/50 justify-center items-center p-6"
+          onPress={() => setShowMaxSpeedModal(false)}
+        >
+          <Pressable
+            className="bg-background rounded-2xl p-6 w-full max-w-sm"
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View className="items-center mb-4">
+              <MaterialIcons name="emoji-events" size={48} color={colors.warning} />
+              <Text className="text-2xl font-bold text-foreground mt-2">
+                최고 속도 기록
+              </Text>
+            </View>
+
+            <View className="bg-surface rounded-xl p-4 border border-border mb-4">
+              <View className="items-center">
+                <Text className="text-4xl font-bold text-warning">
+                  {stats.maxSpeed.toFixed(1)}
+                  <Text className="text-xl text-muted"> km/h</Text>
+                </Text>
+              </View>
+            </View>
+
+            {stats.maxSpeedRecordDate && (
+              <View className="bg-surface rounded-xl p-4 border border-border mb-4">
+                <View className="flex-row items-center mb-2">
+                  <MaterialIcons name="calendar-today" size={18} color={colors.primary} />
+                  <Text className="text-muted text-sm ml-2">기록 날짜</Text>
+                </View>
+                <Text className="text-foreground font-medium">
+                  {new Date(stats.maxSpeedRecordDate).toLocaleDateString("ko-KR", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    weekday: "long",
+                  })}
+                </Text>
+              </View>
+            )}
+
+            <Pressable
+              onPress={() => {
+                setShowMaxSpeedModal(false);
+                if (stats.maxSpeedRecordId) {
+                  router.push(`/ride-detail?id=${stats.maxSpeedRecordId}`);
+                }
+              }}
+              className="bg-primary rounded-xl py-3 items-center mb-3"
+              style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+            >
+              <Text className="text-background font-semibold">해당 주행 기록 보기</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setShowMaxSpeedModal(false)}
+              className="py-3 items-center"
+              style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+            >
+              <Text className="text-muted font-medium">닫기</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState, useEffect } from "react";
 import {
   Text,
   View,
@@ -21,6 +21,8 @@ import {
   getRidingRecords,
   formatDuration,
   formatDistance,
+  syncAllToCloud,
+  fetchAndMergeFromCloud,
   type RidingRecord,
 } from "@/lib/riding-store";
 import { LEVEL_DEFINITIONS, calculateLevel, getLevelTitle, formatLevelDistance } from "@/lib/level-system";
@@ -46,6 +48,8 @@ export default function HomeScreen() {
   const [recentRides, setRecentRides] = useState<RidingRecord[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month" | "all">("week");
   const [showLevelInfo, setShowLevelInfo] = useState(false);
+  const [hasSynced, setHasSynced] = useState(false);
+  const trpcUtils = trpc.useUtils();
 
   // Fetch ranking data
   const weeklyRankingQuery = trpc.ranking.getWeekly.useQuery(
@@ -110,6 +114,32 @@ export default function HomeScreen() {
       loadStats();
     }, [loadStats])
   );
+
+  // Auto sync on first load when authenticated
+  useEffect(() => {
+    const autoSync = async () => {
+      if (isAuthenticated && !hasSynced) {
+        console.log("[HomeScreen] Auto syncing with cloud...");
+        try {
+          // First fetch from cloud and merge
+          const fetchResult = await fetchAndMergeFromCloud(trpcUtils);
+          console.log("[HomeScreen] Fetched from cloud:", fetchResult);
+          
+          // Then sync local records to cloud
+          const syncResult = await syncAllToCloud(trpcUtils);
+          console.log("[HomeScreen] Synced to cloud:", syncResult);
+          
+          setHasSynced(true);
+          
+          // Reload stats after sync
+          loadStats();
+        } catch (error) {
+          console.error("[HomeScreen] Auto sync error:", error);
+        }
+      }
+    };
+    autoSync();
+  }, [isAuthenticated, hasSynced, trpcUtils, loadStats]);
 
   const handleStartRiding = () => {
     if (Platform.OS !== "web") {

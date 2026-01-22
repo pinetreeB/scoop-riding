@@ -133,3 +133,12 @@
 - [x] 친구 주행 시작 알림 기능 (liveLocation.update에서 isStarting 시 알림)
 - [x] 친구 실시간 위치 지도 보기 (주행중인 친구 클릭 시 지도 모달 표시)
 - [x] 주간 랭킹 실시간 데이터 연동 수정 (riding.tsx에서 주행 완료 시 서버 동기화)
+
+- [x] 클라우드 동기화 오류 수정 (ridingRecords 테이블 스키마 문제) - scooterId 기본값 처리
+- [x] 친구 위치 지도에 실제 지도 표시 (OpenStreetMap 연동) - FriendLocationMap 컴포넌트
+- [x] 자전거 아이콘 → 킥보드 아이콘으로 변경 - electric-scooter 아이콘
+- [x] 접속 시 자동 클라우드 동기화 (1회) - 홈 화면에서 자동 동기화
+- [x] 기록 삭제 시 클라우드에서도 삭제 - deleteRecordEverywhere 함수
+- [x] 최고속도 클릭 시 해당 구간 표시 - 최고속도 모달 및 기록 연결
+- [x] 프로필 탭 → 설정 탭으로 이름 변경 - settings 아이콘
+- [x] 레벨 진행도 실시간 업데이트 - 현재 거리 및 다음 레벨 표시

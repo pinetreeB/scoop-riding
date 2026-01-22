@@ -97,6 +97,39 @@ export async function deleteRidingRecord(id: string): Promise<void> {
   }
 }
 
+// Delete record from cloud
+export async function deleteRecordFromCloud(
+  recordId: string,
+  trpcClient: ReturnType<typeof trpc.useUtils>
+): Promise<boolean> {
+  try {
+    const result = await trpcClient.client.rides.delete.mutate({ recordId });
+    return result.success;
+  } catch (error) {
+    console.error("Failed to delete record from cloud:", error);
+    return false;
+  }
+}
+
+// Delete record from both local and cloud
+export async function deleteRecordEverywhere(
+  recordId: string,
+  trpcClient: ReturnType<typeof trpc.useUtils>
+): Promise<boolean> {
+  // Delete from local first
+  await deleteRidingRecord(recordId);
+  
+  // Then try to delete from cloud
+  try {
+    await deleteRecordFromCloud(recordId, trpcClient);
+  } catch (error) {
+    // Cloud deletion failed, but local is already deleted
+    console.error("Cloud deletion failed:", error);
+  }
+  
+  return true;
+}
+
 // Get riding statistics
 export async function getRidingStats(): Promise<RidingStats> {
   const records = await getRidingRecords();

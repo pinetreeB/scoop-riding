@@ -311,7 +311,23 @@ export async function createRidingRecord(data: InsertRidingRecord): Promise<numb
   const db = await getDb();
   if (!db) return null;
 
-  const result = await db.insert(ridingRecords).values(data);
+  // Remove undefined fields and ensure proper types
+  const cleanData: Record<string, unknown> = {
+    userId: data.userId,
+    recordId: data.recordId,
+    date: data.date,
+    duration: data.duration,
+    distance: data.distance,
+    avgSpeed: data.avgSpeed,
+    maxSpeed: data.maxSpeed,
+  };
+  
+  if (data.startTime) cleanData.startTime = data.startTime;
+  if (data.endTime) cleanData.endTime = data.endTime;
+  if (data.gpsPointsJson) cleanData.gpsPointsJson = data.gpsPointsJson;
+  if (data.scooterId) cleanData.scooterId = data.scooterId;
+
+  const result = await db.insert(ridingRecords).values(cleanData as InsertRidingRecord);
   return result[0].insertId;
 }
 

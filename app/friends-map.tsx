@@ -17,6 +17,7 @@ import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { FriendLocationMap } from "@/components/friend-location-map";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 
@@ -151,7 +152,7 @@ export default function FriendsMapScreen() {
               {item.name || "Unknown"}
             </Text>
             <View className="flex-row items-center mt-1">
-              <MaterialIcons name="directions-bike" size={14} color={colors.primary} />
+              <MaterialIcons name="electric-scooter" size={14} color={colors.primary} />
               <Text className="text-primary text-sm ml-1 font-medium">주행 중</Text>
               <Text className="text-muted text-xs ml-2">
                 {formatTime(item.updatedAt)}
@@ -333,81 +334,17 @@ export default function FriendsMapScreen() {
           </View>
 
           {/* Map View */}
-          {selectedFriend && Platform.OS === "web" ? (
-            <iframe
-              src={getMapUrl(selectedFriend.latitude, selectedFriend.longitude)}
-              style={{ flex: 1, border: 0, width: "100%", height: "100%" }}
-              allowFullScreen
-            />
-          ) : selectedFriend ? (
+          {selectedFriend ? (
             <View className="flex-1">
-              {/* Simple Map Visualization for Native */}
-              <View className="flex-1 items-center justify-center" style={{ backgroundColor: "#e5e7eb" }}>
-                <View className="items-center">
-                  {/* Friend marker with profile image */}
-                  <View className="items-center mb-4">
-                    {selectedFriend.profileImageUrl ? (
-                      <View style={{ 
-                        shadowColor: "#000", 
-                        shadowOffset: { width: 0, height: 2 }, 
-                        shadowOpacity: 0.25, 
-                        shadowRadius: 4,
-                        elevation: 5,
-                      }}>
-                        <Image
-                          source={{ uri: selectedFriend.profileImageUrl }}
-                          style={{ 
-                            width: 80, 
-                            height: 80, 
-                            borderRadius: 40,
-                            borderWidth: 4,
-                            borderColor: colors.primary,
-                          }}
-                        />
-                      </View>
-                    ) : (
-                      <View
-                        className="w-20 h-20 rounded-full items-center justify-center"
-                        style={{ 
-                          backgroundColor: colors.primary,
-                          shadowColor: "#000",
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.25,
-                          shadowRadius: 4,
-                          elevation: 5,
-                        }}
-                      >
-                        <Text className="text-white font-bold text-2xl">
-                          {(selectedFriend.name || "?")[0].toUpperCase()}
-                        </Text>
-                      </View>
-                    )}
-                    {selectedFriend.heading !== null && (
-                      <View 
-                        className="absolute -bottom-2"
-                        style={{ transform: [{ rotate: `${selectedFriend.heading}deg` }] }}
-                      >
-                        <MaterialIcons name="navigation" size={24} color={colors.primary} />
-                      </View>
-                    )}
-                  </View>
-                  
-                  <Text className="text-foreground font-bold text-lg mb-2">
-                    {selectedFriend.name || "친구"}
-                  </Text>
-                  <Text className="text-muted text-sm mb-4">
-                    {formatSpeed(selectedFriend.speed)}로 이동 중
-                  </Text>
-                  
-                  {/* Coordinates */}
-                  <View className="bg-surface rounded-xl p-4 border border-border">
-                    <Text className="text-muted text-xs text-center mb-1">현재 좌표</Text>
-                    <Text className="text-foreground font-mono text-sm text-center">
-                      {selectedFriend.latitude.toFixed(6)}, {selectedFriend.longitude.toFixed(6)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
+              {/* Real Map with OpenStreetMap */}
+              <FriendLocationMap
+                latitude={selectedFriend.latitude}
+                longitude={selectedFriend.longitude}
+                heading={selectedFriend.heading}
+                name={selectedFriend.name}
+                profileImageUrl={selectedFriend.profileImageUrl}
+                style={{ flex: 1 }}
+              />
 
               {/* Info Panel */}
               <View className="p-4 border-t border-border" style={{ backgroundColor: colors.background }}>

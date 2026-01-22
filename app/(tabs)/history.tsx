@@ -18,11 +18,12 @@ import { useColors } from "@/hooks/use-colors";
 import {
   getRidingRecords,
   getRidingRecordWithGps,
-  deleteRidingRecord,
+  deleteRecordEverywhere,
   formatDuration,
   formatDistance,
   type RidingRecord,
 } from "@/lib/riding-store";
+import { trpc } from "@/lib/trpc";
 import { saveAndShareGpx, TrackData } from "@/lib/gps-utils";
 import { useFocusEffect } from "expo-router";
 
@@ -50,18 +51,20 @@ export default function HistoryScreen() {
     setRefreshing(false);
   }, [loadRecords]);
 
+  const trpcUtils = trpc.useUtils();
+
   const handleDelete = (id: string) => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
-    Alert.alert("기록 삭제", "이 주행 기록을 삭제하시겠습니까?", [
+    Alert.alert("기록 삭제", "이 주행 기록을 삭제하시겠습니까?\n클라우드에서도 삭제됩니다.", [
       { text: "취소", style: "cancel" },
       {
         text: "삭제",
         style: "destructive",
         onPress: async () => {
-          await deleteRidingRecord(id);
+          await deleteRecordEverywhere(id, trpcUtils);
           await loadRecords();
         },
       },

@@ -414,13 +414,15 @@ export default function RidingScreen() {
               await syncToServer.mutateAsync({
                 recordId: record.id,
                 date: record.date,
-                duration: record.duration,
-                distance: record.distance,
+                duration: Math.round(record.duration),
+                distance: Math.round(record.distance),
                 avgSpeed: record.avgSpeed,
                 maxSpeed: record.maxSpeed,
                 startTime: record.startTime,
                 endTime: record.endTime,
-                gpsPointsJson: JSON.stringify(record.gpsPoints),
+                gpsPointsJson: record.gpsPoints && record.gpsPoints.length > 0 
+                  ? JSON.stringify(record.gpsPoints) 
+                  : undefined,
               });
               console.log("[Riding] Record synced to server");
             } catch (e) {
