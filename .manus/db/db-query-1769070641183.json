@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM ridingRecords WHERE recordId = 'test-debug-123456';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute DELETE FROM ridingRecords WHERE recordId = 'test-debug-123456';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1549
+}

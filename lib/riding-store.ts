@@ -215,15 +215,19 @@ export async function syncRecordToCloud(
       : undefined;
 
     // Call API to save record
+    // Validate startTime and endTime are valid ISO strings
+    const startTime = record.startTime && record.startTime.length > 0 ? record.startTime : undefined;
+    const endTime = record.endTime && record.endTime.length > 0 ? record.endTime : undefined;
+    
     const result = await trpcClient.client.rides.create.mutate({
       recordId: record.id,
       date: record.date,
-      duration: record.duration,
-      distance: record.distance,
+      duration: Math.round(record.duration),
+      distance: Math.round(record.distance),
       avgSpeed: record.avgSpeed,
       maxSpeed: record.maxSpeed,
-      startTime: record.startTime,
-      endTime: record.endTime,
+      startTime,
+      endTime,
       gpsPointsJson,
     });
 

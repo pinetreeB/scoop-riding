@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO ridingRecords (userId, recordId, date, duration, distance, avgSpeed, maxSpeed, startTime, endTime) VALUES (1, 'test-debug-123456', '2025-01-22', 100, 1000, 150, 200, NOW(), NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO ridingRecords (userId, recordId, date, duration, distance, avgSpeed, maxSpeed, startTime, endTime) VALUES (1, 'test-debug-123456', '2025-01-22', 100, 1000, 150, 200, NOW(), NOW());",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1686
+}

@@ -159,3 +159,5 @@
 - [x] Google Cloud Console OAuth 동의 화면 설정
 - [x] OAuth 클라이언트 ID 생성 (웹, Android)
 - [x] 앱에 환경 변수 설정 및 구글 로그인 테스트
+
+- [x] ridingRecords 클라우드 동기화 INSERT 오류 수정

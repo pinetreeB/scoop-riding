@@ -311,8 +311,8 @@ export async function createRidingRecord(data: InsertRidingRecord): Promise<numb
   const db = await getDb();
   if (!db) return null;
 
-  // Remove undefined fields and ensure proper types
-  const cleanData: Record<string, unknown> = {
+  // Build insert data with only defined fields
+  const insertData: InsertRidingRecord = {
     userId: data.userId,
     recordId: data.recordId,
     date: data.date,
@@ -322,12 +322,21 @@ export async function createRidingRecord(data: InsertRidingRecord): Promise<numb
     maxSpeed: data.maxSpeed,
   };
   
-  if (data.startTime) cleanData.startTime = data.startTime;
-  if (data.endTime) cleanData.endTime = data.endTime;
-  if (data.gpsPointsJson) cleanData.gpsPointsJson = data.gpsPointsJson;
-  if (data.scooterId) cleanData.scooterId = data.scooterId;
+  // Only add optional fields if they have values
+  if (data.startTime !== undefined && data.startTime !== null) {
+    insertData.startTime = data.startTime;
+  }
+  if (data.endTime !== undefined && data.endTime !== null) {
+    insertData.endTime = data.endTime;
+  }
+  if (data.gpsPointsJson !== undefined && data.gpsPointsJson !== null) {
+    insertData.gpsPointsJson = data.gpsPointsJson;
+  }
+  if (data.scooterId !== undefined && data.scooterId !== null) {
+    insertData.scooterId = data.scooterId;
+  }
 
-  const result = await db.insert(ridingRecords).values(cleanData as InsertRidingRecord);
+  const result = await db.insert(ridingRecords).values(insertData);
   return result[0].insertId;
 }
 

@@ -1,0 +1,31 @@
+{
+  "query": "SHOW CREATE TABLE ridingRecords;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SHOW CREATE TABLE ridingRecords;",
+  "rows": [
+    {
+      "Table": "ridingRecords",
+      "Create Table": "CREATE TABLE `ridingRecords` ("
+    }
+  ],
+  "messages": [
+    "  `id` int(11) NOT NULL AUTO_INCREMENT,",
+    "  `userId` int(11) NOT NULL,",
+    "  `recordId` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `date` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,",
+    "  `duration` int(11) NOT NULL,",
+    "  `distance` int(11) NOT NULL,",
+    "  `avgSpeed` int(11) NOT NULL,",
+    "  `maxSpeed` int(11) NOT NULL,",
+    "  `startTime` timestamp NULL DEFAULT NULL,",
+    "  `endTime` timestamp NULL DEFAULT NULL,",
+    "  `gpsPointsJson` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,",
+    "  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,",
+    "  `scooterId` int(11) DEFAULT NULL,",
+    "  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,",
+    "  UNIQUE KEY `ridingRecords_recordId_unique` (`recordId`)",
+    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=90001"
+  ],
+  "stdout": "Table\tCreate Table\nridingRecords\tCREATE TABLE `ridingRecords` (\n  `id` int(11) NOT NULL AUTO_INCREMENT,\n  `userId` int(11) NOT NULL,\n  `recordId` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `date` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,\n  `duration` int(11) NOT NULL,\n  `distance` int(11) NOT NULL,\n  `avgSpeed` int(11) NOT NULL,\n  `maxSpeed` int(11) NOT NULL,\n  `startTime` timestamp NULL DEFAULT NULL,\n  `endTime` timestamp NULL DEFAULT NULL,\n  `gpsPointsJson` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `scooterId` int(11) DEFAULT NULL,\n  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,\n  UNIQUE KEY `ridingRecords_recordId_unique` (`recordId`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=90001\n",
+  "stderr": "",
+  "execution_time_ms": 1492
+}
