@@ -169,3 +169,10 @@
 - [x] EAS CLI 설정 및 APK 빌드 준비
 - [x] 앱 업데이트 알림 기능 구현
 - [x] 업데이트 다운로드 기능 구현
+
+
+
+- [ ] APK 빌드에 Google OAuth 환경 변수 포함 (EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID)
+- [ ] APK에서 회원가입/로그인 안 되는 문제 수정 (서버 URL 설정)
+- [ ] Manus 클라우드 배포
+- [ ] 배포된 서버 URL로 APK 재빌드
