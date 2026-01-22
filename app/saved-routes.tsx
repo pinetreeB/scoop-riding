@@ -112,7 +112,14 @@ export default function SavedRoutesScreen() {
   };
 
   const handleFollowRoute = (index: number) => {
-    router.push(`/follow-route?routeId=${index}`);
+    // GPX 경로 데이터를 전달하면서 라이딩 화면으로 이동
+    const route = routes[index];
+    if (route) {
+      // 경로 데이터를 AsyncStorage에 임시 저장
+      AsyncStorage.setItem("@current_gpx_route", JSON.stringify(route)).then(() => {
+        router.push("/riding?withRoute=true");
+      });
+    }
   };
 
   const formatDistance = (meters: number): string => {

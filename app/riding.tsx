@@ -44,12 +44,16 @@ import {
   stopSpeech,
   VoiceSettings,
 } from "@/lib/voice-guidance";
+import { useLocalSearchParams } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { GpxRoute, GpxPoint as GpxRoutePoint } from "@/lib/gpx-parser";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function RidingScreen() {
   const router = useRouter();
   const colors = useColors();
+  const params = useLocalSearchParams<{ withRoute?: string }>();
 
   // Live location mutation for friends tracking
   const updateLiveLocation = trpc.liveLocation.update.useMutation();
@@ -81,6 +85,9 @@ export default function RidingScreen() {
   const stationaryCountRef = useRef(0); // 정지 상태 카운터
   const AUTO_PAUSE_SPEED_THRESHOLD = 1.5; // km/h 이하면 정지로 판단
   const AUTO_PAUSE_DELAY_SECONDS = 5; // 5초 이상 정지 시 자동 일시정지
+  
+  // GPX 경로 따라가기
+  const [gpxRoute, setGpxRoute] = useState<GpxRoute | null>(null);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
@@ -102,6 +109,26 @@ export default function RidingScreen() {
   useEffect(() => {
     getSelectedScooter().then(setSelectedScooter);
   }, []);
+  
+  // Load GPX route if withRoute param is set
+  useEffect(() => {
+    const loadGpxRoute = async () => {
+      if (params.withRoute === "true") {
+        try {
+          const routeJson = await AsyncStorage.getItem("@current_gpx_route");
+          if (routeJson) {
+            const route: GpxRoute = JSON.parse(routeJson);
+            setGpxRoute(route);
+            // 사용 후 임시 데이터 삭제
+            await AsyncStorage.removeItem("@current_gpx_route");
+          }
+        } catch (error) {
+          console.error("Failed to load GPX route:", error);
+        }
+      }
+    };
+    loadGpxRoute();
+  }, [params.withRoute]);
 
   // Load voice settings and announce start
   useEffect(() => {
@@ -537,12 +564,13 @@ export default function RidingScreen() {
         {/* Map or Speed Display */}
         {showMap ? (
           <View className="flex-1 mx-4 mb-4 rounded-2xl overflow-hidden">
-            <RideMap
-              gpsPoints={gpsPoints}
-              currentLocation={currentLocation}
-              isLive={true}
-              showCurrentLocation={false}
-            />
+<RideMap
+               gpsPoints={gpsPoints}
+               currentLocation={currentLocation}
+               isLive={true}
+               showCurrentLocation={false}
+               gpxRoute={gpxRoute}
+             />
             {/* Speed overlay on map */}
             <View className="absolute bottom-4 left-4 bg-black/70 rounded-xl px-4 py-2">
               <Text className="text-4xl font-bold text-white">

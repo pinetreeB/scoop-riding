@@ -4,12 +4,20 @@ import { WebView } from "react-native-webview";
 import { GpsPoint, getBoundingBox } from "@/lib/gps-utils";
 import { useColors } from "@/hooks/use-colors";
 
+interface GpxRoutePoint {
+  latitude: number;
+  longitude: number;
+  elevation?: number;
+  time?: string;
+}
+
 interface RideMapProps {
   gpsPoints: GpsPoint[];
   currentLocation?: { latitude: number; longitude: number; heading?: number } | null;
   showCurrentLocation?: boolean;
   isLive?: boolean;
   style?: any;
+  gpxRoute?: { points: GpxRoutePoint[]; name?: string } | null;
 }
 
 export function RideMap({
@@ -18,6 +26,7 @@ export function RideMap({
   showCurrentLocation = false,
   isLive = false,
   style,
+  gpxRoute,
 }: RideMapProps) {
   const colors = useColors();
   const webViewRef = useRef<WebView>(null);
@@ -210,6 +219,39 @@ export function RideMap({
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
     }).addTo(map);
+
+    // Draw GPX guide route first (so it appears behind the actual path)
+    ${gpxRoute && gpxRoute.points.length > 1 ? `
+    const gpxCoords = [${gpxRoute.points.map(p => `[${p.latitude}, ${p.longitude}]`).join(",")}];
+    const gpxPolyline = L.polyline(gpxCoords, {
+      color: '#2196F3',
+      weight: 6,
+      opacity: 0.6,
+      dashArray: '10, 10',
+      lineCap: 'round',
+      lineJoin: 'round'
+    }).addTo(map);
+    
+    // GPX 경로 시작/끝 마커
+    const gpxStartIcon = L.divIcon({
+      className: 'gpx-start-marker',
+      html: '<div style="width:20px;height:20px;background:#2196F3;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+    const gpxEndIcon = L.divIcon({
+      className: 'gpx-end-marker',
+      html: '<div style="width:20px;height:20px;background:#FF5722;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+    L.marker([${gpxRoute.points[0].latitude}, ${gpxRoute.points[0].longitude}], { icon: gpxStartIcon }).addTo(map);
+    L.marker([${gpxRoute.points[gpxRoute.points.length - 1].latitude}, ${gpxRoute.points[gpxRoute.points.length - 1].longitude}], { icon: gpxEndIcon }).addTo(map);
+    
+    if (!isLiveMode && pathCoords.length <= 1) {
+      map.fitBounds(gpxPolyline.getBounds(), { padding: [30, 30] });
+    }
+    ` : ''}
 
     // Draw path
     const pathCoords = [${pathCoords}];
