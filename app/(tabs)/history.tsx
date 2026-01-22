@@ -148,6 +148,14 @@ export default function HistoryScreen() {
             </Text>
           </View>
           <View className="flex-row items-center">
+            {/* Sync status icon */}
+            <View className="mr-2">
+              <MaterialIcons
+                name={item.synced ? "cloud-done" : "cloud-off"}
+                size={18}
+                color={item.synced ? colors.success : colors.muted}
+              />
+            </View>
             <Pressable
               onPress={(e) => {
                 e.stopPropagation();

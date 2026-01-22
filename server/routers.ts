@@ -892,6 +892,39 @@ export const appRouter = router({
     }),
   }),
 
+  // App version router
+  app: router({
+    // Get latest app version
+    version: publicProcedure.query(async () => {
+      // In production, this would fetch from database
+      // For now, return current version info
+      return {
+        version: "1.0.0",
+        versionCode: 1,
+        downloadUrl: "", // Will be set after APK build
+        releaseNotes: "첫 번째 릴리스",
+        forceUpdate: false,
+        publishedAt: new Date().toISOString(),
+      };
+    }),
+
+    // Update app version (admin only - for future use)
+    updateVersion: protectedProcedure
+      .input(z.object({
+        version: z.string(),
+        versionCode: z.number(),
+        downloadUrl: z.string(),
+        releaseNotes: z.string().optional(),
+        forceUpdate: z.boolean().default(false),
+      }))
+      .mutation(async ({ input }) => {
+        // In production, this would update the database
+        // For now, just return success
+        console.log("App version update:", input);
+        return { success: true };
+      }),
+  }),
+
   // Badges router
   badges: router({
     // Get all badges

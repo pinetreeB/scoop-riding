@@ -140,6 +140,12 @@ const config: ExpoConfig = {
     typedRoutes: true,
     reactCompiler: true,
   },
+  extra: {
+    eas: {
+      projectId: "5a9e8417-b5b8-4ffb-ad3a-d2f1faa44001",
+    },
+  },
+  owner: "pinetreeb",
 };
 
 export default config;

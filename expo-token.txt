@@ -1,0 +1,5 @@
+Expo Access Token (SCOOP Riding Build)
+Created: Jan 22, 2026 5:48 PM
+Token: SR6XQCoW4oUTrIYXlCwopFQ2jt6A00CmYkSsn9yx
+
+Note: This token is used for EAS CLI authentication
