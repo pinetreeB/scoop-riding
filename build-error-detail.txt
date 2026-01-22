@@ -1,0 +1,17 @@
+EAS Build Error Details
+=======================
+
+Build ID: 456554db-9123-463e-953f-1f44fe8eebb8
+
+Error:
+- Task: :app:mergeReleaseResources FAILED
+- Root cause: Android resource compilation failed
+- Specific error: ERROR: /home/expo/workingdir/build/android/app/build/generated/res/createBundleReleaseJsAndAssets/drawable-mdpi/assets_images_icon.png: AAPT: error: file failed to compile.
+
+Problem:
+The icon.png file in assets/images/ is corrupted or has an invalid format that AAPT (Android Asset Packaging Tool) cannot compile.
+
+Solution:
+1. Check if assets/images/icon.png is a valid PNG file
+2. Re-generate the icon with proper PNG format
+3. Ensure the icon has correct dimensions and color depth

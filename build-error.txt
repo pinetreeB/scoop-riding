@@ -1,0 +1,9 @@
+EAS Build Failed - 456554db-9123-463e-953f-1f44fe8eebb8
+Date: Jan 22, 2026
+
+Error: Gradle build failed with unknown error
+Phase: Run gradlew
+
+Build URL: https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/456554db-9123-463e-953f-1f44fe8eebb8
+
+The build failed during the Gradle phase. Need to check the detailed logs for the specific error.

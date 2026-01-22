@@ -1,0 +1,20 @@
+SCOOP Riding APK Download Information
+=====================================
+
+Build ID: be23402e-81b7-4656-8382-e92135a2632a
+Version: 1.0.0 (1)
+Build Date: Jan 22, 2026
+Build Time: 14m 16s
+Status: Finished (Success)
+
+Download/Install Methods:
+1. QR Code: Scan the QR code on the build page with your Android device
+2. Direct Link: https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/be23402e-81b7-4656-8382-e92135a2632a
+3. Expo Orbit: Use "Open with Orbit" button if you have Expo Orbit installed
+
+Build Page: https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/be23402e-81b7-4656-8382-e92135a2632a
+
+Notes:
+- This is an internal distribution build (APK)
+- Can be installed on any Android device
+- For production release, use the "production" profile in eas.json
