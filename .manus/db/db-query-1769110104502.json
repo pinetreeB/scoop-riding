@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO appVersions (version, versionCode, downloadUrl, releaseNotes, forceUpdate, platform, createdAt)\nVALUES ('1.1.0', 2, 'https://expo.dev/artifacts/eas/eZpaVJTaW7j41XxT6mFmTQ.apk', \n'v1.1.0 업데이트\n\n[버그 수정]\n- 기체추가 모달 UI 버그 수정\n- 프로필 저장 시 튕김/로그아웃 버그 수정\n- GPS 튐 보정 강화\n- 알림 클릭 시 해당 탭 이동\n- 친구 주행기록 비교 평균속도 계산 수정\n- 커뮤니티 타인 주행기록 열람 가능\n\n[신규 기능]\n- 그룹 라이딩 서버 연동 (다른 기기 간 그룹 참가)\n- 그룹원 맵 표시 및 멀어진 그룹원 알림 (500m 이상)\n- 인앱 알림 팝업 기능', \n0, 'android', NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO appVersions (version, versionCode, downloadUrl, releaseNotes, forceUpdate, platform, createdAt)\nVALUES ('1.1.0', 2, 'https://expo.dev/artifacts/eas/eZpaVJTaW7j41XxT6mFmTQ.apk', \n'v1.1.0 업데이트\n\n[버그 수정]\n- 기체추가 모달 UI 버그 수정\n- 프로필 저장 시 튕김/로그아웃 버그 수정\n- GPS 튐 보정 강화\n- 알림 클릭 시 해당 탭 이동\n- 친구 주행기록 비교 평균속도 계산 수정\n- 커뮤니티 타인 주행기록 열람 가능\n\n[신규 기능]\n- 그룹 라이딩 서버 연동 (다른 기기 간 그룹 참가)\n- 그룹원 맵 표시 및 멀어진 그룹원 알림 (500m 이상)\n- 인앱 알림 팝업 기능', \n0, 'android', NOW());",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1551
+}
