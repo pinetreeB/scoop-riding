@@ -155,3 +155,7 @@
 - [x] expo-document-picker 모듈 설치 및 오류 수정
 - [x] GPX 경로 따라가기 시 자동 라이딩 시작 + 지도에 경로 표시
 - [x] 구글 로그인 설정 방법 안내
+
+- [x] Google Cloud Console OAuth 동의 화면 설정
+- [x] OAuth 클라이언트 ID 생성 (웹, Android)
+- [x] 앱에 환경 변수 설정 및 구글 로그인 테스트
