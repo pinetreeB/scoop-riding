@@ -172,7 +172,8 @@
 
 
 
-- [ ] APK 빌드에 Google OAuth 환경 변수 포함 (EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID)
-- [ ] APK에서 회원가입/로그인 안 되는 문제 수정 (서버 URL 설정)
-- [ ] Manus 클라우드 배포
-- [ ] 배포된 서버 URL로 APK 재빌드
+- [x] APK 빌드에 Google OAuth 환경 변수 포함 (EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID)
+- [x] APK에서 회원가입/로그인 안 되는 문제 수정 (서버 URL 설정)
+- [x] Manus 클라우드 배포 (https://scoopride-xqsh52mn.manus.space)
+- [x] 배포된 서버 URL로 APK 재빌드 (v1.0.0 빌드 완료)
+- [x] 새 SCOOP 로고 적용 (앱 아이콘, 스플래시, 로그인 화면)
