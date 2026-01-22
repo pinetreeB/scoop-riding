@@ -1,19 +1,54 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Appearance, View, useColorScheme as useSystemColorScheme } from "react-native";
 import { colorScheme as nativewindColorScheme, vars } from "nativewind";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { SchemeColors, type ColorScheme } from "@/constants/theme";
 
+const THEME_STORAGE_KEY = "@scoop_theme_preference";
+
+type ThemeMode = "light" | "dark" | "system";
+
 type ThemeContextValue = {
   colorScheme: ColorScheme;
-  setColorScheme: (scheme: ColorScheme) => void;
+  themeMode: ThemeMode;
+  setThemeMode: (mode: ThemeMode) => void;
+  isDarkMode: boolean;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useSystemColorScheme() ?? "light";
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
   const [colorScheme, setColorSchemeState] = useState<ColorScheme>(systemScheme);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load saved theme preference on mount
+  useEffect(() => {
+    const loadTheme = async () => {
+      try {
+        const savedMode = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+        if (savedMode && (savedMode === "light" || savedMode === "dark" || savedMode === "system")) {
+          setThemeModeState(savedMode as ThemeMode);
+        }
+      } catch (error) {
+        console.error("Failed to load theme preference:", error);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    loadTheme();
+  }, []);
+
+  // Update colorScheme based on themeMode
+  useEffect(() => {
+    if (themeMode === "system") {
+      setColorSchemeState(systemScheme);
+    } else {
+      setColorSchemeState(themeMode);
+    }
+  }, [themeMode, systemScheme]);
 
   const applyScheme = useCallback((scheme: ColorScheme) => {
     nativewindColorScheme.set(scheme);
@@ -29,10 +64,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const setColorScheme = useCallback((scheme: ColorScheme) => {
-    setColorSchemeState(scheme);
-    applyScheme(scheme);
-  }, [applyScheme]);
+  const setThemeMode = useCallback(async (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    try {
+      await AsyncStorage.setItem(THEME_STORAGE_KEY, mode);
+    } catch (error) {
+      console.error("Failed to save theme preference:", error);
+    }
+  }, []);
 
   useEffect(() => {
     applyScheme(colorScheme);
@@ -57,11 +96,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       colorScheme,
-      setColorScheme,
+      themeMode,
+      setThemeMode,
+      isDarkMode: colorScheme === "dark",
     }),
-    [colorScheme, setColorScheme],
+    [colorScheme, themeMode, setThemeMode],
   );
-  console.log(value, themeVariables)
 
   return (
     <ThemeContext.Provider value={value}>

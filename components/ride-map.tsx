@@ -114,7 +114,7 @@ export function RideMap({
       border-radius: 50%;
       box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
-    /* Navigation arrow marker - always pointing up */
+    /* Navigation arrow marker - rotates to show heading */
     .arrow-marker {
       width: 0;
       height: 0;
@@ -122,6 +122,7 @@ export function RideMap({
       border-right: 14px solid transparent;
       border-bottom: 32px solid ${colors.primary};
       filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+      transition: transform 0.1s ease-out;
     }
     .arrow-marker::after {
       content: '';
@@ -291,18 +292,23 @@ export function RideMap({
       return directions[index];
     }
 
-    // Rotate the map container
-    function rotateMap(heading) {
-      const mapEl = document.getElementById('map');
-      if (mapEl) {
-        // Rotate map in opposite direction so arrow points up
-        mapEl.style.transform = 'rotate(' + (-heading) + 'deg)';
-      }
-      
+    // Update direction indicator only (no map rotation for natural view)
+    function updateDirection(heading) {
       // Update direction indicator
       const dirEl = document.getElementById('direction');
       if (dirEl) {
         dirEl.textContent = getDirection(heading);
+      }
+      
+      // Rotate the marker arrow to show heading direction
+      if (currentMarker) {
+        const markerEl = currentMarker.getElement();
+        if (markerEl) {
+          const arrowEl = markerEl.querySelector('.arrow-marker');
+          if (arrowEl) {
+            arrowEl.style.transform = 'rotate(' + heading + 'deg)';
+          }
+        }
       }
     }
 
@@ -324,8 +330,8 @@ export function RideMap({
         currentMarker.setLatLng([currentLat, currentLng]);
       }
 
-      // Rotate map to keep arrow pointing up
-      rotateMap(displayHeading);
+      // Update direction indicator (no map rotation for natural view)
+      updateDirection(displayHeading);
 
       // Smooth map pan to follow marker (center of visible area)
       const mapCenter = map.getCenter();

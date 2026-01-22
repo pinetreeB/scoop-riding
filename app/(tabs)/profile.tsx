@@ -16,6 +16,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
+import { useThemeContext } from "@/lib/theme-provider";
 import { trpc } from "@/lib/trpc";
 import {
   getRidingRecords,
@@ -31,6 +32,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const trpcUtils = trpc.useUtils();
   const { user, logout, isAuthenticated, loading: authLoading } = useAuth();
+  const { themeMode, setThemeMode, isDarkMode } = useThemeContext();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
@@ -555,6 +557,57 @@ export default function ProfileScreen() {
           <Text className="text-lg font-bold text-foreground mb-3">설정</Text>
           
           <View className="bg-surface rounded-2xl border border-border overflow-hidden">
+            {/* Dark Mode Toggle */}
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                // Cycle through: system -> light -> dark -> system
+                if (themeMode === "system") {
+                  setThemeMode("light");
+                } else if (themeMode === "light") {
+                  setThemeMode("dark");
+                } else {
+                  setThemeMode("system");
+                }
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4 border-b border-border"
+            >
+              <MaterialIcons 
+                name={isDarkMode ? "dark-mode" : "light-mode"} 
+                size={24} 
+                color={colors.primary} 
+              />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">테마</Text>
+                <Text className="text-muted text-xs">
+                  {themeMode === "system" ? "시스템 설정 따름" : themeMode === "light" ? "라이트 모드" : "다크 모드"}
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-1">
+                <View 
+                  className="px-3 py-1 rounded-full"
+                  style={{ backgroundColor: themeMode === "system" ? colors.primary : colors.border }}
+                >
+                  <Text style={{ color: themeMode === "system" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>자동</Text>
+                </View>
+                <View 
+                  className="px-3 py-1 rounded-full"
+                  style={{ backgroundColor: themeMode === "light" ? colors.primary : colors.border }}
+                >
+                  <Text style={{ color: themeMode === "light" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>라이트</Text>
+                </View>
+                <View 
+                  className="px-3 py-1 rounded-full"
+                  style={{ backgroundColor: themeMode === "dark" ? colors.primary : colors.border }}
+                >
+                  <Text style={{ color: themeMode === "dark" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>다크</Text>
+                </View>
+              </View>
+            </Pressable>
+
             {/* Location Sharing */}
             <Pressable
               onPress={() => {
@@ -589,6 +642,20 @@ export default function ProfileScreen() {
                   style={{ backgroundColor: '#FFFFFF' }}
                 />
               </View>
+            </Pressable>
+
+            {/* Voice Guidance */}
+            <Pressable
+              onPress={() => router.push("/voice-settings")}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4 border-b border-border"
+            >
+              <MaterialIcons name="record-voice-over" size={24} color={colors.primary} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">음성 안내</Text>
+                <Text className="text-muted text-xs">주행 중 속도, 거리, 시간 음성 안내</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
 
             {/* Notifications */}

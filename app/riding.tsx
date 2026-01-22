@@ -35,6 +35,15 @@ import {
   requestBackgroundLocationPermission,
 } from "@/lib/background-location";
 import { getSelectedScooter, type SelectedScooter } from "@/app/select-scooter";
+import {
+  getVoiceSettings,
+  announceRidingStatus,
+  announceStart,
+  announceEnd,
+  resetAnnouncementTimer,
+  stopSpeech,
+  VoiceSettings,
+} from "@/lib/voice-guidance";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -60,6 +69,7 @@ export default function RidingScreen() {
   const [showMap, setShowMap] = useState(true);
   const [isBackgroundEnabled, setIsBackgroundEnabled] = useState(false);
   const [selectedScooter, setSelectedScooter] = useState<SelectedScooter | null>(null);
+  const [voiceSettings, setVoiceSettings] = useState<VoiceSettings | null>(null);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
@@ -79,6 +89,23 @@ export default function RidingScreen() {
   // Load selected scooter on mount
   useEffect(() => {
     getSelectedScooter().then(setSelectedScooter);
+  }, []);
+
+  // Load voice settings and announce start
+  useEffect(() => {
+    const loadVoiceSettings = async () => {
+      const settings = await getVoiceSettings();
+      setVoiceSettings(settings);
+      resetAnnouncementTimer();
+      if (settings.enabled) {
+        announceStart();
+      }
+    };
+    loadVoiceSettings();
+
+    return () => {
+      stopSpeech();
+    };
   }, []);
 
   useEffect(() => {
@@ -105,7 +132,19 @@ export default function RidingScreen() {
   useEffect(() => {
     intervalRef.current = setInterval(() => {
       if (isRunningRef.current) {
-        setDuration((prev) => prev + 1);
+        setDuration((prev) => {
+          const newDuration = prev + 1;
+          // Voice announcement check (every second, let the function handle interval)
+          if (voiceSettings) {
+            announceRidingStatus(
+              voiceSettings,
+              currentSpeed,
+              distance,
+              newDuration
+            );
+          }
+          return newDuration;
+        });
       }
     }, 1000);
 
@@ -114,7 +153,7 @@ export default function RidingScreen() {
         clearInterval(intervalRef.current);
       }
     };
-  }, []);
+  }, [voiceSettings, currentSpeed, distance]);
 
   const initializeGps = async () => {
     try {
@@ -348,6 +387,13 @@ export default function RidingScreen() {
               scooterName: selectedScooter?.name,
             };
             await saveRidingRecord(record);
+
+            // Voice announcement for ride completion
+            try {
+              await announceEnd(finalDist, duration, finalAvg);
+            } catch (e) {
+              console.log("[Riding] Voice announcement error:", e);
+            }
 
             // Send ride completion notification
             try {

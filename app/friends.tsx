@@ -171,7 +171,14 @@ export default function FriendsScreen() {
         >
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
-        <Text className="text-xl font-bold text-foreground">친구</Text>
+        <Text className="flex-1 text-xl font-bold text-foreground">친구</Text>
+        <Pressable
+          onPress={() => router.push("/compare-records")}
+          style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+          className="p-2"
+        >
+          <MaterialIcons name="compare-arrows" size={24} color={colors.primary} />
+        </Pressable>
       </View>
 
       {/* Tabs */}
