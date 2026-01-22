@@ -961,6 +961,94 @@ export const appRouter = router({
     }),
   }),
 
+  // Group riding router
+  groups: router({
+    // Create a new group
+    create: protectedProcedure
+      .input(z.object({ name: z.string().min(1).max(50) }))
+      .mutation(async ({ ctx, input }) => {
+        const result = await db.createGroupSession(ctx.user.id, input.name);
+        if (!result) throw new Error("그룹 생성에 실패했습니다.");
+        return result;
+      }),
+
+    // Join a group by code
+    join: protectedProcedure
+      .input(z.object({ code: z.string().length(6) }))
+      .mutation(async ({ ctx, input }) => {
+        const result = await db.joinGroupByCode(ctx.user.id, input.code);
+        if (!result) throw new Error("그룹을 찾을 수 없거나 이미 참가한 그룹입니다.");
+        return result;
+      }),
+
+    // Leave a group
+    leave: protectedProcedure
+      .input(z.object({ groupId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.leaveGroup(ctx.user.id, input.groupId);
+        return { success };
+      }),
+
+    // Get user's groups
+    mine: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserGroups(ctx.user.id);
+    }),
+
+    // Get group by ID
+    getById: protectedProcedure
+      .input(z.object({ groupId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getGroupById(input.groupId);
+      }),
+
+    // Update member location
+    updateLocation: protectedProcedure
+      .input(z.object({
+        groupId: z.number(),
+        latitude: z.number(),
+        longitude: z.number(),
+        distance: z.number(),
+        duration: z.number(),
+        currentSpeed: z.number(),
+        isRiding: z.boolean(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.updateGroupMemberLocation(input.groupId, ctx.user.id, {
+          latitude: input.latitude,
+          longitude: input.longitude,
+          distance: input.distance,
+          duration: input.duration,
+          currentSpeed: input.currentSpeed,
+          isRiding: input.isRiding,
+        });
+        return { success };
+      }),
+
+    // Start group riding (host only)
+    startRiding: protectedProcedure
+      .input(z.object({ groupId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.startGroupRiding(input.groupId, ctx.user.id);
+        if (!success) throw new Error("그룹 라이딩을 시작할 수 없습니다. 호스트만 시작할 수 있습니다.");
+        return { success };
+      }),
+
+    // Stop group riding (host only)
+    stopRiding: protectedProcedure
+      .input(z.object({ groupId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.stopGroupRiding(input.groupId, ctx.user.id);
+        return { success };
+      }),
+
+    // Get group members' locations
+    getMembersLocations: protectedProcedure
+      .input(z.object({ groupId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getGroupMembersLocations(input.groupId);
+      }),
+  }),
+
   // Badges router
   badges: router({
     // Get all badges

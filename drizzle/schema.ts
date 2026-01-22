@@ -437,3 +437,57 @@ export const appVersions = mysqlTable("appVersions", {
 
 export type AppVersion = typeof appVersions.$inferSelect;
 export type InsertAppVersion = typeof appVersions.$inferInsert;
+
+
+/**
+ * Group riding sessions table
+ */
+export const groupSessions = mysqlTable("groupSessions", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Unique group code (6 characters) */
+  code: varchar("code", { length: 6 }).notNull().unique(),
+  /** Group name */
+  name: varchar("name", { length: 100 }).notNull(),
+  /** Host user ID */
+  hostId: int("hostId").notNull(),
+  /** Whether the group is currently active */
+  isActive: boolean("isActive").default(true).notNull(),
+  /** Whether riding is in progress */
+  isRiding: boolean("isRiding").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type GroupSession = typeof groupSessions.$inferSelect;
+export type InsertGroupSession = typeof groupSessions.$inferInsert;
+
+/**
+ * Group members table
+ */
+export const groupMembers = mysqlTable("groupMembers", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Group session ID */
+  groupId: int("groupId").notNull(),
+  /** User ID */
+  userId: int("userId").notNull(),
+  /** Whether this member is the host */
+  isHost: boolean("isHost").default(false).notNull(),
+  /** Whether this member is currently riding */
+  isRiding: boolean("isRiding").default(false).notNull(),
+  /** Current distance in meters */
+  distance: int("distance").default(0).notNull(),
+  /** Current duration in seconds */
+  duration: int("duration").default(0).notNull(),
+  /** Current speed in km/h * 10 */
+  currentSpeed: int("currentSpeed").default(0).notNull(),
+  /** Current latitude */
+  latitude: varchar("latitude", { length: 20 }),
+  /** Current longitude */
+  longitude: varchar("longitude", { length: 20 }),
+  /** Last location update time */
+  lastLocationUpdate: timestamp("lastLocationUpdate"),
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+});
+
+export type GroupMember = typeof groupMembers.$inferSelect;
+export type InsertGroupMember = typeof groupMembers.$inferInsert;

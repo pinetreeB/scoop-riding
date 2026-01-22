@@ -11,6 +11,16 @@ interface GpxRoutePoint {
   time?: string;
 }
 
+interface GroupMemberLocation {
+  userId: number;
+  name: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  distance: number;
+  currentSpeed: number;
+  isRiding: boolean;
+}
+
 interface RideMapProps {
   gpsPoints: GpsPoint[];
   currentLocation?: { latitude: number; longitude: number; heading?: number } | null;
@@ -18,6 +28,7 @@ interface RideMapProps {
   isLive?: boolean;
   style?: any;
   gpxRoute?: { points: GpxRoutePoint[]; name?: string } | null;
+  groupMembers?: GroupMemberLocation[];
 }
 
 export function RideMap({
@@ -27,6 +38,7 @@ export function RideMap({
   isLive = false,
   style,
   gpxRoute,
+  groupMembers = [],
 }: RideMapProps) {
   const colors = useColors();
   const webViewRef = useRef<WebView>(null);
@@ -291,6 +303,20 @@ export function RideMap({
     L.marker([${endPoint.latitude}, ${endPoint.longitude}], { icon: endIcon }).addTo(map);
     ` : ''}
 
+    // Group member markers
+    const groupMemberMarkers = {};
+    ${groupMembers.filter(m => m.latitude && m.longitude).map(m => `
+    (function() {
+      const memberIcon = L.divIcon({
+        className: 'group-member-marker',
+        html: '<div style="position:relative;"><div style="width:32px;height:32px;background:#4CAF50;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><span style="color:white;font-size:12px;font-weight:bold;">${(m.name || '?').charAt(0)}</span></div><div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;font-size:10px;padding:2px 6px;border-radius:4px;white-space:nowrap;">${m.name || '\uC775\uBA85'} ${(m.currentSpeed / 10).toFixed(0)}km/h</div></div>',
+        iconSize: [32, 50],
+        iconAnchor: [16, 16]
+      });
+      groupMemberMarkers[${m.userId}] = L.marker([${m.latitude}, ${m.longitude}], { icon: memberIcon, zIndexOffset: 500 }).addTo(map);
+    })();
+    `).join('')}
+
     // Create arrow marker for live mode - arrow always points UP
     ${isLive && currentLocation ? `
     const arrowIcon = L.divIcon({
@@ -400,6 +426,30 @@ export function RideMap({
       }
     };
 
+    // Function to update group member location (called from React Native)
+    window.updateGroupMember = function(userId, lat, lng, name, speed) {
+      if (groupMemberMarkers[userId]) {
+        groupMemberMarkers[userId].setLatLng([lat, lng]);
+        // Update popup content
+        const icon = L.divIcon({
+          className: 'group-member-marker',
+          html: '<div style="position:relative;"><div style="width:32px;height:32px;background:#4CAF50;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><span style="color:white;font-size:12px;font-weight:bold;">' + (name || '?').charAt(0) + '</span></div><div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;font-size:10px;padding:2px 6px;border-radius:4px;white-space:nowrap;">' + (name || '\uC775\uBA85') + ' ' + (speed / 10).toFixed(0) + 'km/h</div></div>',
+          iconSize: [32, 50],
+          iconAnchor: [16, 16]
+        });
+        groupMemberMarkers[userId].setIcon(icon);
+      } else {
+        // Create new marker
+        const memberIcon = L.divIcon({
+          className: 'group-member-marker',
+          html: '<div style="position:relative;"><div style="width:32px;height:32px;background:#4CAF50;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><span style="color:white;font-size:12px;font-weight:bold;">' + (name || '?').charAt(0) + '</span></div><div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;font-size:10px;padding:2px 6px;border-radius:4px;white-space:nowrap;">' + (name || '\uC775\uBA85') + ' ' + (speed / 10).toFixed(0) + 'km/h</div></div>',
+          iconSize: [32, 50],
+          iconAnchor: [16, 16]
+        });
+        groupMemberMarkers[userId] = L.marker([lat, lng], { icon: memberIcon, zIndexOffset: 500 }).addTo(map);
+      }
+    };
+
     // Function to add point to path (called from React Native)
     window.addPathPoint = function(lat, lng) {
       if (polyline) {
@@ -460,6 +510,22 @@ export function RideMap({
       `);
     }
   }, [isLive, gpsPoints.length]);
+
+  // Update group member locations
+  useEffect(() => {
+    if (isLive && groupMembers.length > 0 && webViewRef.current) {
+      groupMembers.forEach(member => {
+        if (member.latitude && member.longitude) {
+          webViewRef.current?.injectJavaScript(`
+            if (window.updateGroupMember) {
+              window.updateGroupMember(${member.userId}, ${member.latitude}, ${member.longitude}, "${member.name || ''}", ${member.currentSpeed});
+            }
+            true;
+          `);
+        }
+      });
+    }
+  }, [isLive, groupMembers]);
 
   // No GPS points and no current location - show placeholder
   if (gpsPoints.length === 0 && !currentLocation) {

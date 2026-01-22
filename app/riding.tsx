@@ -53,7 +53,26 @@ const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 export default function RidingScreen() {
   const router = useRouter();
   const colors = useColors();
-  const params = useLocalSearchParams<{ withRoute?: string }>();
+  const params = useLocalSearchParams<{ withRoute?: string; groupId?: string }>();
+
+  // Group riding state
+  const [groupId, setGroupId] = useState<number | null>(null);
+  const [groupMembers, setGroupMembers] = useState<{
+    userId: number;
+    name: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    distance: number;
+    currentSpeed: number;
+    isRiding: boolean;
+  }[]>([]);
+
+  // Group riding mutations
+  const updateGroupLocation = trpc.groups.updateLocation.useMutation();
+  const { data: groupMembersData, refetch: refetchGroupMembers } = trpc.groups.getMembersLocations.useQuery(
+    { groupId: groupId ?? 0 },
+    { enabled: !!groupId, refetchInterval: 3000 }
+  );
 
   // Live location mutation for friends tracking
   const updateLiveLocation = trpc.liveLocation.update.useMutation();
@@ -109,6 +128,60 @@ export default function RidingScreen() {
   useEffect(() => {
     getSelectedScooter().then(setSelectedScooter);
   }, []);
+
+  // Parse groupId from params
+  useEffect(() => {
+    if (params.groupId) {
+      const id = parseInt(params.groupId, 10);
+      if (!isNaN(id)) {
+        setGroupId(id);
+      }
+    }
+  }, [params.groupId]);
+
+  // Update group members when data changes
+  useEffect(() => {
+    if (groupMembersData) {
+      setGroupMembers(groupMembersData);
+    }
+  }, [groupMembersData]);
+
+  // Check for distant group members and alert
+  const distantMemberAlertedRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    if (!groupId || !currentLocation || groupMembers.length === 0) return;
+
+    const DISTANCE_THRESHOLD_METERS = 500; // 500m 이상 떨어지면 경고
+    
+    groupMembers.forEach(member => {
+      if (!member.latitude || !member.longitude) return;
+      
+      const distanceToMember = calculateDistance(
+        currentLocation.latitude,
+        currentLocation.longitude,
+        member.latitude,
+        member.longitude
+      ) * 1000; // km to m
+      
+      if (distanceToMember > DISTANCE_THRESHOLD_METERS) {
+        // 아직 알림을 보내지 않은 멤버만 알림
+        if (!distantMemberAlertedRef.current.has(member.userId)) {
+          distantMemberAlertedRef.current.add(member.userId);
+          Alert.alert(
+            "그룹원 이탈 경고",
+            `${member.name || '그룹원'}님이 ${Math.round(distanceToMember)}m 떨어져 있습니다.`,
+            [{ text: "확인" }]
+          );
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          }
+        }
+      } else {
+        // 다시 가까워지면 알림 상태 리셋
+        distantMemberAlertedRef.current.delete(member.userId);
+      }
+    });
+  }, [groupId, currentLocation, groupMembers]);
   
   // Load GPX route if withRoute param is set
   useEffect(() => {
@@ -345,6 +418,19 @@ export default function RidingScreen() {
         isStarting,
       });
 
+      // Update group location if in group riding
+      if (groupId) {
+        updateGroupLocation.mutate({
+          groupId,
+          latitude,
+          longitude,
+          distance: distance,
+          duration: duration,
+          currentSpeed: displaySpeed,
+          isRiding: true,
+        });
+      }
+
       if (rawSpeedKmh >= GPS_CONSTANTS.MIN_SPEED_THRESHOLD) {
         setMaxSpeed((prev) => Math.max(prev, rawSpeedKmh));
       }
@@ -570,6 +656,7 @@ export default function RidingScreen() {
                isLive={true}
                showCurrentLocation={false}
                gpxRoute={gpxRoute}
+               groupMembers={groupMembers}
              />
             {/* Speed overlay on map */}
             <View className="absolute bottom-4 left-4 bg-black/70 rounded-xl px-4 py-2">

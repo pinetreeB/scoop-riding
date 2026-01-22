@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -2147,4 +2147,440 @@ export async function getAllAppVersions(platform: string = "android"): Promise<A
     .from(appVersions)
     .where(eq(appVersions.platform, platform))
     .orderBy(desc(appVersions.versionCode));
+}
+
+
+// ==================== Group Riding Functions ====================
+
+// Generate 6-character group code
+function generateGroupCode(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// Create a new group session
+export async function createGroupSession(hostId: number, name: string): Promise<{ groupId: number; code: string } | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    // Generate unique code
+    let code = generateGroupCode();
+    let attempts = 0;
+    while (attempts < 10) {
+      const existing = await db.select().from(groupSessions).where(eq(groupSessions.code, code)).limit(1);
+      if (existing.length === 0) break;
+      code = generateGroupCode();
+      attempts++;
+    }
+
+    // Create group session
+    const result = await db.insert(groupSessions).values({
+      code,
+      name,
+      hostId,
+      isActive: true,
+      isRiding: false,
+    });
+
+    const groupId = result[0].insertId;
+
+    // Add host as first member
+    await db.insert(groupMembers).values({
+      groupId,
+      userId: hostId,
+      isHost: true,
+      isRiding: false,
+    });
+
+    return { groupId, code };
+  } catch (error) {
+    console.error("[Database] Failed to create group session:", error);
+    return null;
+  }
+}
+
+// Join a group by code
+export async function joinGroupByCode(userId: number, code: string): Promise<{ groupId: number; groupName: string } | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    // Find group by code
+    const group = await db
+      .select()
+      .from(groupSessions)
+      .where(and(eq(groupSessions.code, code.toUpperCase()), eq(groupSessions.isActive, true)))
+      .limit(1);
+
+    if (group.length === 0) return null;
+
+    const groupId = group[0].id;
+
+    // Check if already a member
+    const existingMember = await db
+      .select()
+      .from(groupMembers)
+      .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)))
+      .limit(1);
+
+    if (existingMember.length > 0) {
+      return { groupId, groupName: group[0].name };
+    }
+
+    // Add as member
+    await db.insert(groupMembers).values({
+      groupId,
+      userId,
+      isHost: false,
+      isRiding: false,
+    });
+
+    return { groupId, groupName: group[0].name };
+  } catch (error) {
+    console.error("[Database] Failed to join group:", error);
+    return null;
+  }
+}
+
+// Leave a group
+export async function leaveGroup(userId: number, groupId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    // Check if user is host
+    const group = await db
+      .select()
+      .from(groupSessions)
+      .where(eq(groupSessions.id, groupId))
+      .limit(1);
+
+    if (group.length === 0) return false;
+
+    if (group[0].hostId === userId) {
+      // Host leaving - delete entire group
+      await db.delete(groupMembers).where(eq(groupMembers.groupId, groupId));
+      await db.delete(groupSessions).where(eq(groupSessions.id, groupId));
+    } else {
+      // Regular member leaving
+      await db.delete(groupMembers).where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
+    }
+
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to leave group:", error);
+    return false;
+  }
+}
+
+// Get user's groups
+export async function getUserGroups(userId: number): Promise<{
+  id: number;
+  code: string;
+  name: string;
+  hostId: number;
+  hostName: string | null;
+  isActive: boolean;
+  isRiding: boolean;
+  members: {
+    userId: number;
+    name: string | null;
+    profileImageUrl: string | null;
+    isHost: boolean;
+    isRiding: boolean;
+    distance: number;
+    duration: number;
+    currentSpeed: number;
+    latitude: number | null;
+    longitude: number | null;
+  }[];
+}[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    // Get groups where user is a member
+    const memberOf = await db
+      .select({ groupId: groupMembers.groupId })
+      .from(groupMembers)
+      .where(eq(groupMembers.userId, userId));
+
+    if (memberOf.length === 0) return [];
+
+    const groupIds = memberOf.map(m => m.groupId);
+
+    // Get group details
+    const groups = await db
+      .select({
+        id: groupSessions.id,
+        code: groupSessions.code,
+        name: groupSessions.name,
+        hostId: groupSessions.hostId,
+        isActive: groupSessions.isActive,
+        isRiding: groupSessions.isRiding,
+        hostName: users.name,
+      })
+      .from(groupSessions)
+      .leftJoin(users, eq(groupSessions.hostId, users.id))
+      .where(sql`${groupSessions.id} IN (${sql.join(groupIds.map(id => sql`${id}`), sql`, `)})`);
+
+    // Get members for each group
+    const result = await Promise.all(
+      groups.map(async (group) => {
+        const members = await db
+          .select({
+            userId: groupMembers.userId,
+            isHost: groupMembers.isHost,
+            isRiding: groupMembers.isRiding,
+            distance: groupMembers.distance,
+            duration: groupMembers.duration,
+            currentSpeed: groupMembers.currentSpeed,
+            latitude: groupMembers.latitude,
+            longitude: groupMembers.longitude,
+            name: users.name,
+            profileImageUrl: users.profileImageUrl,
+          })
+          .from(groupMembers)
+          .leftJoin(users, eq(groupMembers.userId, users.id))
+          .where(eq(groupMembers.groupId, group.id));
+
+        return {
+          ...group,
+          members: members.map(m => ({
+            ...m,
+            latitude: m.latitude ? parseFloat(m.latitude) : null,
+            longitude: m.longitude ? parseFloat(m.longitude) : null,
+          })),
+        };
+      })
+    );
+
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get user groups:", error);
+    return [];
+  }
+}
+
+// Get group by ID
+export async function getGroupById(groupId: number): Promise<{
+  id: number;
+  code: string;
+  name: string;
+  hostId: number;
+  hostName: string | null;
+  isActive: boolean;
+  isRiding: boolean;
+  members: {
+    userId: number;
+    name: string | null;
+    profileImageUrl: string | null;
+    isHost: boolean;
+    isRiding: boolean;
+    distance: number;
+    duration: number;
+    currentSpeed: number;
+    latitude: number | null;
+    longitude: number | null;
+  }[];
+} | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const group = await db
+      .select({
+        id: groupSessions.id,
+        code: groupSessions.code,
+        name: groupSessions.name,
+        hostId: groupSessions.hostId,
+        isActive: groupSessions.isActive,
+        isRiding: groupSessions.isRiding,
+        hostName: users.name,
+      })
+      .from(groupSessions)
+      .leftJoin(users, eq(groupSessions.hostId, users.id))
+      .where(eq(groupSessions.id, groupId))
+      .limit(1);
+
+    if (group.length === 0) return null;
+
+    const members = await db
+      .select({
+        userId: groupMembers.userId,
+        isHost: groupMembers.isHost,
+        isRiding: groupMembers.isRiding,
+        distance: groupMembers.distance,
+        duration: groupMembers.duration,
+        currentSpeed: groupMembers.currentSpeed,
+        latitude: groupMembers.latitude,
+        longitude: groupMembers.longitude,
+        name: users.name,
+        profileImageUrl: users.profileImageUrl,
+      })
+      .from(groupMembers)
+      .leftJoin(users, eq(groupMembers.userId, users.id))
+      .where(eq(groupMembers.groupId, groupId));
+
+    return {
+      ...group[0],
+      members: members.map(m => ({
+        ...m,
+        latitude: m.latitude ? parseFloat(m.latitude) : null,
+        longitude: m.longitude ? parseFloat(m.longitude) : null,
+      })),
+    };
+  } catch (error) {
+    console.error("[Database] Failed to get group:", error);
+    return null;
+  }
+}
+
+// Update member location during group riding
+export async function updateGroupMemberLocation(
+  groupId: number,
+  userId: number,
+  data: {
+    latitude: number;
+    longitude: number;
+    distance: number;
+    duration: number;
+    currentSpeed: number;
+    isRiding: boolean;
+  }
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db
+      .update(groupMembers)
+      .set({
+        latitude: data.latitude.toString(),
+        longitude: data.longitude.toString(),
+        distance: data.distance,
+        duration: data.duration,
+        currentSpeed: data.currentSpeed,
+        isRiding: data.isRiding,
+        lastLocationUpdate: new Date(),
+      })
+      .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
+
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to update member location:", error);
+    return false;
+  }
+}
+
+// Start group riding
+export async function startGroupRiding(groupId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    // Verify user is host
+    const group = await db
+      .select()
+      .from(groupSessions)
+      .where(eq(groupSessions.id, groupId))
+      .limit(1);
+
+    if (group.length === 0 || group[0].hostId !== userId) return false;
+
+    // Update group status
+    await db
+      .update(groupSessions)
+      .set({ isRiding: true })
+      .where(eq(groupSessions.id, groupId));
+
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to start group riding:", error);
+    return false;
+  }
+}
+
+// Stop group riding
+export async function stopGroupRiding(groupId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    // Verify user is host
+    const group = await db
+      .select()
+      .from(groupSessions)
+      .where(eq(groupSessions.id, groupId))
+      .limit(1);
+
+    if (group.length === 0 || group[0].hostId !== userId) return false;
+
+    // Update group status
+    await db
+      .update(groupSessions)
+      .set({ isRiding: false })
+      .where(eq(groupSessions.id, groupId));
+
+    // Reset all members' riding status
+    await db
+      .update(groupMembers)
+      .set({ isRiding: false })
+      .where(eq(groupMembers.groupId, groupId));
+
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to stop group riding:", error);
+    return false;
+  }
+}
+
+// Get group members' locations (for map display)
+export async function getGroupMembersLocations(groupId: number): Promise<{
+  userId: number;
+  name: string | null;
+  profileImageUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  distance: number;
+  duration: number;
+  currentSpeed: number;
+  isRiding: boolean;
+  lastUpdate: Date | null;
+}[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const members = await db
+      .select({
+        userId: groupMembers.userId,
+        name: users.name,
+        profileImageUrl: users.profileImageUrl,
+        latitude: groupMembers.latitude,
+        longitude: groupMembers.longitude,
+        distance: groupMembers.distance,
+        duration: groupMembers.duration,
+        currentSpeed: groupMembers.currentSpeed,
+        isRiding: groupMembers.isRiding,
+        lastUpdate: groupMembers.lastLocationUpdate,
+      })
+      .from(groupMembers)
+      .leftJoin(users, eq(groupMembers.userId, users.id))
+      .where(eq(groupMembers.groupId, groupId));
+
+    return members.map(m => ({
+      ...m,
+      latitude: m.latitude ? parseFloat(m.latitude) : null,
+      longitude: m.longitude ? parseFloat(m.longitude) : null,
+    }));
+  } catch (error) {
+    console.error("[Database] Failed to get group members locations:", error);
+    return [];
+  }
 }
