@@ -16,6 +16,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 
@@ -364,7 +365,7 @@ export default function ScootersScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setIsModalVisible(false)}
       >
-        <View className="flex-1 bg-background">
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "left", "right"]}>
           {/* Modal Header */}
           <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
             <Pressable
@@ -499,7 +500,7 @@ export default function ScootersScreen() {
               />
             </View>
           </ScrollView>
-        </View>
+        </SafeAreaView>
       </Modal>
     </ScreenContainer>
   );

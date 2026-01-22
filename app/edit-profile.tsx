@@ -134,7 +134,7 @@ export default function EditProfileScreen() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert("오류", "이름을 입력해주세요.");
       return;
@@ -145,11 +145,27 @@ export default function EditProfileScreen() {
     }
 
     setSaving(true);
-    updateProfileMutation.mutate({
-      name: name.trim(),
-      profileImageUrl,
-    });
-    setSaving(false);
+    try {
+      const result = await updateProfileMutation.mutateAsync({
+        name: name.trim(),
+        profileImageUrl,
+      });
+      
+      if (result.success) {
+        // 성공 시에만 캐시 무효화 시도
+        try {
+          utils.auth.me.invalidate();
+        } catch (e) {
+          console.log("Cache invalidation skipped");
+        }
+      }
+    } catch (error) {
+      console.error("Profile save error:", error);
+      // 에러가 발생해도 로그아웃되지 않도록 처리
+      Alert.alert("오류", "프로필 저장 중 문제가 발생했습니다. 다시 시도해주세요.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

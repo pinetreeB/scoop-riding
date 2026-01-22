@@ -86,13 +86,46 @@ export default function PostDetailScreen() {
     },
   });
 
-  // Load attached ride if exists
+  // Load attached ride if exists - try local first, then server for shared records
   useFocusEffect(
     useCallback(() => {
-      if (postQuery.data?.ridingRecordId) {
-        getRidingRecordWithGps(postQuery.data.ridingRecordId).then(setAttachedRide);
-      }
-    }, [postQuery.data?.ridingRecordId])
+      const loadRide = async () => {
+        if (!postQuery.data?.ridingRecordId) return;
+        
+        // Try local storage first (for own records)
+        const localRecord = await getRidingRecordWithGps(postQuery.data.ridingRecordId);
+        if (localRecord) {
+          setAttachedRide(localRecord);
+          return;
+        }
+        
+        // If not found locally, fetch from server (for other users' records)
+        try {
+          const serverRecord = await trpcUtils.client.rides.getById.query({ 
+            recordId: postQuery.data.ridingRecordId 
+          });
+          if (serverRecord) {
+            // Convert server record to local format
+            const convertedRecord: RidingRecord = {
+              id: serverRecord.recordId,
+              date: serverRecord.date,
+              duration: serverRecord.duration,
+              distance: serverRecord.distance,
+              avgSpeed: serverRecord.avgSpeed / 10,
+              maxSpeed: serverRecord.maxSpeed / 10,
+              startTime: serverRecord.startTime?.toISOString() || "",
+              endTime: serverRecord.endTime?.toISOString() || "",
+              gpsPoints: serverRecord.gpsPointsJson ? JSON.parse(serverRecord.gpsPointsJson) : undefined,
+            };
+            setAttachedRide(convertedRecord);
+          }
+        } catch (error) {
+          console.error("Failed to load ride from server:", error);
+        }
+      };
+      
+      loadRide();
+    }, [postQuery.data?.ridingRecordId, trpcUtils])
   );
 
   const handleLike = () => {

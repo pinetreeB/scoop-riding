@@ -349,6 +349,14 @@ export async function deleteRidingRecord(recordId: string, userId: number): Prom
   return true;
 }
 
+export async function getRidingRecordById(recordId: string): Promise<RidingRecord | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const results = await db.select().from(ridingRecords).where(eq(ridingRecords.recordId, recordId));
+  return results[0];
+}
+
 // Scooter (기체) Management Functions
 
 export async function getUserScooters(userId: number): Promise<Scooter[]> {
@@ -1273,14 +1281,19 @@ export async function updateUserProfile(
   userId: number,
   data: { name?: string; profileImageUrl?: string | null }
 ): Promise<boolean> {
-  const db = await getDb();
-  if (!db) return false;
+  try {
+    const db = await getDb();
+    if (!db) return false;
 
-  await db.update(users)
-    .set({ ...data, updatedAt: new Date() })
-    .where(eq(users.id, userId));
-  
-  return true;
+    await db.update(users)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+    
+    return true;
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    return false;
+  }
 }
 
 // Get user by ID
@@ -2000,8 +2013,9 @@ export async function getFriendStats(userId: number, friendId: number): Promise<
   const totalDistance = records.reduce((sum, r) => sum + r.distance, 0);
   const totalRides = records.length;
   const totalDuration = records.reduce((sum, r) => sum + r.duration, 0);
+  // avgSpeed is stored as value * 10 in DB, so divide by 10 to get actual value
   const avgSpeed = totalRides > 0 
-    ? records.reduce((sum, r) => sum + r.avgSpeed, 0) / totalRides 
+    ? records.reduce((sum, r) => sum + (r.avgSpeed / 10), 0) / totalRides 
     : 0;
 
   return {
@@ -2046,8 +2060,9 @@ export async function getUserStats(userId: number): Promise<FriendStats | null> 
   const totalDistance = records.reduce((sum, r) => sum + r.distance, 0);
   const totalRides = records.length;
   const totalDuration = records.reduce((sum, r) => sum + r.duration, 0);
+  // avgSpeed is stored as value * 10 in DB, so divide by 10 to get actual value
   const avgSpeed = totalRides > 0 
-    ? records.reduce((sum, r) => sum + r.avgSpeed, 0) / totalRides 
+    ? records.reduce((sum, r) => sum + (r.avgSpeed / 10), 0) / totalRides 
     : 0;
 
   return {

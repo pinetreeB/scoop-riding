@@ -275,6 +275,13 @@ export const appRouter = router({
       return db.getUserRidingRecords(ctx.user.id);
     }),
 
+    // Get a specific riding record by ID (for viewing shared records)
+    getById: protectedProcedure
+      .input(z.object({ recordId: z.string() }))
+      .query(async ({ input }) => {
+        return db.getRidingRecordById(input.recordId);
+      }),
+
     create: protectedProcedure
       .input(
         z.object({

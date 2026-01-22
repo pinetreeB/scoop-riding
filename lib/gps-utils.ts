@@ -6,11 +6,14 @@ import { Platform } from "react-native";
 // GPS filtering constants
 export const GPS_CONSTANTS = {
   MIN_SPEED_THRESHOLD: 1.0, // km/h - speeds below this are considered stationary
-  MIN_ACCURACY_THRESHOLD: 30, // meters - ignore points with worse accuracy
-  MAX_SPEED_JUMP: 40, // km/h - maximum allowed speed change between readings
-  MAX_DISTANCE_JUMP: 50, // meters - maximum allowed distance between consecutive points
-  MIN_TIME_BETWEEN_POINTS: 500, // ms - minimum time between valid points
+  MIN_ACCURACY_THRESHOLD: 25, // meters - ignore points with worse accuracy (stricter)
+  MAX_SPEED_JUMP: 30, // km/h - maximum allowed speed change between readings (stricter)
+  MAX_DISTANCE_JUMP: 30, // meters - maximum allowed distance between consecutive points (stricter)
+  MIN_TIME_BETWEEN_POINTS: 800, // ms - minimum time between valid points
   BACKWARD_MOVEMENT_THRESHOLD: 5, // meters - detect backward movement
+  MAX_REALISTIC_SPEED: 80, // km/h - maximum realistic speed for e-scooter
+  GPS_SPIKE_THRESHOLD: 100, // meters - distance that indicates GPS spike
+  CONSECUTIVE_INVALID_LIMIT: 3, // number of consecutive invalid points before resetting
 };
 
 export interface GpsPoint {
@@ -157,7 +160,7 @@ export function validateGpsPoint(
   lastValidPoint: GpsPoint | null,
   lastBearing: number | null
 ): { isValid: boolean; reason?: string; newBearing?: number } {
-  // Check accuracy
+  // Check accuracy - reject points with poor GPS accuracy
   if (newPoint.accuracy !== null && newPoint.accuracy > GPS_CONSTANTS.MIN_ACCURACY_THRESHOLD) {
     return { isValid: false, reason: "accuracy_too_low" };
   }
@@ -166,6 +169,11 @@ export function validateGpsPoint(
   const speedKmh = newPoint.speed !== null ? msToKmh(newPoint.speed) : 0;
   if (speedKmh < GPS_CONSTANTS.MIN_SPEED_THRESHOLD) {
     return { isValid: false, reason: "speed_below_threshold" };
+  }
+
+  // Check for unrealistically high speed (GPS spike indicator)
+  if (speedKmh > GPS_CONSTANTS.MAX_REALISTIC_SPEED) {
+    return { isValid: false, reason: "speed_too_high" };
   }
 
   if (!lastValidPoint) {
@@ -186,10 +194,24 @@ export function validateGpsPoint(
     newPoint.longitude
   );
 
+  // Check for GPS spike (sudden large distance jump)
+  if (distance > GPS_CONSTANTS.GPS_SPIKE_THRESHOLD) {
+    return { isValid: false, reason: "gps_spike" };
+  }
+
+  // Calculate expected maximum distance based on time and max realistic speed
+  const timeSeconds = timeDiff / 1000;
+  const maxExpectedDistance = timeSeconds * (GPS_CONSTANTS.MAX_REALISTIC_SPEED / 3.6);
+  
   // Check for unrealistic distance jump
-  const maxExpectedDistance = (timeDiff / 1000) * (GPS_CONSTANTS.MAX_SPEED_JUMP / 3.6);
-  if (distance > Math.max(GPS_CONSTANTS.MAX_DISTANCE_JUMP, maxExpectedDistance)) {
+  if (distance > Math.min(GPS_CONSTANTS.MAX_DISTANCE_JUMP, maxExpectedDistance)) {
     return { isValid: false, reason: "distance_jump" };
+  }
+
+  // Calculate implied speed from distance and time
+  const impliedSpeedKmh = (distance / timeSeconds) * 3.6;
+  if (impliedSpeedKmh > GPS_CONSTANTS.MAX_REALISTIC_SPEED) {
+    return { isValid: false, reason: "implied_speed_too_high" };
   }
 
   // Calculate bearing
@@ -207,7 +229,7 @@ export function validateGpsPoint(
     }
   }
 
-  // Check for unrealistic speed jump
+  // Check for unrealistic speed jump between consecutive points
   if (lastValidPoint.speed !== null && newPoint.speed !== null) {
     const lastSpeedKmh = msToKmh(lastValidPoint.speed);
     const speedDiff = Math.abs(speedKmh - lastSpeedKmh);

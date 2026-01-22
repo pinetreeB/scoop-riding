@@ -82,8 +82,17 @@ export default function NotificationsCenterScreen() {
       router.push(`/post-detail?id=${notification.entityId}` as never);
     } else if (notification.entityType === "user" && notification.actorId) {
       router.push(`/user-profile?userId=${notification.actorId}` as never);
-    } else if (notification.type === "friend_request") {
+    } else if (notification.type === "friend_request" || notification.type === "friend_accepted") {
       router.push("/friends" as never);
+    } else if (notification.type === "like" || notification.type === "comment") {
+      // Navigate to community tab
+      router.push("/(tabs)/community" as never);
+    } else if (notification.type === "challenge") {
+      // Navigate to challenges
+      router.push("/challenges" as never);
+    } else if (notification.type === "group_riding") {
+      // Navigate to group riding
+      router.push("/group-riding" as never);
     }
   };
 
