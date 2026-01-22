@@ -595,23 +595,7 @@ export default function ProfileScreen() {
           
           <View className="bg-surface rounded-2xl border border-border overflow-hidden">
             {/* Dark Mode Toggle */}
-            <Pressable
-              onPress={() => {
-                if (Platform.OS !== "web") {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                // Cycle through: system -> light -> dark -> system
-                if (themeMode === "system") {
-                  setThemeMode("light");
-                } else if (themeMode === "light") {
-                  setThemeMode("dark");
-                } else {
-                  setThemeMode("system");
-                }
-              }}
-              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-              className="flex-row items-center p-4 border-b border-border"
-            >
+            <View className="flex-row items-center p-4 border-b border-border">
               <MaterialIcons 
                 name={isDarkMode ? "dark-mode" : "light-mode"} 
                 size={24} 
@@ -624,26 +608,50 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <View className="flex-row items-center gap-1">
-                <View 
+                <Pressable 
+                  onPress={() => {
+                    if (Platform.OS !== "web") {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    setThemeMode("system");
+                  }}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
                   className="px-3 py-1 rounded-full"
-                  style={{ backgroundColor: themeMode === "system" ? colors.primary : colors.border }}
                 >
-                  <Text style={{ color: themeMode === "system" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>자동</Text>
-                </View>
-                <View 
+                  <View style={{ backgroundColor: themeMode === "system" ? colors.primary : colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
+                    <Text style={{ color: themeMode === "system" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>자동</Text>
+                  </View>
+                </Pressable>
+                <Pressable 
+                  onPress={() => {
+                    if (Platform.OS !== "web") {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    setThemeMode("light");
+                  }}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
                   className="px-3 py-1 rounded-full"
-                  style={{ backgroundColor: themeMode === "light" ? colors.primary : colors.border }}
                 >
-                  <Text style={{ color: themeMode === "light" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>라이트</Text>
-                </View>
-                <View 
+                  <View style={{ backgroundColor: themeMode === "light" ? colors.primary : colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
+                    <Text style={{ color: themeMode === "light" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>라이트</Text>
+                  </View>
+                </Pressable>
+                <Pressable 
+                  onPress={() => {
+                    if (Platform.OS !== "web") {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    setThemeMode("dark");
+                  }}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
                   className="px-3 py-1 rounded-full"
-                  style={{ backgroundColor: themeMode === "dark" ? colors.primary : colors.border }}
                 >
-                  <Text style={{ color: themeMode === "dark" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>다크</Text>
-                </View>
+                  <View style={{ backgroundColor: themeMode === "dark" ? colors.primary : colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
+                    <Text style={{ color: themeMode === "dark" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>다크</Text>
+                  </View>
+                </Pressable>
               </View>
-            </Pressable>
+            </View>
 
             {/* Location Sharing */}
             <Pressable
@@ -691,6 +699,48 @@ export default function ProfileScreen() {
               <View className="flex-1 ml-3">
                 <Text className="text-foreground font-medium">음성 안내</Text>
                 <Text className="text-muted text-xs">주행 중 속도, 거리, 시간 음성 안내</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+
+            {/* Saved Routes */}
+            <Pressable
+              onPress={() => router.push("/saved-routes")}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4 border-b border-border"
+            >
+              <MaterialIcons name="map" size={24} color={colors.primary} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">저장된 경로</Text>
+                <Text className="text-muted text-xs">GPX 파일 가져오기 및 경로 따라가기</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+
+            {/* Route Heatmap */}
+            <Pressable
+              onPress={() => router.push("/route-heatmap")}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4 border-b border-border"
+            >
+              <MaterialIcons name="whatshot" size={24} color={colors.primary} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">주행 히트맵</Text>
+                <Text className="text-muted text-xs">자주 다니는 경로를 시각화</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+
+            {/* Group Riding */}
+            <Pressable
+              onPress={() => router.push("/group-riding")}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4 border-b border-border"
+            >
+              <MaterialIcons name="groups" size={24} color={colors.primary} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">그룹 라이딩</Text>
+                <Text className="text-muted text-xs">친구들과 함께 실시간 그룹 주행</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>

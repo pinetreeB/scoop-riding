@@ -55,19 +55,24 @@ export default function EditProfileScreen() {
       setUploading(false);
       
       // 프로필 사진 URL이 서버에 이미 저장됨 (uploadImage에서 자동 저장)
-      // trpc 캐시만 무효화하고 로컬 상태만 업데이트
-      utils.auth.me.invalidate();
+      // trpc 캐시만 무효화 - API 호출은 하지 않음 (로그아웃 방지)
+      try {
+        utils.auth.me.invalidate();
+      } catch (e) {
+        console.log("Cache invalidation skipped");
+      }
       
-      // 로컬 상태 업데이트 (로그아웃 방지를 위해 refreshUser 대신 직접 업데이트)
-      // refreshUser는 API를 호출하는데, 이 과정에서 세션 문제가 발생할 수 있음
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       
-      Alert.alert("성공", "프로필 사진이 변경되었습니다.");
+      Alert.alert("성공", "프로필 사진이 변경되었습니다.", [
+        { text: "확인" }
+      ]);
     },
     onError: (error) => {
       setUploading(false);
+      console.error("Upload error:", error);
       Alert.alert("오류", error.message || "이미지 업로드에 실패했습니다.");
     },
   });

@@ -1,0 +1,59 @@
+{
+  "query": "SELECT id, userId, distance, avgSpeed, createdAt FROM `ridingRecords` ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, userId, distance, avgSpeed, createdAt FROM `ridingRecords` ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "60003",
+      "userId": "30030",
+      "distance": "0",
+      "avgSpeed": "0",
+      "createdAt": "2026-01-22 07:30:10"
+    },
+    {
+      "id": "60002",
+      "userId": "30030",
+      "distance": "44",
+      "avgSpeed": "28",
+      "createdAt": "2026-01-22 07:30:09"
+    },
+    {
+      "id": "60001",
+      "userId": "30030",
+      "distance": "29",
+      "avgSpeed": "42",
+      "createdAt": "2026-01-22 07:30:08"
+    },
+    {
+      "id": "30002",
+      "userId": "1",
+      "distance": "79",
+      "avgSpeed": "55",
+      "createdAt": "2026-01-21 19:52:14"
+    },
+    {
+      "id": "30001",
+      "userId": "30030",
+      "distance": "14",
+      "avgSpeed": "21",
+      "createdAt": "2026-01-21 19:28:03"
+    },
+    {
+      "id": "2",
+      "userId": "1",
+      "distance": "26",
+      "avgSpeed": "38",
+      "createdAt": "2026-01-21 18:24:00"
+    },
+    {
+      "id": "1",
+      "userId": "1",
+      "distance": "30",
+      "avgSpeed": "42",
+      "createdAt": "2026-01-21 17:07:43"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tdistance\tavgSpeed\tcreatedAt\n60003\t30030\t0\t0\t2026-01-22 07:30:10\n60002\t30030\t44\t28\t2026-01-22 07:30:09\n60001\t30030\t29\t42\t2026-01-22 07:30:08\n30002\t1\t79\t55\t2026-01-21 19:52:14\n30001\t30030\t14\t21\t2026-01-21 19:28:03\n2\t1\t26\t38\t2026-01-21 18:24:00\n1\t1\t30\t42\t2026-01-21 17:07:43\n",
+  "stderr": "",
+  "execution_time_ms": 1510
+}

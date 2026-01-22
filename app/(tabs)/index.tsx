@@ -131,6 +131,10 @@ export default function HomeScreen() {
           
           setHasSynced(true);
           
+          // Invalidate ranking queries to get fresh data
+          trpcUtils.ranking.getWeekly.invalidate();
+          trpcUtils.ranking.getMonthly.invalidate();
+          
           // Reload stats after sync
           loadStats();
         } catch (error) {
@@ -283,6 +287,46 @@ export default function HomeScreen() {
           </View>
         </Pressable>
 
+        {/* Quick Stats Widget */}
+        <View className="mx-5 mb-4">
+          <View className="flex-row gap-2">
+            {/* Weekly Stats */}
+            <View 
+              className="flex-1 rounded-2xl p-4"
+              style={{ backgroundColor: colors.primary }}
+            >
+              <View className="flex-row items-center mb-2">
+                <MaterialIcons name="date-range" size={16} color="#FFFFFF" />
+                <Text className="text-white font-semibold ml-1">이번 주</Text>
+              </View>
+              <Text className="text-white text-2xl font-bold">
+                {(stats.weeklyDistance / 1000).toFixed(1)} km
+              </Text>
+              <View className="flex-row items-center mt-1">
+                <Text className="text-white/70 text-xs">{stats.weeklyRides}회 주행</Text>
+                <Text className="text-white/50 text-xs mx-1">·</Text>
+                <Text className="text-white/70 text-xs">{formatDuration(stats.weeklyDuration)}</Text>
+              </View>
+            </View>
+
+            {/* Monthly Stats */}
+            <View className="flex-1 rounded-2xl p-4 bg-surface border border-border">
+              <View className="flex-row items-center mb-2">
+                <MaterialIcons name="calendar-month" size={16} color={colors.primary} />
+                <Text className="text-foreground font-semibold ml-1">이번 달</Text>
+              </View>
+              <Text className="text-foreground text-2xl font-bold">
+                {(stats.monthlyDistance / 1000).toFixed(1)} km
+              </Text>
+              <View className="flex-row items-center mt-1">
+                <Text className="text-muted text-xs">{stats.monthlyRides}회 주행</Text>
+                <Text className="text-muted text-xs mx-1">·</Text>
+                <Text className="text-muted text-xs">{formatDuration(stats.monthlyDuration)}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* Quick Actions Row */}
         <View className="flex-row mx-5 mb-4">
           {/* My Tracking Report */}
@@ -296,33 +340,34 @@ export default function HomeScreen() {
               },
             ]}
           >
-            <View className="bg-surface rounded-2xl p-4 h-28 justify-between border border-border">
-              <Text className="text-foreground font-semibold">내 트래킹</Text>
-              <Text className="text-foreground font-semibold">보고서</Text>
+            <View className="bg-surface rounded-2xl p-4 h-24 justify-between border border-border">
               <View className="flex-row items-center">
+                <MaterialIcons name="analytics" size={18} color={colors.primary} />
+                <Text className="text-foreground font-semibold ml-2">내 트래킹 보고서</Text>
+              </View>
+              <View className="flex-row items-end">
                 <View className="flex-row">
-                  <View className="w-2 h-8 bg-primary rounded-full mr-1" />
-                  <View className="w-2 h-5 bg-primary/60 rounded-full mr-1" />
-                  <View className="w-2 h-10 bg-primary rounded-full" />
+                  <View className="w-2 h-6 bg-primary rounded-full mr-1" />
+                  <View className="w-2 h-4 bg-primary/60 rounded-full mr-1" />
+                  <View className="w-2 h-8 bg-primary rounded-full" />
                 </View>
+                <MaterialIcons name="chevron-right" size={20} color={colors.muted} style={{ marginLeft: 'auto' }} />
               </View>
             </View>
           </Pressable>
 
-          {/* Stats Quick View */}
+          {/* Total Stats */}
           <View className="flex-1 ml-2">
-            <View 
-              className="rounded-2xl p-4 h-28 justify-between"
-              style={{ backgroundColor: colors.primary }}
-            >
-              <Text className="text-white font-semibold">이번 주</Text>
+            <View className="bg-surface rounded-2xl p-4 h-24 justify-between border border-border">
+              <View className="flex-row items-center">
+                <MaterialIcons name="speed" size={18} color={colors.success} />
+                <Text className="text-foreground font-semibold ml-2">전체 통계</Text>
+              </View>
               <View>
-                <Text className="text-white text-2xl font-bold">
-                  {(stats.weeklyDistance / 1000).toFixed(1)} km
+                <Text className="text-foreground text-lg font-bold">
+                  {(stats.totalDistance / 1000).toFixed(1)} km
                 </Text>
-                <Text className="text-white/70 text-xs">
-                  {stats.weeklyRides}회 주행
-                </Text>
+                <Text className="text-muted text-xs">전체 {stats.totalRides}회 주행</Text>
               </View>
             </View>
           </View>

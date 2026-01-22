@@ -57,6 +57,7 @@ export default function RidingScreen() {
   
   // Server sync mutation for ranking
   const syncToServer = trpc.rides.create.useMutation();
+  const trpcUtils = trpc.useUtils();
 
   const [isRunning, setIsRunning] = useState(true);
   const [duration, setDuration] = useState(0);
@@ -73,6 +74,13 @@ export default function RidingScreen() {
   const [isBackgroundEnabled, setIsBackgroundEnabled] = useState(false);
   const [selectedScooter, setSelectedScooter] = useState<SelectedScooter | null>(null);
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings | null>(null);
+  
+  // Auto-pause when stationary
+  const [isAutoPaused, setIsAutoPaused] = useState(false);
+  const [restTime, setRestTime] = useState(0); // 휴식 시간 (초)
+  const stationaryCountRef = useRef(0); // 정지 상태 카운터
+  const AUTO_PAUSE_SPEED_THRESHOLD = 1.5; // km/h 이하면 정지로 판단
+  const AUTO_PAUSE_DELAY_SECONDS = 5; // 5초 이상 정지 시 자동 일시정지
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
@@ -135,7 +143,8 @@ export default function RidingScreen() {
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
-      if (isRunningRef.current) {
+      if (isRunningRef.current && !isAutoPaused) {
+        // 주행 중일 때만 시간 카운트
         setDuration((prev) => {
           const newDuration = prev + 1;
           // Voice announcement check (every second, let the function handle interval)
@@ -149,6 +158,9 @@ export default function RidingScreen() {
           }
           return newDuration;
         });
+      } else if (isAutoPaused) {
+        // 자동 일시정지 중일 때 휴식 시간 카운트
+        setRestTime((prev) => prev + 1);
       }
     }, 1000);
 
@@ -157,7 +169,7 @@ export default function RidingScreen() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [voiceSettings, currentSpeed, distance]);
+  }, [voiceSettings, currentSpeed, distance, isAutoPaused]);
 
   const initializeGps = async () => {
     try {
@@ -266,6 +278,26 @@ export default function RidingScreen() {
     const rawSpeedKmh = speed !== null && speed >= 0 ? msToKmh(speed) : 0;
     const displaySpeed = smoothSpeed(rawSpeedKmh);
     setCurrentSpeed(displaySpeed);
+
+    // 자동 일시정지 로직: 속도가 임계값 이하면 정지 카운터 증가
+    if (displaySpeed < AUTO_PAUSE_SPEED_THRESHOLD) {
+      stationaryCountRef.current += 1;
+      if (stationaryCountRef.current >= AUTO_PAUSE_DELAY_SECONDS && !isAutoPaused) {
+        setIsAutoPaused(true);
+        if (Platform.OS !== "web") {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+      }
+    } else {
+      // 움직이면 카운터 리셋 및 자동 일시정지 해제
+      stationaryCountRef.current = 0;
+      if (isAutoPaused) {
+        setIsAutoPaused(false);
+        if (Platform.OS !== "web") {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+      }
+    }
 
     const validation = validateGpsPoint(gpsPoint, lastValidPointRef.current, lastBearingRef.current);
 
@@ -425,6 +457,10 @@ export default function RidingScreen() {
                   : undefined,
               });
               console.log("[Riding] Record synced to server");
+              
+              // Invalidate ranking queries to reflect new data
+              trpcUtils.ranking.getWeekly.invalidate();
+              trpcUtils.ranking.getMonthly.invalidate();
             } catch (e) {
               console.log("[Riding] Server sync error:", e);
             }
@@ -526,10 +562,19 @@ export default function RidingScreen() {
 
         {/* Time Display */}
         <View className="items-center mb-4">
+          {isAutoPaused && (
+            <View className="bg-yellow-500/20 px-4 py-1 rounded-full mb-2">
+              <Text className="text-yellow-400 text-sm font-medium">
+                휴식 중 ({formatDuration(restTime)})
+              </Text>
+            </View>
+          )}
           <Text className="text-4xl font-bold text-white">
             {formatDuration(duration)}
           </Text>
-          <Text className="text-sm text-gray-400 mt-1">주행 시간</Text>
+          <Text className="text-sm text-gray-400 mt-1">
+            주행 시간{restTime > 0 ? ` (휴식 ${formatDuration(restTime)})` : ""}
+          </Text>
         </View>
 
         {/* Stats Row */}
