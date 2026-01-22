@@ -41,6 +41,7 @@ export default function PostDetailScreen() {
   const [commentText, setCommentText] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [attachedRide, setAttachedRide] = useState<RidingRecord | null>(null);
+  const [loadingRide, setLoadingRide] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ id: number; name: string } | null>(null);
 
   const trpcUtils = trpc.useUtils();
@@ -90,21 +91,31 @@ export default function PostDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       const loadRide = async () => {
-        if (!postQuery.data?.ridingRecordId) return;
-        
-        // Try local storage first (for own records)
-        const localRecord = await getRidingRecordWithGps(postQuery.data.ridingRecordId);
-        if (localRecord) {
-          setAttachedRide(localRecord);
+        if (!postQuery.data?.ridingRecordId) {
+          setAttachedRide(null);
           return;
         }
         
-        // If not found locally, fetch from server (for other users' records)
+        setLoadingRide(true);
+        
         try {
+          // Try local storage first (for own records)
+          const localRecord = await getRidingRecordWithGps(postQuery.data.ridingRecordId);
+          if (localRecord) {
+            console.log("[PostDetail] Found local ride record:", localRecord.id);
+            setAttachedRide(localRecord);
+            setLoadingRide(false);
+            return;
+          }
+          
+          // If not found locally, fetch from server (for other users' records)
+          console.log("[PostDetail] Fetching ride from server:", postQuery.data.ridingRecordId);
           const serverRecord = await trpcUtils.client.rides.getById.query({ 
             recordId: postQuery.data.ridingRecordId 
           });
+          
           if (serverRecord) {
+            console.log("[PostDetail] Server record found:", serverRecord.recordId);
             // Convert server record to local format
             const convertedRecord: RidingRecord = {
               id: serverRecord.recordId,
@@ -113,14 +124,20 @@ export default function PostDetailScreen() {
               distance: serverRecord.distance,
               avgSpeed: serverRecord.avgSpeed / 10,
               maxSpeed: serverRecord.maxSpeed / 10,
-              startTime: serverRecord.startTime?.toISOString() || "",
-              endTime: serverRecord.endTime?.toISOString() || "",
+              startTime: serverRecord.startTime ? new Date(serverRecord.startTime).toISOString() : "",
+              endTime: serverRecord.endTime ? new Date(serverRecord.endTime).toISOString() : "",
               gpsPoints: serverRecord.gpsPointsJson ? JSON.parse(serverRecord.gpsPointsJson) : undefined,
             };
             setAttachedRide(convertedRecord);
+          } else {
+            console.log("[PostDetail] No server record found");
+            setAttachedRide(null);
           }
         } catch (error) {
-          console.error("Failed to load ride from server:", error);
+          console.error("[PostDetail] Failed to load ride:", error);
+          setAttachedRide(null);
+        } finally {
+          setLoadingRide(false);
         }
       };
       
@@ -365,7 +382,13 @@ export default function PostDetailScreen() {
             })()}
 
             {/* Attached Ride with Route Preview */}
-            {attachedRide && (
+            {loadingRide && postQuery.data?.ridingRecordId && (
+              <View className="bg-surface rounded-xl p-4 border border-border mb-4 items-center justify-center" style={{ minHeight: 100 }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text className="text-muted text-sm mt-2">주행 기록 불러오는 중...</Text>
+              </View>
+            )}
+            {!loadingRide && attachedRide && (
               <Pressable
                 onPress={() => router.push(`/ride-detail?id=${attachedRide.id}` as any)}
                 style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}

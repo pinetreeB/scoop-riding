@@ -15,6 +15,10 @@ export interface RidingRecord {
   synced?: boolean; // Whether this record has been synced to cloud
   scooterId?: number; // Scooter used for this ride
   scooterName?: string; // Scooter name (for display)
+  // Group riding info
+  groupId?: number; // Group session ID if this was a group ride
+  groupName?: string; // Group name
+  groupMembers?: { userId: number; name: string | null }[]; // Members who rode together
 }
 
 export interface RidingStats {
@@ -219,6 +223,8 @@ export async function syncRecordToCloud(
     const startTime = record.startTime && record.startTime.length > 0 ? record.startTime : undefined;
     const endTime = record.endTime && record.endTime.length > 0 ? record.endTime : undefined;
     
+    console.log("[Sync] Uploading record:", record.id, "date:", record.date);
+    
     const result = await trpcClient.client.rides.create.mutate({
       recordId: record.id,
       date: record.date,
@@ -231,14 +237,24 @@ export async function syncRecordToCloud(
       gpsPointsJson,
     });
 
+    console.log("[Sync] Upload result:", result);
+
     if (result.success) {
       // Mark as synced locally
       await markRecordAsSynced(record.id);
+      console.log("[Sync] Record marked as synced:", record.id);
       return true;
     }
+    console.log("[Sync] Upload failed - result.success is false");
     return false;
-  } catch (error) {
-    console.error("Failed to sync record to cloud:", error);
+  } catch (error: any) {
+    // Check if it's a duplicate key error (record already exists)
+    if (error?.message?.includes('Duplicate') || error?.message?.includes('duplicate')) {
+      console.log("[Sync] Record already exists on server, marking as synced:", record.id);
+      await markRecordAsSynced(record.id);
+      return true;
+    }
+    console.error("[Sync] Failed to sync record to cloud:", error?.message || error);
     return false;
   }
 }

@@ -33,21 +33,8 @@ export default function EditProfileScreen() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const updateProfileMutation = trpc.profile.update.useMutation({
-    onSuccess: () => {
-      utils.auth.me.invalidate();
-      if (refreshUser) refreshUser();
-      if (Platform.OS !== "web") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-      Alert.alert("성공", "프로필이 업데이트되었습니다.", [
-        { text: "확인", onPress: () => router.back() },
-      ]);
-    },
-    onError: (error) => {
-      Alert.alert("오류", error.message || "프로필 업데이트에 실패했습니다.");
-    },
-  });
+  // mutation 성공/실패 콜백은 handleSave에서 직접 처리
+  const updateProfileMutation = trpc.profile.update.useMutation();
 
   const uploadImageMutation = trpc.profile.uploadImage.useMutation({
     onSuccess: async (data) => {
@@ -146,23 +133,40 @@ export default function EditProfileScreen() {
 
     setSaving(true);
     try {
+      console.log("[EditProfile] Saving profile:", { name: name.trim(), profileImageUrl });
+      
       const result = await updateProfileMutation.mutateAsync({
         name: name.trim(),
         profileImageUrl,
       });
       
+      console.log("[EditProfile] Save result:", result);
+      
+      // 성공 시 캐시 무효화 및 사용자 정보 새로고침
       if (result.success) {
-        // 성공 시에만 캐시 무효화 시도
-        try {
-          utils.auth.me.invalidate();
-        } catch (e) {
-          console.log("Cache invalidation skipped");
+        // 캐시 무효화는 비동기로 처리하여 로그아웃 방지
+        setTimeout(() => {
+          try {
+            utils.auth.me.invalidate();
+            if (refreshUser) refreshUser();
+          } catch (e) {
+            console.log("[EditProfile] Cache invalidation skipped:", e);
+          }
+        }, 100);
+        
+        if (Platform.OS !== "web") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
+        
+        Alert.alert("성공", "프로필이 업데이트되었습니다.", [
+          { text: "확인", onPress: () => router.back() },
+        ]);
       }
-    } catch (error) {
-      console.error("Profile save error:", error);
+    } catch (error: any) {
+      console.error("[EditProfile] Save error:", error);
       // 에러가 발생해도 로그아웃되지 않도록 처리
-      Alert.alert("오류", "프로필 저장 중 문제가 발생했습니다. 다시 시도해주세요.");
+      const errorMessage = error?.message || "프로필 저장 중 문제가 발생했습니다.";
+      Alert.alert("오류", errorMessage);
     } finally {
       setSaving(false);
     }

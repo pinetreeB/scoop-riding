@@ -170,7 +170,15 @@ export default function RideDetailScreen() {
         {/* Date and Scooter */}
         <View className="px-4 py-3">
           <View className="flex-row items-center justify-between">
-            <Text className="text-sm text-muted">{record.date}</Text>
+            <View className="flex-row items-center">
+              <Text className="text-sm text-muted">{record.date}</Text>
+              {record.groupId && (
+                <View className="flex-row items-center bg-success/20 px-2 py-0.5 rounded-full ml-2">
+                  <MaterialIcons name="group" size={12} color="#22C55E" />
+                  <Text className="text-success text-xs font-medium ml-1">그룹 라이딩</Text>
+                </View>
+              )}
+            </View>
             {record.scooterName && (
               <View className="flex-row items-center bg-primary/10 px-3 py-1 rounded-full">
                 <MaterialIcons name="electric-scooter" size={14} color={colors.primary} />
@@ -194,6 +202,34 @@ export default function RideDetailScreen() {
                 </>
               )}
             </Text>
+          )}
+
+          {/* Group Members */}
+          {record.groupMembers && record.groupMembers.length > 0 && (
+            <View className="mt-3 bg-surface rounded-xl p-3 border border-border">
+              <View className="flex-row items-center mb-2">
+                <MaterialIcons name="people" size={16} color={colors.primary} />
+                <Text className="text-foreground font-medium ml-2">함께 라이딩한 멤버</Text>
+              </View>
+              <View className="flex-row flex-wrap gap-2">
+                {record.groupMembers.map((member, index) => (
+                  <View
+                    key={member.userId || index}
+                    className="flex-row items-center bg-background rounded-full px-3 py-1.5"
+                  >
+                    <View
+                      style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: colors.primary }}
+                      className="items-center justify-center"
+                    >
+                      <Text className="text-white text-xs font-bold">
+                        {(member.name || "?").charAt(0)}
+                      </Text>
+                    </View>
+                    <Text className="text-sm text-foreground ml-1.5">{member.name || "익명"}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
           )}
         </View>
 

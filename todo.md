@@ -256,3 +256,18 @@
 - 하마의 라이딩 지도: https://www.google.com/maps/d/u/0/viewer?mid=1EYwRJ2GaFq3mlRBqc-9a6lHvMOf7I4Q
 - 설문 분석: /docs/survey-analysis.md
 - 로드맵 상세: /docs/ROADMAP.md
+- [ ] 업데이트 배너가 표시되지 않는 버그 수정
+
+## 버그 수정 및 기능 추가 (2026-01-23)
+- [ ] Google OAuth "Custom URI scheme is not enabled" 오류 수정
+- [x] 동기화 안 되는 버그 수정 - 상세 로깅 추가 및 에러 메시지 개선
+- [x] 프로필 수정 저장 시 튕겨서 로그아웃되는 버그 재수정 - mutation 콜백 분리 및 비동기 캐시 무효화
+- [x] 커뮤니티 주행기록 상세보기 로딩만 되고 내용 안 나오는 버그 수정 - 로딩 상태 표시 및 에러 처리 개선
+- [x] 설정에 앱 버전 버튼 추가 (새 버전 있으면 "새로운 버전 확인" 문구, 클릭 시 다운로드) - appVersion API 및 UI 구현
+- [x] 업데이트 알림 팝업 기능 개선 - 앱 버전 체크 API 연동
+- [x] 백그라운드에서 주행기록 정상 작동하도록 개선 - background-location.ts 이미 구현됨
+- [x] 그룹 라이딩 기록에 "그룹 라이딩" 표시 및 함께한 멤버 정보 표시 - ride-detail.tsx 업데이트
+- [x] 그룹 라이딩 시 맵에 같이 라이딩 중인 친구 표시 - RideMap 컴포넌트 groupMembers 지원
+- [x] 알림 탭에서 클릭 시 해당 화면으로 이동 개선 (친구요청→친구요청탭, 라이딩중→실시간위치) - notifications-center.tsx 업데이트
+- [x] 레벨 시스템 설명 영어로 변경 (Junior Rider, Rookie Rider 등) - level-system.ts titleEn 추가
+- [x] Google OAuth "Custom URI scheme is not enabled" 오류 수정 - Google Cloud Console에서 Android 클라이언트 고급 설정에서 활성화

@@ -525,6 +525,13 @@ export default function RidingScreen() {
             const finalAvg = finalAvgSpeed > 0 ? finalAvgSpeed : avgSpeed;
             const finalMax = finalMaxSpeed > 0 ? finalMaxSpeed : maxSpeed;
 
+            // Build group riding info if applicable
+            const groupInfo = groupId && groupMembers.length > 0 ? {
+              groupId,
+              groupName: groupMembers.find(m => m.isRiding)?.name || "그룹 라이딩",
+              groupMembers: groupMembers.map(m => ({ userId: m.userId, name: m.name })),
+            } : {};
+
             const record = {
               id: generateId(),
               date: new Date().toLocaleDateString("ko-KR"),
@@ -537,6 +544,7 @@ export default function RidingScreen() {
               gpsPoints: gpsPointsRef.current,
               scooterId: selectedScooter?.id,
               scooterName: selectedScooter?.name,
+              ...groupInfo,
             };
             await saveRidingRecord(record);
 

@@ -13,6 +13,7 @@ import {
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useRouter } from "expo-router";
+import { useEffect } from "react";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -51,6 +52,31 @@ export default function ProfileScreen() {
     unsyncedCount: 0,
   });
   const [showMaxSpeedModal, setShowMaxSpeedModal] = useState(false);
+  const [appUpdateInfo, setAppUpdateInfo] = useState<{
+    hasUpdate: boolean;
+    latestVersion: string | null;
+    downloadUrl: string | null;
+    releaseNotes: string | null;
+  }>({ hasUpdate: false, latestVersion: null, downloadUrl: null, releaseNotes: null });
+
+  const CURRENT_APP_VERSION = "1.1.0";
+
+  // Check for app updates
+  const { data: updateData } = trpc.appVersion.checkUpdate.useQuery(
+    { currentVersion: CURRENT_APP_VERSION, platform: "android" },
+    { staleTime: 1000 * 60 * 60 } // Cache for 1 hour
+  );
+
+  useEffect(() => {
+    if (updateData) {
+      setAppUpdateInfo({
+        hasUpdate: updateData.hasUpdate,
+        latestVersion: updateData.latestVersion?.version || null,
+        downloadUrl: updateData.latestVersion?.downloadUrl || null,
+        releaseNotes: updateData.latestVersion?.releaseNotes || null,
+      });
+    }
+  }, [updateData]);
 
   // Level calculation now uses centralized level-system module
 
@@ -108,24 +134,34 @@ export default function ProfileScreen() {
     setSyncStatus("동기화 중...");
 
     try {
+      console.log("[Profile] Starting full sync...");
       const result = await fullSync(trpcUtils);
+      console.log("[Profile] Sync result:", result);
       
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
-      setSyncStatus(`동기화 완료: ${result.uploaded}개 업로드, ${result.downloaded}개 다운로드`);
+      let statusMsg = "동기화 완료";
+      if (result.uploaded > 0 || result.downloaded > 0) {
+        statusMsg = `동기화 완료: ${result.uploaded}개 업로드, ${result.downloaded}개 다운로드`;
+      } else if (result.failed > 0) {
+        statusMsg = `동기화 완료: ${result.failed}개 실패`;
+      } else {
+        statusMsg = "동기화 완료: 모든 데이터가 최신 상태입니다";
+      }
+      setSyncStatus(statusMsg);
       await loadStats();
 
       // Clear status after 3 seconds
       setTimeout(() => setSyncStatus(null), 3000);
-    } catch (error) {
-      console.error("Sync error:", error);
-      setSyncStatus("동기화 실패");
+    } catch (error: any) {
+      console.error("[Profile] Sync error:", error?.message || error);
+      setSyncStatus(`동기화 실패: ${error?.message || "알 수 없는 오류"}`);
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-      setTimeout(() => setSyncStatus(null), 3000);
+      setTimeout(() => setSyncStatus(null), 5000);
     } finally {
       setIsSyncing(false);
     }
@@ -759,16 +795,49 @@ export default function ProfileScreen() {
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
 
-            {/* App Info */}
+            {/* App Version */}
             <Pressable
+              onPress={() => {
+                if (appUpdateInfo.hasUpdate && appUpdateInfo.downloadUrl) {
+                  Alert.alert(
+                    "새 버전 사용 가능",
+                    `v${appUpdateInfo.latestVersion} 버전이 출시되었습니다.\n\n${appUpdateInfo.releaseNotes || "새로운 기능과 버그 수정이 포함되어 있습니다."}`,
+                    [
+                      { text: "나중에", style: "cancel" },
+                      { 
+                        text: "다운로드", 
+                        onPress: async () => {
+                          const { Linking } = await import("react-native");
+                          Linking.openURL(appUpdateInfo.downloadUrl!);
+                        }
+                      },
+                    ]
+                  );
+                } else {
+                  Alert.alert("앱 정보", `SCOOP Riding v${CURRENT_APP_VERSION}\n\n최신 버전을 사용 중입니다.`);
+                }
+              }}
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
               className="flex-row items-center p-4 border-b border-border"
             >
-              <MaterialIcons name="info-outline" size={24} color={colors.muted} />
+              <MaterialIcons 
+                name={appUpdateInfo.hasUpdate ? "system-update" : "info-outline"} 
+                size={24} 
+                color={appUpdateInfo.hasUpdate ? colors.primary : colors.muted} 
+              />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">앱 정보</Text>
-                <Text className="text-muted text-xs">SCOOP Riding v1.0.0</Text>
+                <Text className="text-foreground font-medium">앱 버전</Text>
+                <Text className={appUpdateInfo.hasUpdate ? "text-primary text-xs font-medium" : "text-muted text-xs"}>
+                  {appUpdateInfo.hasUpdate 
+                    ? `새 버전 확인 (v${appUpdateInfo.latestVersion})` 
+                    : `SCOOP Riding v${CURRENT_APP_VERSION}`}
+                </Text>
               </View>
+              {appUpdateInfo.hasUpdate && (
+                <View className="bg-primary rounded-full px-2 py-0.5 mr-2">
+                  <Text className="text-white text-xs font-medium">NEW</Text>
+                </View>
+              )}
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
 

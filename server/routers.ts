@@ -687,8 +687,15 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const success = await db.updateUserProfile(ctx.user.id, input);
-        return { success };
+        try {
+          console.log("[Profile Update] User:", ctx.user.id, "Input:", input);
+          const success = await db.updateUserProfile(ctx.user.id, input);
+          console.log("[Profile Update] Success:", success);
+          return { success };
+        } catch (error) {
+          console.error("[Profile Update] Error:", error);
+          throw new Error("프로필 업데이트에 실패했습니다.");
+        }
       }),
 
     // Upload profile image
@@ -1046,6 +1053,56 @@ export const appRouter = router({
       .input(z.object({ groupId: z.number() }))
       .query(async ({ input }) => {
         return db.getGroupMembersLocations(input.groupId);
+      }),
+  }),
+
+  // App version management
+  appVersion: router({
+    // Check for updates
+    checkUpdate: publicProcedure
+      .input(z.object({ 
+        currentVersion: z.string(),
+        platform: z.string().default("android"),
+      }))
+      .query(async ({ input }) => {
+        const latestVersion = await db.getLatestAppVersion(input.platform);
+        if (!latestVersion) {
+          return { hasUpdate: false, latestVersion: null };
+        }
+        
+        // Compare versions
+        const currentParts = input.currentVersion.split('.').map(Number);
+        const latestParts = latestVersion.version.split('.').map(Number);
+        
+        let hasUpdate = false;
+        for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
+          const current = currentParts[i] || 0;
+          const latest = latestParts[i] || 0;
+          if (latest > current) {
+            hasUpdate = true;
+            break;
+          } else if (current > latest) {
+            break;
+          }
+        }
+        
+        return {
+          hasUpdate,
+          latestVersion: hasUpdate ? {
+            version: latestVersion.version,
+            versionCode: latestVersion.versionCode,
+            downloadUrl: latestVersion.downloadUrl,
+            releaseNotes: latestVersion.releaseNotes,
+            forceUpdate: latestVersion.forceUpdate,
+          } : null,
+        };
+      }),
+
+    // Get latest version info
+    getLatest: publicProcedure
+      .input(z.object({ platform: z.string().default("android") }))
+      .query(async ({ input }) => {
+        return db.getLatestAppVersion(input.platform);
       }),
   }),
 

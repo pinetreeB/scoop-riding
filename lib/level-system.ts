@@ -4,6 +4,7 @@
 export interface LevelInfo {
   level: number;
   title: string;
+  titleEn: string; // English title for display
   minDistance: number; // km
   maxDistance: number; // km
   color: string;
@@ -12,13 +13,13 @@ export interface LevelInfo {
 // Level definitions with 10x distance requirements
 // 마지막 레벨은 100,000km 이상
 export const LEVEL_DEFINITIONS: LevelInfo[] = [
-  { level: 1, title: "루키 라이더", minDistance: 0, maxDistance: 500, color: "#9CA3AF" },
-  { level: 2, title: "주니어 라이더", minDistance: 500, maxDistance: 2000, color: "#22C55E" },
-  { level: 3, title: "시니어 라이더", minDistance: 2000, maxDistance: 5000, color: "#3B82F6" },
-  { level: 4, title: "프로 라이더", minDistance: 5000, maxDistance: 10000, color: "#8B5CF6" },
-  { level: 5, title: "마스터 라이더", minDistance: 10000, maxDistance: 50000, color: "#F59E0B" },
-  { level: 6, title: "레전드 라이더", minDistance: 50000, maxDistance: 100000, color: "#EF4444" },
-  { level: 7, title: "신화 라이더", minDistance: 100000, maxDistance: Infinity, color: "#EC4899" },
+  { level: 1, title: "루키 라이더", titleEn: "Rookie Rider", minDistance: 0, maxDistance: 500, color: "#9CA3AF" },
+  { level: 2, title: "주니어 라이더", titleEn: "Junior Rider", minDistance: 500, maxDistance: 2000, color: "#22C55E" },
+  { level: 3, title: "시니어 라이더", titleEn: "Senior Rider", minDistance: 2000, maxDistance: 5000, color: "#3B82F6" },
+  { level: 4, title: "프로 라이더", titleEn: "Pro Rider", minDistance: 5000, maxDistance: 10000, color: "#8B5CF6" },
+  { level: 5, title: "마스터 라이더", titleEn: "Master Rider", minDistance: 10000, maxDistance: 50000, color: "#F59E0B" },
+  { level: 6, title: "레전드 라이더", titleEn: "Legend Rider", minDistance: 50000, maxDistance: 100000, color: "#EF4444" },
+  { level: 7, title: "신화 라이더", titleEn: "Mythic Rider", minDistance: 100000, maxDistance: Infinity, color: "#EC4899" },
 ];
 
 // Get level info from total distance in km
@@ -53,8 +54,14 @@ export function calculateLevel(totalDistanceKm: number): { level: number; progre
   return { level: levelInfo.level, progress, nextLevelDistance };
 }
 
-// Get level title from level number
+// Get level title from level number (returns English title)
 export function getLevelTitle(level: number): string {
+  const levelDef = LEVEL_DEFINITIONS.find(l => l.level === level);
+  return levelDef?.titleEn || "Rookie Rider";
+}
+
+// Get level title in Korean from level number
+export function getLevelTitleKo(level: number): string {
   const levelDef = LEVEL_DEFINITIONS.find(l => l.level === level);
   return levelDef?.title || "루키 라이더";
 }

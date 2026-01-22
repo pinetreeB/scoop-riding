@@ -82,17 +82,30 @@ export default function NotificationsCenterScreen() {
       router.push(`/post-detail?id=${notification.entityId}` as never);
     } else if (notification.entityType === "user" && notification.actorId) {
       router.push(`/user-profile?userId=${notification.actorId}` as never);
-    } else if (notification.type === "friend_request" || notification.type === "friend_accepted") {
+    } else if (notification.type === "friend_request") {
+      // Navigate to friend requests tab
+      router.push("/friends?tab=requests" as never);
+    } else if (notification.type === "friend_accepted") {
+      // Navigate to friends list
       router.push("/friends" as never);
+    } else if (notification.type === "friend_riding" || notification.type === "friend_started_riding") {
+      // Navigate to friends real-time location map
+      router.push("/friends-map" as never);
     } else if (notification.type === "like" || notification.type === "comment") {
       // Navigate to community tab
       router.push("/(tabs)/community" as never);
-    } else if (notification.type === "challenge") {
+    } else if (notification.type === "challenge" || notification.type === "challenge_invite") {
       // Navigate to challenges
       router.push("/challenges" as never);
-    } else if (notification.type === "group_riding") {
+    } else if (notification.type === "group_riding" || notification.type === "group_invite") {
       // Navigate to group riding
       router.push("/group-riding" as never);
+    } else if (notification.type === "badge") {
+      // Navigate to badges
+      router.push("/badges" as never);
+    } else if (notification.type === "level_up") {
+      // Navigate to profile
+      router.push("/(tabs)/profile" as never);
     }
   };
 
