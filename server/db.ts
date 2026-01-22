@@ -1,6 +1,6 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -455,8 +455,6 @@ export async function getDefaultScooter(userId: number): Promise<Scooter | undef
 }
 
 // ==================== Community Functions ====================
-
-import { desc, sql } from "drizzle-orm";
 
 export interface PostWithAuthor extends Post {
   authorName: string | null;
@@ -2077,4 +2075,61 @@ async function checkFriendship(userId1: number, userId2: number): Promise<boolea
     .limit(1);
 
   return result.length > 0;
+}
+
+
+// App Version Management Functions
+
+export async function getLatestAppVersion(platform: string = "android"): Promise<AppVersion | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db
+    .select()
+    .from(appVersions)
+    .where(and(eq(appVersions.platform, platform), eq(appVersions.isActive, true)))
+    .orderBy(desc(appVersions.versionCode))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function createAppVersion(data: InsertAppVersion): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(appVersions).values(data);
+    return result[0].insertId;
+  } catch (error) {
+    console.error("[Database] Failed to create app version:", error);
+    return null;
+  }
+}
+
+export async function updateAppVersion(
+  id: number,
+  data: Partial<InsertAppVersion>
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.update(appVersions).set(data).where(eq(appVersions.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to update app version:", error);
+    return false;
+  }
+}
+
+export async function getAllAppVersions(platform: string = "android"): Promise<AppVersion[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(appVersions)
+    .where(eq(appVersions.platform, platform))
+    .orderBy(desc(appVersions.versionCode));
 }

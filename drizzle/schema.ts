@@ -410,3 +410,30 @@ export const challengeInvitations = mysqlTable("challengeInvitations", {
 
 export type ChallengeInvitation = typeof challengeInvitations.$inferSelect;
 export type InsertChallengeInvitation = typeof challengeInvitations.$inferInsert;
+
+
+/**
+ * App versions table for update management
+ */
+export const appVersions = mysqlTable("appVersions", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Version string (e.g., "1.0.0") */
+  version: varchar("version", { length: 20 }).notNull(),
+  /** Version code (integer, e.g., 1, 2, 3) */
+  versionCode: int("versionCode").notNull(),
+  /** APK download URL */
+  downloadUrl: varchar("downloadUrl", { length: 500 }).notNull(),
+  /** Release notes */
+  releaseNotes: text("releaseNotes"),
+  /** Whether this update is mandatory */
+  forceUpdate: boolean("forceUpdate").default(false).notNull(),
+  /** Platform (android, ios) */
+  platform: varchar("platform", { length: 20 }).default("android").notNull(),
+  /** Whether this version is active/latest */
+  isActive: boolean("isActive").default(true).notNull(),
+  publishedAt: timestamp("publishedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AppVersion = typeof appVersions.$inferSelect;
+export type InsertAppVersion = typeof appVersions.$inferInsert;

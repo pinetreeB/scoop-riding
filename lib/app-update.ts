@@ -194,6 +194,6 @@ function getApiBaseUrl(): string {
     return window.location.origin;
   }
   
-  // For native apps, use the configured API URL
-  return process.env.EXPO_PUBLIC_API_URL || "https://your-api-server.com";
+  // For native apps, use the configured API URL from environment
+  return process.env.EXPO_PUBLIC_API_BASE_URL || "https://scoopride-xqsh52mn.manus.space";
 }

@@ -177,3 +177,4 @@
 - [x] Manus 클라우드 배포 (https://scoopride-xqsh52mn.manus.space)
 - [x] 배포된 서버 URL로 APK 재빌드 (v1.0.0 빌드 완료)
 - [x] 새 SCOOP 로고 적용 (앱 아이콘, 스플래시, 로그인 화면)
+- [x] 자동 업데이트 알림 시스템 구현 (앱 버전 관리 DB, API, 클라이언트 연동)

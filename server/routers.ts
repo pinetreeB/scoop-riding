@@ -896,20 +896,31 @@ export const appRouter = router({
   app: router({
     // Get latest app version
     version: publicProcedure.query(async () => {
-      // In production, this would fetch from database
-      // For now, return current version info
+      // Try to get from database first
+      const latestVersion = await db.getLatestAppVersion("android");
+      if (latestVersion) {
+        return {
+          version: latestVersion.version,
+          versionCode: latestVersion.versionCode,
+          downloadUrl: latestVersion.downloadUrl,
+          releaseNotes: latestVersion.releaseNotes || "",
+          forceUpdate: latestVersion.forceUpdate,
+          publishedAt: latestVersion.publishedAt?.toISOString() || new Date().toISOString(),
+        };
+      }
+      // Fallback to default version
       return {
         version: "1.0.0",
         versionCode: 1,
-        downloadUrl: "", // Will be set after APK build
-        releaseNotes: "첫 번째 릴리스",
+        downloadUrl: "https://expo.dev/artifacts/eas/xAcTXn7FmDZcz3RzCJrRqg.apk",
+        releaseNotes: "SCOOP Riding 첫 번째 릴리스",
         forceUpdate: false,
         publishedAt: new Date().toISOString(),
       };
     }),
 
-    // Update app version (admin only - for future use)
-    updateVersion: protectedProcedure
+    // Create new app version (admin only)
+    createVersion: protectedProcedure
       .input(z.object({
         version: z.string(),
         versionCode: z.number(),
@@ -918,11 +929,22 @@ export const appRouter = router({
         forceUpdate: z.boolean().default(false),
       }))
       .mutation(async ({ input }) => {
-        // In production, this would update the database
-        // For now, just return success
-        console.log("App version update:", input);
-        return { success: true };
+        const id = await db.createAppVersion({
+          version: input.version,
+          versionCode: input.versionCode,
+          downloadUrl: input.downloadUrl,
+          releaseNotes: input.releaseNotes || null,
+          forceUpdate: input.forceUpdate,
+          platform: "android",
+          isActive: true,
+        });
+        return { success: !!id, id };
       }),
+
+    // Get all app versions
+    allVersions: protectedProcedure.query(async () => {
+      return db.getAllAppVersions("android");
+    }),
   }),
 
   // Badges router
