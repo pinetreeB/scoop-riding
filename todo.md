@@ -271,3 +271,4 @@
 - [x] 알림 탭에서 클릭 시 해당 화면으로 이동 개선 (친구요청→친구요청탭, 라이딩중→실시간위치) - notifications-center.tsx 업데이트
 - [x] 레벨 시스템 설명 영어로 변경 (Junior Rider, Rookie Rider 등) - level-system.ts titleEn 추가
 - [x] Google OAuth "Custom URI scheme is not enabled" 오류 수정 - Google Cloud Console에서 Android 클라이언트 고급 설정에서 활성화
+- [x] APK v1.2.0 빌드 큐 등록 완료 (https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/e3160c32-3e78-42ac-8a24-d99d92f7351b)
