@@ -333,22 +333,13 @@ router.delete("/users/:id", verifyAdminToken, async (req: Request, res: Response
 
 // Serve admin dashboard HTML
 router.get("/", (req: Request, res: Response) => {
-  // In production, __dirname points to dist folder, so we need to handle both cases
-  const fs = require("fs");
-  const possiblePaths = [
-    path.join(__dirname, "index.html"),
-    path.join(__dirname, "..", "admin", "index.html"),
-    path.join(process.cwd(), "server", "admin", "index.html")
-  ];
-  
-  for (const filePath of possiblePaths) {
-    if (fs.existsSync(filePath)) {
-      return res.sendFile(filePath);
-    }
+  try {
+    // Always use inline HTML for production reliability
+    res.send(getAdminDashboardHTML());
+  } catch (e) {
+    console.error("Admin dashboard error:", e);
+    res.status(500).json({ error: "Failed to load admin dashboard" });
   }
-  
-  // Fallback: send inline HTML
-  res.send(getAdminDashboardHTML());
 });
 
 // Inline HTML fallback for production
