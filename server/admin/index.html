@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCOOP Riding - 관리자 대시보드</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .modal { display: none; }
+    .modal.active { display: flex; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <!-- Header -->
+  <header class="bg-orange-500 text-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+          <span class="text-orange-500 font-bold text-xl">S</span>
+        </div>
+        <h1 class="text-xl font-bold">SCOOP Riding 관리자</h1>
+      </div>
+      <div class="flex items-center gap-4">
+        <span id="adminEmail" class="text-sm opacity-80"></span>
+        <button onclick="logout()" class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg text-sm">
+          로그아웃
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Login Form -->
+  <div id="loginSection" class="max-w-md mx-auto mt-20 p-6 bg-white rounded-xl shadow-lg">
+    <h2 class="text-2xl font-bold text-center mb-6">관리자 로그인</h2>
+    <form onsubmit="login(event)">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+        <input type="email" id="loginEmail" required
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
+        <input type="password" id="loginPassword" required
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+      </div>
+      <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-semibold">
+        로그인
+      </button>
+      <p id="loginError" class="text-red-500 text-sm mt-2 text-center hidden"></p>
+    </form>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboardSection" class="hidden">
+    <!-- Stats Cards -->
+    <div class="max-w-7xl mx-auto px-4 py-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl p-6 shadow">
+          <div class="text-gray-500 text-sm">전체 사용자</div>
+          <div id="statTotalUsers" class="text-3xl font-bold text-gray-800">-</div>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow">
+          <div class="text-gray-500 text-sm">오늘 가입</div>
+          <div id="statTodayUsers" class="text-3xl font-bold text-green-600">-</div>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow">
+          <div class="text-gray-500 text-sm">총 주행 기록</div>
+          <div id="statTotalRides" class="text-3xl font-bold text-blue-600">-</div>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow">
+          <div class="text-gray-500 text-sm">총 주행 거리</div>
+          <div id="statTotalDistance" class="text-3xl font-bold text-orange-500">-</div>
+        </div>
+      </div>
+
+      <!-- Search & Filter -->
+      <div class="bg-white rounded-xl p-4 shadow mb-6">
+        <div class="flex flex-wrap gap-4 items-center">
+          <input type="text" id="searchInput" placeholder="이름 또는 이메일로 검색..."
+            class="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+            onkeyup="debounceSearch()">
+          <select id="filterRole" onchange="loadUsers()" class="px-4 py-2 border border-gray-300 rounded-lg">
+            <option value="">전체 역할</option>
+            <option value="user">일반 사용자</option>
+            <option value="admin">관리자</option>
+          </select>
+          <select id="filterSort" onchange="loadUsers()" class="px-4 py-2 border border-gray-300 rounded-lg">
+            <option value="newest">최근 가입순</option>
+            <option value="oldest">오래된 가입순</option>
+            <option value="lastActive">최근 활동순</option>
+            <option value="name">이름순</option>
+          </select>
+          <button onclick="loadUsers()" class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg">
+            새로고침
+          </button>
+        </div>
+      </div>
+
+      <!-- Users Table -->
+      <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="w-full">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">프로필</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">이름</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">이메일</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">로그인 방식</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">역할</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">가입일</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">최근 활동</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">주행 기록</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody" class="divide-y divide-gray-200">
+            <tr>
+              <td colspan="10" class="px-4 py-8 text-center text-gray-500">로딩 중...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="flex justify-between items-center mt-4">
+        <div id="paginationInfo" class="text-sm text-gray-600"></div>
+        <div class="flex gap-2">
+          <button onclick="prevPage()" id="prevBtn" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50" disabled>
+            이전
+          </button>
+          <button onclick="nextPage()" id="nextBtn" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50" disabled>
+            다음
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit User Modal -->
+  <div id="editModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+      <h3 class="text-xl font-bold mb-4">사용자 정보 수정</h3>
+      <form onsubmit="saveUser(event)">
+        <input type="hidden" id="editUserId">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">이름</label>
+          <input type="text" id="editName"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+          <input type="email" id="editEmail"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">역할</label>
+          <select id="editRole" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+            <option value="user">일반 사용자</option>
+            <option value="admin">관리자</option>
+          </select>
+        </div>
+        <div class="flex gap-3 mt-6">
+          <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+            취소
+          </button>
+          <button type="submit" class="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+            저장
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- User Detail Modal -->
+  <div id="detailModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold">사용자 상세 정보</h3>
+        <button onclick="closeDetailModal()" class="text-gray-500 hover:text-gray-700">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="detailContent"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let currentPage = 1;
+    let totalPages = 1;
+    let searchTimeout = null;
+    let adminToken = localStorage.getItem('adminToken');
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      if (adminToken) {
+        checkAuth();
+      }
+    });
+
+    async function checkAuth() {
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/me`, {
+          headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('adminEmail').textContent = data.email;
+          showDashboard();
+          loadStats();
+          loadUsers();
+        } else {
+          logout();
+        }
+      } catch (e) {
+        logout();
+      }
+    }
+
+    async function login(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const errorEl = document.getElementById('loginError');
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok && data.token) {
+          adminToken = data.token;
+          localStorage.setItem('adminToken', adminToken);
+          document.getElementById('adminEmail').textContent = email;
+          showDashboard();
+          loadStats();
+          loadUsers();
+        } else {
+          errorEl.textContent = data.error || '로그인에 실패했습니다.';
+          errorEl.classList.remove('hidden');
+        }
+      } catch (e) {
+        errorEl.textContent = '서버 연결에 실패했습니다.';
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    function logout() {
+      adminToken = null;
+      localStorage.removeItem('adminToken');
+      document.getElementById('loginSection').classList.remove('hidden');
+      document.getElementById('dashboardSection').classList.add('hidden');
+    }
+
+    function showDashboard() {
+      document.getElementById('loginSection').classList.add('hidden');
+      document.getElementById('dashboardSection').classList.remove('hidden');
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/stats`, {
+          headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        const data = await res.json();
+        
+        document.getElementById('statTotalUsers').textContent = data.totalUsers?.toLocaleString() || '0';
+        document.getElementById('statTodayUsers').textContent = data.todayUsers?.toLocaleString() || '0';
+        document.getElementById('statTotalRides').textContent = data.totalRides?.toLocaleString() || '0';
+        document.getElementById('statTotalDistance').textContent = 
+          (data.totalDistance ? (data.totalDistance / 1000).toFixed(1) + ' km' : '0 km');
+      } catch (e) {
+        console.error('Failed to load stats:', e);
+      }
+    }
+
+    function debounceSearch() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentPage = 1;
+        loadUsers();
+      }, 300);
+    }
+
+    async function loadUsers() {
+      const search = document.getElementById('searchInput').value;
+      const role = document.getElementById('filterRole').value;
+      const sort = document.getElementById('filterSort').value;
+      
+      try {
+        const params = new URLSearchParams({
+          page: currentPage,
+          limit: 20,
+          ...(search && { search }),
+          ...(role && { role }),
+          sort
+        });
+        
+        const res = await fetch(`${API_BASE}/api/admin/users?${params}`, {
+          headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        const data = await res.json();
+        
+        totalPages = data.totalPages || 1;
+        renderUsers(data.users || []);
+        updatePagination(data.total || 0);
+      } catch (e) {
+        console.error('Failed to load users:', e);
+      }
+    }
+
+    function renderUsers(users) {
+      const tbody = document.getElementById('usersTableBody');
+      
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="px-4 py-8 text-center text-gray-500">사용자가 없습니다.</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = users.map(user => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 text-sm">${user.id}</td>
+          <td class="px-4 py-3">
+            ${user.profileImageUrl 
+              ? `<img src="${user.profileImageUrl}" class="w-8 h-8 rounded-full object-cover">`
+              : `<div class="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-bold">${(user.name || '?')[0].toUpperCase()}</div>`
+            }
+          </td>
+          <td class="px-4 py-3 text-sm font-medium">${user.name || '-'}</td>
+          <td class="px-4 py-3 text-sm text-gray-600">${user.email || '-'}</td>
+          <td class="px-4 py-3 text-sm">
+            <span class="px-2 py-1 rounded-full text-xs ${
+              user.loginMethod === 'google' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+            }">${user.loginMethod || 'email'}</span>
+          </td>
+          <td class="px-4 py-3 text-sm">
+            <span class="px-2 py-1 rounded-full text-xs ${
+              user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+            }">${user.role}</span>
+          </td>
+          <td class="px-4 py-3 text-sm text-gray-600">${formatDate(user.createdAt)}</td>
+          <td class="px-4 py-3 text-sm text-gray-600">${formatDate(user.lastSignedIn)}</td>
+          <td class="px-4 py-3 text-sm">${user.rideCount || 0}회</td>
+          <td class="px-4 py-3 text-sm">
+            <div class="flex gap-2">
+              <button onclick="viewUser(${user.id})" class="text-blue-600 hover:text-blue-800">상세</button>
+              <button onclick="editUser(${user.id})" class="text-orange-600 hover:text-orange-800">수정</button>
+              <button onclick="deleteUser(${user.id})" class="text-red-600 hover:text-red-800">삭제</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updatePagination(total) {
+      const info = document.getElementById('paginationInfo');
+      const start = (currentPage - 1) * 20 + 1;
+      const end = Math.min(currentPage * 20, total);
+      info.textContent = `${start}-${end} / 총 ${total}명`;
+      
+      document.getElementById('prevBtn').disabled = currentPage <= 1;
+      document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+    }
+
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        loadUsers();
+      }
+    }
+
+    function nextPage() {
+      if (currentPage < totalPages) {
+        currentPage++;
+        loadUsers();
+      }
+    }
+
+    async function viewUser(userId) {
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+          headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        const user = await res.json();
+        
+        document.getElementById('detailContent').innerHTML = `
+          <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-2 flex items-center gap-4 mb-4">
+              ${user.profileImageUrl 
+                ? `<img src="${user.profileImageUrl}" class="w-20 h-20 rounded-full object-cover">`
+                : `<div class="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center text-white text-2xl font-bold">${(user.name || '?')[0].toUpperCase()}</div>`
+              }
+              <div>
+                <h4 class="text-xl font-bold">${user.name || '이름 없음'}</h4>
+                <p class="text-gray-600">${user.email || '이메일 없음'}</p>
+              </div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <div class="text-sm text-gray-500">ID</div>
+              <div class="font-medium">${user.id}</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <div class="text-sm text-gray-500">역할</div>
+              <div class="font-medium">${user.role}</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <div class="text-sm text-gray-500">로그인 방식</div>
+              <div class="font-medium">${user.loginMethod || 'email'}</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <div class="text-sm text-gray-500">이메일 인증</div>
+              <div class="font-medium">${user.emailVerified ? '완료' : '미완료'}</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <div class="text-sm text-gray-500">가입일</div>
+              <div class="font-medium">${formatDate(user.createdAt)}</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <div class="text-sm text-gray-500">최근 활동</div>
+              <div class="font-medium">${formatDate(user.lastSignedIn)}</div>
+            </div>
+            <div class="col-span-2 bg-orange-50 p-4 rounded-lg">
+              <div class="text-sm text-gray-500 mb-2">주행 통계</div>
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <div class="text-2xl font-bold text-orange-500">${user.stats?.totalRides || 0}</div>
+                  <div class="text-sm text-gray-600">총 주행</div>
+                </div>
+                <div>
+                  <div class="text-2xl font-bold text-orange-500">${((user.stats?.totalDistance || 0) / 1000).toFixed(1)} km</div>
+                  <div class="text-sm text-gray-600">총 거리</div>
+                </div>
+                <div>
+                  <div class="text-2xl font-bold text-orange-500">${Math.floor((user.stats?.totalDuration || 0) / 60)} 분</div>
+                  <div class="text-sm text-gray-600">총 시간</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        document.getElementById('detailModal').classList.add('active');
+      } catch (e) {
+        alert('사용자 정보를 불러오는데 실패했습니다.');
+      }
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detailModal').classList.remove('active');
+    }
+
+    async function editUser(userId) {
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+          headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        const user = await res.json();
+        
+        document.getElementById('editUserId').value = user.id;
+        document.getElementById('editName').value = user.name || '';
+        document.getElementById('editEmail').value = user.email || '';
+        document.getElementById('editRole').value = user.role || 'user';
+        
+        document.getElementById('editModal').classList.add('active');
+      } catch (e) {
+        alert('사용자 정보를 불러오는데 실패했습니다.');
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').classList.remove('active');
+    }
+
+    async function saveUser(e) {
+      e.preventDefault();
+      const userId = document.getElementById('editUserId').value;
+      const data = {
+        name: document.getElementById('editName').value,
+        email: document.getElementById('editEmail').value,
+        role: document.getElementById('editRole').value
+      };
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${adminToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        if (res.ok) {
+          closeModal();
+          loadUsers();
+          alert('사용자 정보가 수정되었습니다.');
+        } else {
+          const err = await res.json();
+          alert(err.error || '수정에 실패했습니다.');
+        }
+      } catch (e) {
+        alert('서버 오류가 발생했습니다.');
+      }
+    }
+
+    async function deleteUser(userId) {
+      if (!confirm('정말로 이 사용자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+        return;
+      }
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        
+        if (res.ok) {
+          loadUsers();
+          loadStats();
+          alert('사용자가 삭제되었습니다.');
+        } else {
+          const err = await res.json();
+          alert(err.error || '삭제에 실패했습니다.');
+        }
+      } catch (e) {
+        alert('서버 오류가 발생했습니다.');
+      }
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  </script>
+</body>
+</html>

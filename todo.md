@@ -180,3 +180,4 @@
 - [x] 자동 업데이트 알림 시스템 구현 (앱 버전 관리 DB, API, 클라이언트 연동)
 - [x] Google OAuth redirect_uri_mismatch 오류 수정 (APK용 redirect URI 설정) - Expo redirect URI 추가 완료
 - [x] 프로필 사진 수정 시 앱 튜김 버그 수정 - 에러 처리 개선 및 파일명 살균화
+- [x] 관리자 대시보드 페이지 구현 (사용자 목록, 정보 수정, 활동 현황)
