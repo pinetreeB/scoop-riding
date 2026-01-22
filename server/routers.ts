@@ -694,15 +694,22 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const { storagePut } = await import("./storage");
-        const buffer = Buffer.from(input.base64, "base64");
-        const key = `profiles/${ctx.user.id}/${Date.now()}-${input.filename}`;
-        const result = await storagePut(key, buffer, input.contentType);
-        
-        // Update user profile with new image URL
-        await db.updateUserProfile(ctx.user.id, { profileImageUrl: result.url });
-        
-        return { url: result.url, key: result.key };
+        try {
+          const { storagePut } = await import("./storage");
+          const buffer = Buffer.from(input.base64, "base64");
+          // Sanitize filename to prevent issues
+          const sanitizedFilename = input.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const key = `profiles/${ctx.user.id}/${Date.now()}-${sanitizedFilename}`;
+          const result = await storagePut(key, buffer, input.contentType);
+          
+          // Update user profile with new image URL
+          await db.updateUserProfile(ctx.user.id, { profileImageUrl: result.url });
+          
+          return { url: result.url, key: result.key };
+        } catch (error) {
+          console.error("Profile image upload error:", error);
+          throw new Error("이미지 업로드에 실패했습니다. 다시 시도해주세요.");
+        }
       }),
 
     // Get user profile by ID

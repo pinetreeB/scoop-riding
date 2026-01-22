@@ -178,3 +178,5 @@
 - [x] 배포된 서버 URL로 APK 재빌드 (v1.0.0 빌드 완료)
 - [x] 새 SCOOP 로고 적용 (앱 아이콘, 스플래시, 로그인 화면)
 - [x] 자동 업데이트 알림 시스템 구현 (앱 버전 관리 DB, API, 클라이언트 연동)
+- [x] Google OAuth redirect_uri_mismatch 오류 수정 (APK용 redirect URI 설정) - Expo redirect URI 추가 완료
+- [x] 프로필 사진 수정 시 앱 튜김 버그 수정 - 에러 처리 개선 및 파일명 살균화

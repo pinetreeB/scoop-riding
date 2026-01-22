@@ -101,19 +101,31 @@ export default function EditProfileScreen() {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
 
-        // Read file as base64
-        const base64 = await FileSystem.readAsStringAsync(asset.uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
+        try {
+          // Use the asset URI directly - ImagePicker with allowsEditing already provides a file:// URI
+          let imageUri = asset.uri;
+          
+          // Read file as base64
+          const base64 = await FileSystem.readAsStringAsync(imageUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
 
-        const filename = asset.uri.split("/").pop() || "profile.jpg";
-        const contentType = asset.mimeType || "image/jpeg";
+          // Generate a safe filename
+          const timestamp = Date.now();
+          const extension = asset.mimeType?.split('/')[1] || 'jpg';
+          const filename = `profile_${timestamp}.${extension}`;
+          const contentType = asset.mimeType || "image/jpeg";
 
-        uploadImageMutation.mutate({
-          base64,
-          filename,
-          contentType,
-        });
+          uploadImageMutation.mutate({
+            base64,
+            filename,
+            contentType,
+          });
+        } catch (readError) {
+          setUploading(false);
+          console.error("File read error:", readError);
+          Alert.alert("오류", "이미지를 읽는 중 오류가 발생했습니다. 다른 이미지를 선택해주세요.");
+        }
       }
     } catch (error) {
       setUploading(false);
