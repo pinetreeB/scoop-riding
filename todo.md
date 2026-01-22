@@ -127,3 +127,9 @@
 - [x] 주행 음성 안내 기능 (속도, 거리, 시간 TTS 안내) - expo-speech, voice-settings 화면
 - [x] 친구 주행 기록 비교 화면 (친구와 나의 통계 비교) - compare-records 화면
 - [x] 주행 지도 회전 취소 (네비게이션 스타일 → 자연스러운 표시) - 마커만 회전
+
+- [x] 실제 친구 통계 연동 - 서버에서 친구 주행 통계 가져오기 (getFriendStats, getMyStats API)
+- [x] 음성 안내 언어 선택 - 한국어/영어 지원 (voice-guidance.ts, voice-settings.tsx)
+- [x] 친구 주행 시작 알림 기능 (liveLocation.update에서 isStarting 시 알림)
+- [x] 친구 실시간 위치 지도 보기 (주행중인 친구 클릭 시 지도 모달 표시)
+- [x] 주간 랭킹 실시간 데이터 연동 수정 (riding.tsx에서 주행 완료 시 서버 동기화)

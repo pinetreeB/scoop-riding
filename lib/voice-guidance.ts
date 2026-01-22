@@ -4,13 +4,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const VOICE_SETTINGS_KEY = '@scoop_voice_settings';
 
+export type VoiceLanguage = 'ko-KR' | 'en-US';
+
 export interface VoiceSettings {
   enabled: boolean;
   speedAnnouncement: boolean;
   distanceAnnouncement: boolean;
   timeAnnouncement: boolean;
   intervalMinutes: number; // Announcement interval in minutes
-  language: string;
+  language: VoiceLanguage;
 }
 
 const DEFAULT_SETTINGS: VoiceSettings = {
@@ -20,6 +22,44 @@ const DEFAULT_SETTINGS: VoiceSettings = {
   timeAnnouncement: true,
   intervalMinutes: 5,
   language: 'ko-KR',
+};
+
+// Language-specific text
+const TEXTS = {
+  'ko-KR': {
+    ridingTime: '주행 시간',
+    ridingDistance: '주행 거리',
+    currentSpeed: '현재 속도',
+    startRiding: '주행을 시작합니다',
+    endRiding: '주행이 완료되었습니다',
+    total: '총',
+    during: '동안 주행했습니다',
+    avgSpeed: '평균 속도는',
+    hours: '시간',
+    minutes: '분',
+    seconds: '초',
+    kilometers: '킬로미터',
+    meters: '미터',
+    speedUnit: '시속',
+    kmPerHour: '킬로미터',
+  },
+  'en-US': {
+    ridingTime: 'Riding time',
+    ridingDistance: 'Distance traveled',
+    currentSpeed: 'Current speed',
+    startRiding: 'Starting ride',
+    endRiding: 'Ride completed',
+    total: 'Total',
+    during: 'traveled in',
+    avgSpeed: 'Average speed was',
+    hours: 'hours',
+    minutes: 'minutes',
+    seconds: 'seconds',
+    kilometers: 'kilometers',
+    meters: 'meters',
+    speedUnit: '',
+    kmPerHour: 'kilometers per hour',
+  },
 };
 
 let lastAnnouncementTime = 0;
@@ -44,26 +84,51 @@ export async function saveVoiceSettings(settings: VoiceSettings): Promise<void> 
   }
 }
 
-export function formatDurationForSpeech(seconds: number): string {
+export function formatDurationForSpeech(seconds: number, language: VoiceLanguage): string {
+  const t = TEXTS[language];
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   
-  if (hours > 0) {
-    return `${hours}시간 ${minutes}분`;
+  if (language === 'ko-KR') {
+    if (hours > 0) {
+      return `${hours}${t.hours} ${minutes}${t.minutes}`;
+    }
+    return `${minutes}${t.minutes}`;
+  } else {
+    if (hours > 0) {
+      return `${hours} ${t.hours} ${minutes} ${t.minutes}`;
+    }
+    return `${minutes} ${t.minutes}`;
   }
-  return `${minutes}분`;
 }
 
-export function formatDistanceForSpeech(meters: number): string {
+export function formatDistanceForSpeech(meters: number, language: VoiceLanguage): string {
+  const t = TEXTS[language];
   const km = meters / 1000;
+  
   if (km >= 1) {
-    return `${km.toFixed(1)}킬로미터`;
+    if (language === 'ko-KR') {
+      return `${km.toFixed(1)}${t.kilometers}`;
+    } else {
+      return `${km.toFixed(1)} ${t.kilometers}`;
+    }
   }
-  return `${Math.round(meters)}미터`;
+  
+  if (language === 'ko-KR') {
+    return `${Math.round(meters)}${t.meters}`;
+  } else {
+    return `${Math.round(meters)} ${t.meters}`;
+  }
 }
 
-export function formatSpeedForSpeech(speedKmh: number): string {
-  return `시속 ${Math.round(speedKmh)}킬로미터`;
+export function formatSpeedForSpeech(speedKmh: number, language: VoiceLanguage): string {
+  const t = TEXTS[language];
+  
+  if (language === 'ko-KR') {
+    return `${t.speedUnit} ${Math.round(speedKmh)}${t.kmPerHour}`;
+  } else {
+    return `${Math.round(speedKmh)} ${t.kmPerHour}`;
+  }
 }
 
 export async function announceRidingStatus(
@@ -91,19 +156,21 @@ export async function announceRidingStatus(
   
   lastAnnouncementTime = now;
   
+  const t = TEXTS[settings.language];
+  
   // Build announcement text
   const parts: string[] = [];
   
   if (settings.timeAnnouncement) {
-    parts.push(`주행 시간 ${formatDurationForSpeech(elapsedTime)}`);
+    parts.push(`${t.ridingTime} ${formatDurationForSpeech(elapsedTime, settings.language)}`);
   }
   
   if (settings.distanceAnnouncement) {
-    parts.push(`주행 거리 ${formatDistanceForSpeech(totalDistance)}`);
+    parts.push(`${t.ridingDistance} ${formatDistanceForSpeech(totalDistance, settings.language)}`);
   }
   
   if (settings.speedAnnouncement && currentSpeed > 0) {
-    parts.push(`현재 속도 ${formatSpeedForSpeech(currentSpeed)}`);
+    parts.push(`${t.currentSpeed} ${formatSpeedForSpeech(currentSpeed, settings.language)}`);
   }
   
   if (parts.length === 0) return;
@@ -129,8 +196,10 @@ export async function announceStart(): Promise<void> {
   const settings = await getVoiceSettings();
   if (!settings.enabled || Platform.OS === 'web') return;
   
+  const t = TEXTS[settings.language];
+  
   try {
-    Speech.speak('주행을 시작합니다', {
+    Speech.speak(t.startRiding, {
       language: settings.language,
       pitch: 1.0,
       rate: 1.0,
@@ -148,7 +217,14 @@ export async function announceEnd(
   const settings = await getVoiceSettings();
   if (!settings.enabled || Platform.OS === 'web') return;
   
-  const announcement = `주행이 완료되었습니다. 총 ${formatDistanceForSpeech(totalDistance)}를 ${formatDurationForSpeech(elapsedTime)} 동안 주행했습니다. 평균 속도는 ${formatSpeedForSpeech(avgSpeed)}입니다.`;
+  const t = TEXTS[settings.language];
+  
+  let announcement: string;
+  if (settings.language === 'ko-KR') {
+    announcement = `${t.endRiding}. ${t.total} ${formatDistanceForSpeech(totalDistance, settings.language)}를 ${formatDurationForSpeech(elapsedTime, settings.language)} ${t.during}. ${t.avgSpeed} ${formatSpeedForSpeech(avgSpeed, settings.language)}입니다.`;
+  } else {
+    announcement = `${t.endRiding}. ${t.total} ${formatDistanceForSpeech(totalDistance, settings.language)} ${t.during} ${formatDurationForSpeech(elapsedTime, settings.language)}. ${t.avgSpeed} ${formatSpeedForSpeech(avgSpeed, settings.language)}.`;
+  }
   
   try {
     await Speech.stop();
@@ -172,4 +248,12 @@ export async function stopSpeech(): Promise<void> {
   } catch (error) {
     console.error('Failed to stop speech:', error);
   }
+}
+
+// Get available languages
+export function getAvailableLanguages(): { code: VoiceLanguage; name: string }[] {
+  return [
+    { code: 'ko-KR', name: '한국어' },
+    { code: 'en-US', name: 'English' },
+  ];
 }

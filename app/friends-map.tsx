@@ -8,8 +8,9 @@ import {
   Dimensions,
   RefreshControl,
   FlatList,
-  Image,
+  Modal,
 } from "react-native";
+import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
@@ -38,6 +39,8 @@ export default function FriendsMapScreen() {
 
   const [myLocation, setMyLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedFriend, setSelectedFriend] = useState<FriendLocation | null>(null);
+  const [showMapModal, setShowMapModal] = useState(false);
 
   const friendsLocationQuery = trpc.liveLocation.friends.useQuery(undefined, {
     refetchInterval: 5000, // Refresh every 5 seconds
@@ -67,6 +70,14 @@ export default function FriendsMapScreen() {
     setRefreshing(true);
     await friendsLocationQuery.refetch();
     setRefreshing(false);
+  };
+
+  const handleFriendPress = (friend: FriendLocation) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setSelectedFriend(friend);
+    setShowMapModal(true);
   };
 
   const formatSpeed = (speed: number | null): string => {
@@ -99,13 +110,21 @@ export default function FriendsMapScreen() {
     return `${(meters / 1000).toFixed(1)}km`;
   };
 
+  const getDirectionName = (heading: number): string => {
+    const directions = ["북", "북동", "동", "남동", "남", "남서", "서", "북서"];
+    const index = Math.round(heading / 45) % 8;
+    return directions[index];
+  };
+
   const renderFriendItem = ({ item }: { item: FriendLocation }) => {
     const distanceFromMe = myLocation
       ? calculateDistance(myLocation.latitude, myLocation.longitude, item.latitude, item.longitude)
       : null;
 
     return (
-      <View
+      <Pressable
+        onPress={() => handleFriendPress(item)}
+        style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
         className="bg-surface rounded-2xl p-4 mb-3 border border-border"
       >
         <View className="flex-row items-center">
@@ -140,7 +159,7 @@ export default function FriendsMapScreen() {
             </View>
           </View>
 
-          {/* Stats */}
+          {/* Stats and Map Icon */}
           <View className="items-end">
             <View className="flex-row items-center">
               <MaterialIcons name="speed" size={16} color={colors.muted} />
@@ -156,6 +175,11 @@ export default function FriendsMapScreen() {
                 </Text>
               </View>
             )}
+          </View>
+          
+          {/* Map indicator */}
+          <View className="ml-3">
+            <MaterialIcons name="map" size={24} color={colors.primary} />
           </View>
         </View>
 
@@ -176,19 +200,22 @@ export default function FriendsMapScreen() {
             <Text className="text-muted text-sm">
               {getDirectionName(item.heading)} 방향으로 이동 중
             </Text>
+            <View className="flex-1" />
+            <Text className="text-primary text-sm font-medium">
+              탭하여 지도 보기 →
+            </Text>
           </View>
         )}
-      </View>
+      </Pressable>
     );
   };
 
-  const getDirectionName = (heading: number): string => {
-    const directions = ["북", "북동", "동", "남동", "남", "남서", "서", "북서"];
-    const index = Math.round(heading / 45) % 8;
-    return directions[index];
-  };
-
   const ridingFriends = friendsLocationQuery.data || [];
+
+  // Generate OpenStreetMap URL for the selected friend's location
+  const getMapUrl = (lat: number, lon: number) => {
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.01}%2C${lat - 0.01}%2C${lon + 0.01}%2C${lat + 0.01}&layer=mapnik&marker=${lat}%2C${lon}`;
+  };
 
   return (
     <ScreenContainer>
@@ -259,12 +286,174 @@ export default function FriendsMapScreen() {
                 </Text>
               </View>
               <Text className="text-muted text-sm mt-2">
-                위치는 5초마다 자동으로 업데이트됩니다
+                친구를 탭하면 지도에서 위치를 확인할 수 있습니다
               </Text>
             </View>
           }
         />
       )}
+
+      {/* Map Modal */}
+      <Modal
+        visible={showMapModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowMapModal(false)}
+      >
+        <View className="flex-1" style={{ backgroundColor: colors.background }}>
+          {/* Modal Header */}
+          <View className="flex-row items-center px-5 pt-4 pb-3 border-b border-border">
+            <Pressable
+              onPress={() => setShowMapModal(false)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="mr-4"
+            >
+              <MaterialIcons name="close" size={24} color={colors.foreground} />
+            </Pressable>
+            <View className="flex-1 flex-row items-center">
+              {selectedFriend?.profileImageUrl ? (
+                <Image
+                  source={{ uri: selectedFriend.profileImageUrl }}
+                  style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8 }}
+                />
+              ) : (
+                <View
+                  className="w-8 h-8 rounded-full items-center justify-center mr-2"
+                  style={{ backgroundColor: colors.primary }}
+                >
+                  <Text className="text-white font-bold text-sm">
+                    {(selectedFriend?.name || "?")[0].toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <Text className="text-xl font-bold text-foreground">
+                {selectedFriend?.name || "친구"} 위치
+              </Text>
+            </View>
+          </View>
+
+          {/* Map View */}
+          {selectedFriend && Platform.OS === "web" ? (
+            <iframe
+              src={getMapUrl(selectedFriend.latitude, selectedFriend.longitude)}
+              style={{ flex: 1, border: 0, width: "100%", height: "100%" }}
+              allowFullScreen
+            />
+          ) : selectedFriend ? (
+            <View className="flex-1">
+              {/* Simple Map Visualization for Native */}
+              <View className="flex-1 items-center justify-center" style={{ backgroundColor: "#e5e7eb" }}>
+                <View className="items-center">
+                  {/* Friend marker with profile image */}
+                  <View className="items-center mb-4">
+                    {selectedFriend.profileImageUrl ? (
+                      <View style={{ 
+                        shadowColor: "#000", 
+                        shadowOffset: { width: 0, height: 2 }, 
+                        shadowOpacity: 0.25, 
+                        shadowRadius: 4,
+                        elevation: 5,
+                      }}>
+                        <Image
+                          source={{ uri: selectedFriend.profileImageUrl }}
+                          style={{ 
+                            width: 80, 
+                            height: 80, 
+                            borderRadius: 40,
+                            borderWidth: 4,
+                            borderColor: colors.primary,
+                          }}
+                        />
+                      </View>
+                    ) : (
+                      <View
+                        className="w-20 h-20 rounded-full items-center justify-center"
+                        style={{ 
+                          backgroundColor: colors.primary,
+                          shadowColor: "#000",
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.25,
+                          shadowRadius: 4,
+                          elevation: 5,
+                        }}
+                      >
+                        <Text className="text-white font-bold text-2xl">
+                          {(selectedFriend.name || "?")[0].toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                    {selectedFriend.heading !== null && (
+                      <View 
+                        className="absolute -bottom-2"
+                        style={{ transform: [{ rotate: `${selectedFriend.heading}deg` }] }}
+                      >
+                        <MaterialIcons name="navigation" size={24} color={colors.primary} />
+                      </View>
+                    )}
+                  </View>
+                  
+                  <Text className="text-foreground font-bold text-lg mb-2">
+                    {selectedFriend.name || "친구"}
+                  </Text>
+                  <Text className="text-muted text-sm mb-4">
+                    {formatSpeed(selectedFriend.speed)}로 이동 중
+                  </Text>
+                  
+                  {/* Coordinates */}
+                  <View className="bg-surface rounded-xl p-4 border border-border">
+                    <Text className="text-muted text-xs text-center mb-1">현재 좌표</Text>
+                    <Text className="text-foreground font-mono text-sm text-center">
+                      {selectedFriend.latitude.toFixed(6)}, {selectedFriend.longitude.toFixed(6)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Info Panel */}
+              <View className="p-4 border-t border-border" style={{ backgroundColor: colors.background }}>
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <MaterialIcons name="speed" size={20} color={colors.primary} />
+                    <Text className="text-foreground font-medium ml-2">
+                      {formatSpeed(selectedFriend.speed)}
+                    </Text>
+                  </View>
+                  {selectedFriend.heading !== null && (
+                    <View className="flex-row items-center">
+                      <MaterialIcons name="explore" size={20} color={colors.primary} />
+                      <Text className="text-foreground font-medium ml-2">
+                        {getDirectionName(selectedFriend.heading)} 방향
+                      </Text>
+                    </View>
+                  )}
+                  <View className="flex-row items-center">
+                    <MaterialIcons name="access-time" size={20} color={colors.muted} />
+                    <Text className="text-muted ml-2">
+                      {formatTime(selectedFriend.updatedAt)}
+                    </Text>
+                  </View>
+                </View>
+                
+                {myLocation && (
+                  <View className="mt-3 pt-3 border-t border-border">
+                    <View className="flex-row items-center justify-center">
+                      <MaterialIcons name="social-distance" size={20} color={colors.muted} />
+                      <Text className="text-muted ml-2">
+                        나와의 거리: {formatDistance(calculateDistance(
+                          myLocation.latitude, 
+                          myLocation.longitude, 
+                          selectedFriend.latitude, 
+                          selectedFriend.longitude
+                        ))}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }

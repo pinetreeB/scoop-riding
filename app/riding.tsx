@@ -54,6 +54,9 @@ export default function RidingScreen() {
   // Live location mutation for friends tracking
   const updateLiveLocation = trpc.liveLocation.update.useMutation();
   const stopLiveLocation = trpc.liveLocation.stop.useMutation();
+  
+  // Server sync mutation for ranking
+  const syncToServer = trpc.rides.create.useMutation();
 
   const [isRunning, setIsRunning] = useState(true);
   const [duration, setDuration] = useState(0);
@@ -80,6 +83,7 @@ export default function RidingScreen() {
   const isRunningRef = useRef(true);
   
   const speedHistoryRef = useRef<number[]>([]);
+  const isFirstLocationRef = useRef(true);
   const SPEED_SMOOTHING_SAMPLES = 3;
 
   useEffect(() => {
@@ -271,12 +275,15 @@ export default function RidingScreen() {
       setGpsPointCount(gpsPointsRef.current.length);
 
       // Update live location for friends to see
+      const isStarting = isFirstLocationRef.current;
+      isFirstLocationRef.current = false;
       updateLiveLocation.mutate({
         latitude,
         longitude,
         heading: heading ?? null,
         speed: speed ?? null,
         isRiding: true,
+        isStarting,
       });
 
       if (rawSpeedKmh >= GPS_CONSTANTS.MIN_SPEED_THRESHOLD) {
@@ -400,6 +407,24 @@ export default function RidingScreen() {
               await notifyRideCompleted(finalDist, duration, finalAvg);
             } catch (e) {
               console.log("[Riding] Notification error:", e);
+            }
+
+            // Sync to server for ranking
+            try {
+              await syncToServer.mutateAsync({
+                recordId: record.id,
+                date: record.date,
+                duration: record.duration,
+                distance: record.distance,
+                avgSpeed: record.avgSpeed,
+                maxSpeed: record.maxSpeed,
+                startTime: record.startTime,
+                endTime: record.endTime,
+                gpsPointsJson: JSON.stringify(record.gpsPoints),
+              });
+              console.log("[Riding] Record synced to server");
+            } catch (e) {
+              console.log("[Riding] Server sync error:", e);
             }
 
             router.back();

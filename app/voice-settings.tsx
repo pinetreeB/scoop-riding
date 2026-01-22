@@ -15,9 +15,11 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import {
   VoiceSettings,
+  VoiceLanguage,
   getVoiceSettings,
   saveVoiceSettings,
   announceRidingStatus,
+  getAvailableLanguages,
 } from "@/lib/voice-guidance";
 
 export default function VoiceSettingsScreen() {
@@ -231,6 +233,37 @@ export default function VoiceSettingsScreen() {
             </>
           )}
         </Pressable>
+
+        {/* Language Selection */}
+        <Text className="text-lg font-bold text-foreground mb-3">안내 언어</Text>
+        <View className="bg-surface rounded-2xl border border-border p-4 mb-6">
+          <View className="flex-row flex-wrap gap-2">
+            {getAvailableLanguages().map((lang) => (
+              <Pressable
+                key={lang.code}
+                onPress={() => updateSetting("language", lang.code)}
+                style={({ pressed }) => [{ 
+                  opacity: pressed ? 0.7 : 1,
+                  backgroundColor: settings.language === lang.code ? colors.primary : colors.background,
+                  borderColor: settings.language === lang.code ? colors.primary : colors.border,
+                }]}
+                className="px-4 py-2 rounded-full border"
+              >
+                <Text 
+                  style={{ 
+                    color: settings.language === lang.code ? '#FFFFFF' : colors.foreground 
+                  }}
+                  className="font-medium"
+                >
+                  {lang.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Text className="text-muted text-sm mt-3">
+            선택한 언어로 음성 안내를 제공합니다
+          </Text>
+        </View>
 
         {/* Info */}
         <View className="bg-surface/50 rounded-xl p-4 mb-6">

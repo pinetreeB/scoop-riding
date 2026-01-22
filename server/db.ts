@@ -971,7 +971,7 @@ export async function rejectFriendRequest(requestId: number, userId: number): Pr
 }
 
 // Get friends list
-export async function getFriends(userId: number): Promise<{ id: number; name: string | null; email: string | null }[]> {
+export async function getFriends(userId: number): Promise<{ id: number; name: string | null; email: string | null; profileImageUrl: string | null }[]> {
   const db = await getDb();
   if (!db) return [];
 
@@ -981,6 +981,7 @@ export async function getFriends(userId: number): Promise<{ id: number; name: st
       id: users.id,
       name: users.name,
       email: users.email,
+      profileImageUrl: users.profileImageUrl,
     })
     .from(friends)
     .innerJoin(users, eq(friends.userId2, users.id))
@@ -992,6 +993,7 @@ export async function getFriends(userId: number): Promise<{ id: number; name: st
       id: users.id,
       name: users.name,
       email: users.email,
+      profileImageUrl: users.profileImageUrl,
     })
     .from(friends)
     .innerJoin(users, eq(friends.userId1, users.id))
@@ -1925,4 +1927,129 @@ export async function respondToChallengeInvitation(
   }
 
   return true;
+}
+
+
+// ==================== Friend Stats Functions ====================
+
+export interface FriendStats {
+  userId: number;
+  name: string | null;
+  profileImageUrl: string | null;
+  totalDistance: number;
+  totalRides: number;
+  totalDuration: number;
+  avgSpeed: number;
+}
+
+// Get friend's riding stats
+export async function getFriendStats(userId: number, friendId: number): Promise<FriendStats | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Verify they are friends
+  const areFriends = await checkFriendship(userId, friendId);
+  if (!areFriends) return null;
+
+  // Get friend's user info
+  const friendInfo = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      profileImageUrl: users.profileImageUrl,
+    })
+    .from(users)
+    .where(eq(users.id, friendId))
+    .limit(1);
+
+  if (friendInfo.length === 0) return null;
+
+  // Get friend's riding records
+  const records = await db
+    .select({
+      distance: ridingRecords.distance,
+      duration: ridingRecords.duration,
+      avgSpeed: ridingRecords.avgSpeed,
+    })
+    .from(ridingRecords)
+    .where(eq(ridingRecords.userId, friendId));
+
+  const totalDistance = records.reduce((sum, r) => sum + r.distance, 0);
+  const totalRides = records.length;
+  const totalDuration = records.reduce((sum, r) => sum + r.duration, 0);
+  const avgSpeed = totalRides > 0 
+    ? records.reduce((sum, r) => sum + r.avgSpeed, 0) / totalRides 
+    : 0;
+
+  return {
+    userId: friendInfo[0].id,
+    name: friendInfo[0].name,
+    profileImageUrl: friendInfo[0].profileImageUrl,
+    totalDistance,
+    totalRides,
+    totalDuration,
+    avgSpeed,
+  };
+}
+
+// Get current user's stats
+export async function getUserStats(userId: number): Promise<FriendStats | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Get user info
+  const userInfo = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      profileImageUrl: users.profileImageUrl,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (userInfo.length === 0) return null;
+
+  // Get user's riding records
+  const records = await db
+    .select({
+      distance: ridingRecords.distance,
+      duration: ridingRecords.duration,
+      avgSpeed: ridingRecords.avgSpeed,
+    })
+    .from(ridingRecords)
+    .where(eq(ridingRecords.userId, userId));
+
+  const totalDistance = records.reduce((sum, r) => sum + r.distance, 0);
+  const totalRides = records.length;
+  const totalDuration = records.reduce((sum, r) => sum + r.duration, 0);
+  const avgSpeed = totalRides > 0 
+    ? records.reduce((sum, r) => sum + r.avgSpeed, 0) / totalRides 
+    : 0;
+
+  return {
+    userId: userInfo[0].id,
+    name: userInfo[0].name,
+    profileImageUrl: userInfo[0].profileImageUrl,
+    totalDistance,
+    totalRides,
+    totalDuration,
+    avgSpeed,
+  };
+}
+
+// Check if two users are friends
+async function checkFriendship(userId1: number, userId2: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const [smaller, larger] = userId1 < userId2 ? [userId1, userId2] : [userId2, userId1];
+  
+  const result = await db
+    .select()
+    .from(friends)
+    .where(and(eq(friends.userId1, smaller), eq(friends.userId2, larger)))
+    .limit(1);
+
+  return result.length > 0;
 }

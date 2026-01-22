@@ -594,6 +594,18 @@ export const appRouter = router({
         const success = await db.removeFriend(ctx.user.id, input.friendId);
         return { success };
       }),
+
+    // Get friend's stats for comparison
+    getFriendStats: protectedProcedure
+      .input(z.object({ friendId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return db.getFriendStats(ctx.user.id, input.friendId);
+      }),
+
+    // Get my stats for comparison
+    getMyStats: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserStats(ctx.user.id);
+    }),
   }),
 
   // Follows
@@ -835,6 +847,7 @@ export const appRouter = router({
         heading: z.number().nullable(),
         speed: z.number().nullable(),
         isRiding: z.boolean(),
+        isStarting: z.boolean().optional(), // True when ride just started
       }))
       .mutation(async ({ ctx, input }) => {
         await db.updateLiveLocation(
@@ -845,6 +858,25 @@ export const appRouter = router({
           input.speed,
           input.isRiding
         );
+
+        // Send notification to friends when ride starts
+        if (input.isStarting && input.isRiding) {
+          const friends = await db.getFriends(ctx.user.id);
+          const userName = ctx.user.name || '친구';
+          
+          for (const friend of friends) {
+            await db.createNotification({
+              userId: friend.id,
+              type: 'friend_riding',
+              title: '친구가 주행 중입니다',
+              body: `${userName}님이 주행을 시작했습니다. 실시간 위치를 확인해보세요!`,
+              entityType: 'riding',
+              entityId: ctx.user.id,
+              actorId: ctx.user.id,
+            });
+          }
+        }
+
         return { success: true };
       }),
 
