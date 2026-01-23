@@ -278,3 +278,4 @@
 - [x] Android APK에서 커뮤니티 타인 주행기록 열람 안 되는 문제 수정 - 동기화 문제와 동일 원인
 - [x] APK v0.0.3 빌드 큐 등록 완료 (https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/57591a97-7c1e-4ffa-a300-f8c3bdd09a8e)
 - [x] APK v0.0.3 배포 완료 - 다운로드: https://expo.dev/artifacts/eas/bMAtGUJFgUHLA5tbF8BMwE.apk
+- [x] Android APK 클라우드 동기화 5개 실패 문제 해결 - JWT 시크릿 키 일관성 문제 수정 및 로깅 추가

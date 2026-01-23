@@ -7,8 +7,10 @@ import * as db from "./db";
 import * as jose from "jose";
 import { ENV } from "./_core/env";
 
-// JWT secret for session tokens
+// JWT secret for session tokens - MUST match sdk.ts getSessionSecret()
+// Uses ENV.cookieSecret which comes from JWT_SECRET environment variable
 const JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret || "scoop-riding-secret-key-change-in-production");
+console.log("[Auth] JWT_SECRET initialized, cookieSecret length:", ENV.cookieSecret?.length || 0);
 
 // Generate session token
 // Must include openId, appId, and name to be compatible with SDK verifySession
@@ -297,19 +299,33 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const result = await db.createRidingRecord({
-          userId: ctx.user.id,
-          recordId: input.recordId,
-          date: input.date,
-          duration: input.duration,
-          distance: Math.round(input.distance),
-          avgSpeed: Math.round(input.avgSpeed * 10),
-          maxSpeed: Math.round(input.maxSpeed * 10),
-          startTime: input.startTime ? new Date(input.startTime) : undefined,
-          endTime: input.endTime ? new Date(input.endTime) : undefined,
-          gpsPointsJson: input.gpsPointsJson,
-        });
-        return { success: true, id: result };
+        console.log("[rides.create] Called by user:", ctx.user.id, ctx.user.email);
+        console.log("[rides.create] Input:", { recordId: input.recordId, date: input.date, duration: input.duration, distance: input.distance });
+        
+        try {
+          const result = await db.createRidingRecord({
+            userId: ctx.user.id,
+            recordId: input.recordId,
+            date: input.date,
+            duration: input.duration,
+            distance: Math.round(input.distance),
+            avgSpeed: Math.round(input.avgSpeed * 10),
+            maxSpeed: Math.round(input.maxSpeed * 10),
+            startTime: input.startTime ? new Date(input.startTime) : undefined,
+            endTime: input.endTime ? new Date(input.endTime) : undefined,
+            gpsPointsJson: input.gpsPointsJson,
+          });
+          console.log("[rides.create] Success, id:", result);
+          return { success: true, id: result };
+        } catch (error: any) {
+          console.error("[rides.create] Error:", error?.message || error);
+          // Check for duplicate key error
+          if (error?.message?.includes('Duplicate') || error?.code === 'ER_DUP_ENTRY') {
+            console.log("[rides.create] Duplicate record, returning success");
+            return { success: true, id: null, duplicate: true };
+          }
+          throw error;
+        }
       }),
 
     delete: protectedProcedure

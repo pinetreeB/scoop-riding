@@ -11,10 +11,22 @@ export type TrpcContext = {
 export async function createContext(opts: CreateExpressContextOptions): Promise<TrpcContext> {
   let user: User | null = null;
 
+  // Log incoming request info for debugging
+  const authHeader = opts.req.headers.authorization || opts.req.headers.Authorization;
+  const hasCookie = !!opts.req.headers.cookie;
+  console.log("[Context] createContext called:", {
+    path: opts.req.path,
+    hasAuthHeader: !!authHeader,
+    authHeaderPrefix: typeof authHeader === 'string' ? authHeader.substring(0, 20) : null,
+    hasCookie,
+  });
+
   try {
     user = await sdk.authenticateRequest(opts.req);
-  } catch (error) {
+    console.log("[Context] User authenticated:", user?.id, user?.email);
+  } catch (error: any) {
     // Authentication is optional for public procedures.
+    console.log("[Context] Authentication failed:", error?.message || error);
     user = null;
   }
 

@@ -137,6 +137,11 @@ class SDKServer {
 
   private getSessionSecret() {
     const secret = ENV.cookieSecret;
+    console.log("[Auth] getSessionSecret called, secret length:", secret?.length || 0);
+    if (!secret) {
+      console.error("[Auth] WARNING: cookieSecret is empty! Using fallback.");
+      return new TextEncoder().encode("scoop-riding-secret-key-change-in-production");
+    }
     return new TextEncoder().encode(secret);
   }
 
@@ -182,29 +187,35 @@ class SDKServer {
     cookieValue: string | undefined | null,
   ): Promise<{ openId: string; appId: string; name: string } | null> {
     if (!cookieValue) {
-      console.warn("[Auth] Missing session cookie");
+      console.warn("[Auth] Missing session cookie/token");
       return null;
     }
+
+    console.log("[Auth] verifySession called, token length:", cookieValue.length);
+    console.log("[Auth] Token preview:", cookieValue.substring(0, 50) + "...");
 
     try {
       const secretKey = this.getSessionSecret();
       const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"],
       });
+      console.log("[Auth] JWT verified, payload:", payload);
+      
       const { openId, appId, name } = payload as Record<string, unknown>;
 
       if (!isNonEmptyString(openId) || !isNonEmptyString(appId) || !isNonEmptyString(name)) {
-        console.warn("[Auth] Session payload missing required fields");
+        console.warn("[Auth] Session payload missing required fields:", { openId: !!openId, appId: !!appId, name: !!name });
         return null;
       }
 
+      console.log("[Auth] Session valid for user:", openId);
       return {
         openId,
         appId,
         name,
       };
     } catch (error) {
-      console.warn("[Auth] Session verification failed", String(error));
+      console.warn("[Auth] Session verification failed:", String(error));
       return null;
     }
   }

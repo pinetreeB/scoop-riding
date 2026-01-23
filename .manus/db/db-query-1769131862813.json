@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, name, email, openId FROM users WHERE name LIKE '%소나무%' OR email = 'tmd7221@gmail.com';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, name, email, openId FROM users WHERE name LIKE '%소나무%' OR email = 'tmd7221@gmail.com';",
+  "rows": [
+    {
+      "id": "1",
+      "name": "소나무군",
+      "email": "tmd7221@gmail.com",
+      "openId": "email_7026ce4d846cb2a7a1f11c873c6cfaa3"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\topenId\n1\t소나무군\ttmd7221@gmail.com\temail_7026ce4d846cb2a7a1f11c873c6cfaa3\n",
+  "stderr": "",
+  "execution_time_ms": 1508
+}
