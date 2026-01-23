@@ -80,8 +80,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.log("[AuthContext] Has token but no cached user, setting user to null");
-      setUser(null);
+      // Has token, try to fetch user from API
+      console.log("[AuthContext] Has token, fetching user from API...");
+      try {
+        const apiUser = await Api.getMe();
+        console.log("[AuthContext] Native API user response:", apiUser);
+
+        if (apiUser) {
+          const userInfo: Auth.User = {
+            id: apiUser.id,
+            openId: apiUser.openId,
+            name: apiUser.name,
+            email: apiUser.email,
+            loginMethod: apiUser.loginMethod,
+            lastSignedIn: new Date(apiUser.lastSignedIn),
+            profileImageUrl: apiUser.profileImageUrl,
+          };
+          setUser(userInfo);
+          await Auth.setUserInfo(userInfo);
+          console.log("[AuthContext] Native user set from API:", userInfo);
+        } else {
+          console.log("[AuthContext] Native: No authenticated user from API, clearing token");
+          await Auth.removeSessionToken();
+          setUser(null);
+        }
+      } catch (apiError) {
+        console.log("[AuthContext] Native API call failed:", apiError);
+        // Token might be invalid, clear it
+        await Auth.removeSessionToken();
+        setUser(null);
+      }
     } catch (err) {
       const error = err instanceof Error ? err : new Error("Failed to fetch user");
       console.error("[AuthContext] fetchUser error:", error);
@@ -93,14 +121,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (userInfo: Auth.User, token?: string) => {
-    console.log("[AuthContext] login called with user:", userInfo.email);
+    console.log("[AuthContext] login called with user:", userInfo.email, "platform:", Platform.OS);
+    console.log("[AuthContext] Token provided:", token ? `yes (${token.substring(0, 30)}...)` : "no");
     
     // Store session token for native
     if (token && Platform.OS !== "web") {
-      await Auth.setSessionToken(token);
+      console.log("[AuthContext] Storing session token in SecureStore...");
+      try {
+        await Auth.setSessionToken(token);
+        console.log("[AuthContext] Session token stored successfully");
+        
+        // Verify token was stored
+        const storedToken = await Auth.getSessionToken();
+        console.log("[AuthContext] Token verification:", storedToken ? "stored correctly" : "FAILED TO STORE");
+      } catch (tokenError) {
+        console.error("[AuthContext] Failed to store session token:", tokenError);
+      }
     }
 
     // Store user info
+    console.log("[AuthContext] Storing user info...");
     await Auth.setUserInfo(userInfo);
     
     // Update state immediately

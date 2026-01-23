@@ -59,7 +59,7 @@ export default function ProfileScreen() {
     releaseNotes: string | null;
   }>({ hasUpdate: false, latestVersion: null, downloadUrl: null, releaseNotes: null });
 
-  const CURRENT_APP_VERSION = "1.1.0";
+  const CURRENT_APP_VERSION = "0.0.3";
 
   // Check for app updates
   const { data: updateData } = trpc.appVersion.checkUpdate.useQuery(
@@ -156,8 +156,21 @@ export default function ProfileScreen() {
       // Clear status after 3 seconds
       setTimeout(() => setSyncStatus(null), 3000);
     } catch (error: any) {
-      console.error("[Profile] Sync error:", error?.message || error);
-      setSyncStatus(`동기화 실패: ${error?.message || "알 수 없는 오류"}`);
+      console.error("[Profile] Sync error:", {
+        message: error?.message || String(error),
+        code: error?.data?.code || error?.code,
+        stack: error?.stack?.substring(0, 300),
+      });
+      
+      // Provide more helpful error messages
+      let errorMsg = error?.message || "알 수 없는 오류";
+      if (errorMsg.includes('UNAUTHORIZED') || errorMsg.includes('Invalid session')) {
+        errorMsg = "인증이 만료되었습니다. 다시 로그인해주세요.";
+      } else if (errorMsg.includes('Network') || errorMsg.includes('fetch')) {
+        errorMsg = "네트워크 연결을 확인해주세요.";
+      }
+      
+      setSyncStatus(`동기화 실패: ${errorMsg}`);
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }

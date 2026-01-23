@@ -254,7 +254,17 @@ export async function syncRecordToCloud(
       await markRecordAsSynced(record.id);
       return true;
     }
-    console.error("[Sync] Failed to sync record to cloud:", error?.message || error);
+    // Log detailed error info for debugging
+    console.error("[Sync] Failed to sync record to cloud:", {
+      recordId: record.id,
+      errorMessage: error?.message || String(error),
+      errorCode: error?.data?.code || error?.code,
+      errorStack: error?.stack?.substring(0, 500),
+    });
+    // Check for auth errors
+    if (error?.message?.includes('UNAUTHORIZED') || error?.message?.includes('401') || error?.message?.includes('Invalid session')) {
+      console.error("[Sync] Authentication error - user may need to re-login");
+    }
     return false;
   }
 }

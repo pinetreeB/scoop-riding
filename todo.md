@@ -272,3 +272,7 @@
 - [x] 레벨 시스템 설명 영어로 변경 (Junior Rider, Rookie Rider 등) - level-system.ts titleEn 추가
 - [x] Google OAuth "Custom URI scheme is not enabled" 오류 수정 - Google Cloud Console에서 Android 클라이언트 고급 설정에서 활성화
 - [x] APK v1.2.0 빌드 큐 등록 완료 (https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/e3160c32-3e78-42ac-8a24-d99d92f7351b)
+
+## 버그 수정 (2026-01-23 추가)
+- [x] Android APK에서 클라우드 동기화 안 되는 문제 수정 - 상세 로깅 추가, 인증 토큰 저장/전달 로직 개선
+- [x] Android APK에서 커뮤니티 타인 주행기록 열람 안 되는 문제 수정 - 동기화 문제와 동일 원인
