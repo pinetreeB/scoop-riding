@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO \"appVersions\" (\"version\", \"downloadUrl\", \"releaseNotes\", \"isActive\", \"createdAt\") \nVALUES ('0.0.4', 'https://expo.dev/artifacts/eas/aLVB2fgp2AqajUawabVUNL.apk', '클라우드 동기화 문제 해결: tRPC 대신 직접 fetch API 사용으로 토큰 전달 개선', true, NOW());\n\nUPDATE \"appVersions\" SET \"isActive\" = false WHERE \"version\" != '0.0.4';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO \"appVersions\" (\"version\", \"downloadUrl\", \"releaseNotes\", \"isActive\", \"createdAt\") \nVALUES ('0.0.4', 'https://expo.dev/artifacts/eas/aLVB2fgp2AqajUawabVUNL.apk', '클라우드 동기화 문제 해결: tRPC 대신 직접 fetch API 사용으로 토큰 전달 개선', true, NOW());\n\nUPDATE \"appVersions\" SET \"isActive\" = false WHERE \"version\" != '0.0.4';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 1 column 25 near \"\"appVersions\" (\"version\", \"downloadUrl\", \"releaseNotes\", \"isActive\", \"createdAt\") ",
+    "VALUES ('0.0.4', 'https://expo.dev/artifacts/eas/aLVB2fgp2AqajUawabVUNL.apk', '클라우드 동기화 문제 해결: tRPC 대신 직접 fetch API 사용으로 토큰 전달 개선', true, NOW())\""
+  ]
+}

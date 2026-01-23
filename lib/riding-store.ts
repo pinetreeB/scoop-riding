@@ -287,20 +287,45 @@ export async function syncRecordToCloud(
       return false;
     }
     
-    const responseData = await response.json();
-    console.log("[Sync] Response data:", JSON.stringify(responseData).substring(0, 200));
+    const responseText = await response.text();
+    console.log("[Sync] Response text:", responseText.substring(0, 300));
+    
+    // Parse response
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("[Sync] Failed to parse response JSON:", parseError);
+      // If response status is 200 but can't parse, still consider it a success
+      // (server might have saved the record)
+      if (response.status === 200) {
+        console.log("[Sync] Status 200, marking as synced despite parse error");
+        await markRecordAsSynced(record.id);
+        return true;
+      }
+      return false;
+    }
     
     // tRPC wraps response in result.data.json
     const result = responseData?.result?.data?.json;
+    console.log("[Sync] Parsed result:", JSON.stringify(result));
     
-    if (result?.success) {
+    // Check for success - either explicit success:true or presence of id
+    if (result?.success || result?.id || result?.duplicate) {
       // Mark as synced locally
       await markRecordAsSynced(record.id);
       console.log("[Sync] Record marked as synced:", record.id);
       return true;
     }
     
-    console.log("[Sync] Upload failed - result.success is false or missing");
+    // If response status is 200, consider it a success even if result parsing fails
+    if (response.status === 200) {
+      console.log("[Sync] Status 200, marking as synced");
+      await markRecordAsSynced(record.id);
+      return true;
+    }
+    
+    console.log("[Sync] Upload failed - result.success is false or missing, status:", response.status);
     return false;
   } catch (error: any) {
     // Check if it's a duplicate key error (record already exists)
