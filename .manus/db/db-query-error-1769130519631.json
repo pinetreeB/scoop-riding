@@ -1,0 +1,11 @@
+{
+  "query": "INSERT INTO app_versions (version, platform, download_url, release_notes, is_required, created_at)\nVALUES ('0.0.3', 'android', 'https://expo.dev/artifacts/eas/bMAtGUJFgUHLA5tbF8BMwE.apk', 'v0.0.3 업데이트:\n- Android APK에서 클라우드 동기화 문제 디버깅을 위한 상세 로깅 추가\n- tRPC 클라이언트에 요청/응답 로깅 추가\n- AuthContext에 토큰 저장/검증 로깅 추가\n- riding-store에 동기화 에러 상세 로깅 추가\n- 프로필 화면에 동기화 에러 메시지 개선', false, NOW())\nON CONFLICT (version, platform) DO UPDATE SET\n  download_url = EXCLUDED.download_url,\n  release_notes = EXCLUDED.release_notes,\n  is_required = EXCLUDED.is_required;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO app_versions (version, platform, download_url, release_notes, is_required, created_at)\nVALUES ('0.0.3', 'android', 'https://expo.dev/artifacts/eas/bMAtGUJFgUHLA5tbF8BMwE.apk', 'v0.0.3 업데이트:\n- Android APK에서 클라우드 동기화 문제 디버깅을 위한 상세 로깅 추가\n- tRPC 클라이언트에 요청/응답 로깅 추가\n- AuthContext에 토큰 저장/검증 로깅 추가\n- riding-store에 동기화 에러 상세 로깅 추가\n- 프로필 화면에 동기화 에러 메시지 개선', false, NOW())\nON CONFLICT (version, platform) DO UPDATE SET\n  download_url = EXCLUDED.download_url,\n  release_notes = EXCLUDED.release_notes,\n  is_required = EXCLUDED.is_required;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 8 column 12 near \"CONFLICT (version, platform) DO UPDATE SET",
+    "  download_url = EXCLUDED.download_url,",
+    "  release_notes = EXCLUDED.release_notes,",
+    "  is_required = EXCLUDED.is_required\""
+  ]
+}

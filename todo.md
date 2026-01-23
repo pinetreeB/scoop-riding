@@ -276,3 +276,5 @@
 ## 버그 수정 (2026-01-23 추가)
 - [x] Android APK에서 클라우드 동기화 안 되는 문제 수정 - 상세 로깅 추가, 인증 토큰 저장/전달 로직 개선
 - [x] Android APK에서 커뮤니티 타인 주행기록 열람 안 되는 문제 수정 - 동기화 문제와 동일 원인
+- [x] APK v0.0.3 빌드 큐 등록 완료 (https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/57591a97-7c1e-4ffa-a300-f8c3bdd09a8e)
+- [x] APK v0.0.3 배포 완료 - 다운로드: https://expo.dev/artifacts/eas/bMAtGUJFgUHLA5tbF8BMwE.apk
