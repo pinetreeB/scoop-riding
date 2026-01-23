@@ -206,46 +206,101 @@ export async function clearAllRecords(): Promise<void> {
 // Cloud Sync Functions
 // ============================================
 
-// Sync a single record to cloud
+// Sync a single record to cloud using direct fetch API
+// This ensures we always get the latest token from SecureStore
 export async function syncRecordToCloud(
   record: RidingRecord,
-  trpcClient: ReturnType<typeof trpc.useUtils>
+  _trpcClient?: ReturnType<typeof trpc.useUtils> // Kept for backward compatibility but not used
 ): Promise<boolean> {
   try {
+    // Import dependencies dynamically to avoid circular imports
+    const { Platform } = await import("react-native");
+    const { getApiBaseUrl } = await import("@/constants/oauth");
+    const Auth = await import("@/lib/_core/auth");
+    
     // Get GPS points for this record
     const recordWithGps = await getRidingRecordWithGps(record.id);
     const gpsPointsJson = recordWithGps?.gpsPoints 
       ? JSON.stringify(recordWithGps.gpsPoints)
       : undefined;
 
-    // Call API to save record
     // Validate startTime and endTime are valid ISO strings
     const startTime = record.startTime && record.startTime.length > 0 ? record.startTime : undefined;
     const endTime = record.endTime && record.endTime.length > 0 ? record.endTime : undefined;
     
     console.log("[Sync] Uploading record:", record.id, "date:", record.date);
     
-    const result = await trpcClient.client.rides.create.mutate({
-      recordId: record.id,
-      date: record.date,
-      duration: Math.round(record.duration),
-      distance: Math.round(record.distance),
-      avgSpeed: record.avgSpeed,
-      maxSpeed: record.maxSpeed,
-      startTime,
-      endTime,
-      gpsPointsJson,
+    // Get the latest token directly from SecureStore
+    const token = await Auth.getSessionToken();
+    console.log("[Sync] Token status:", token ? `present (${token.substring(0, 30)}...)` : "MISSING");
+    
+    if (!token && Platform.OS !== "web") {
+      console.error("[Sync] No auth token available - user needs to re-login");
+      return false;
+    }
+    
+    // Build request body for tRPC
+    const requestBody = {
+      json: {
+        recordId: record.id,
+        date: record.date,
+        duration: Math.round(record.duration),
+        distance: Math.round(record.distance),
+        avgSpeed: record.avgSpeed,
+        maxSpeed: record.maxSpeed,
+        startTime,
+        endTime,
+        gpsPointsJson,
+      }
+    };
+    
+    const baseUrl = getApiBaseUrl();
+    const url = `${baseUrl}/api/trpc/rides.create`;
+    
+    console.log("[Sync] Making direct fetch to:", url);
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(requestBody),
+      credentials: "include",
     });
-
-    console.log("[Sync] Upload result:", result);
-
-    if (result.success) {
+    
+    console.log("[Sync] Response status:", response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[Sync] Server error:", response.status, errorText);
+      
+      // Check for auth errors
+      if (response.status === 401) {
+        console.error("[Sync] Authentication error (401) - user needs to re-login");
+      }
+      return false;
+    }
+    
+    const responseData = await response.json();
+    console.log("[Sync] Response data:", JSON.stringify(responseData).substring(0, 200));
+    
+    // tRPC wraps response in result.data.json
+    const result = responseData?.result?.data?.json;
+    
+    if (result?.success) {
       // Mark as synced locally
       await markRecordAsSynced(record.id);
       console.log("[Sync] Record marked as synced:", record.id);
       return true;
     }
-    console.log("[Sync] Upload failed - result.success is false");
+    
+    console.log("[Sync] Upload failed - result.success is false or missing");
     return false;
   } catch (error: any) {
     // Check if it's a duplicate key error (record already exists)
@@ -261,10 +316,6 @@ export async function syncRecordToCloud(
       errorCode: error?.data?.code || error?.code,
       errorStack: error?.stack?.substring(0, 500),
     });
-    // Check for auth errors
-    if (error?.message?.includes('UNAUTHORIZED') || error?.message?.includes('401') || error?.message?.includes('Invalid session')) {
-      console.error("[Sync] Authentication error - user may need to re-login");
-    }
     return false;
   }
 }
