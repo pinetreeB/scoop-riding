@@ -283,3 +283,4 @@
 - [x] APK v0.0.4 빌드 큐 등록 (https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/4f280223-0567-4c8d-bc98-55e2e2bb6b70)
 - [x] APK v0.0.4 배포 완료 - 다운로드: https://expo.dev/artifacts/eas/aLVB2fgp2AqajUawabVUNL.apk
 - [x] 클라우드 동기화 - 업로드 성공 후 로컨 synced 상태 업데이트 실패 문제 수정 - 응답 파싱 개선 및 status 200 시 성공 처리
+- [ ] 앱 버전 체크 API에서 이전 버전 앱이 최신버전으로 표시되는 버그 수정

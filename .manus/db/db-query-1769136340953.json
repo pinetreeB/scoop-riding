@@ -1,0 +1,31 @@
+{
+  "query": "SELECT id, version, versionCode, isActive, platform FROM appVersions ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, version, versionCode, isActive, platform FROM appVersions ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "60001",
+      "version": "0.0.4",
+      "versionCode": "4",
+      "isActive": "1",
+      "platform": "android"
+    },
+    {
+      "id": "30001",
+      "version": "0.0.3",
+      "versionCode": "3",
+      "isActive": "0",
+      "platform": "android"
+    },
+    {
+      "id": "1",
+      "version": "1.1.0",
+      "versionCode": "2",
+      "isActive": "0",
+      "platform": "android"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tversion\tversionCode\tisActive\tplatform\n60001\t0.0.4\t4\t1\tandroid\n30001\t0.0.3\t3\t0\tandroid\n1\t1.1.0\t2\t0\tandroid\n",
+  "stderr": "",
+  "execution_time_ms": 1493
+}
