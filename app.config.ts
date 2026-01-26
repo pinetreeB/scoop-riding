@@ -136,6 +136,15 @@ const config: ExpoConfig = {
       },
     ],
   ],
+  updates: {
+    enabled: true,
+    url: "https://u.expo.dev/5a9e8417-b5b8-4ffb-ad3a-d2f1faa44001",
+    fallbackToCacheTimeout: 0,
+    checkAutomatically: "ON_LOAD",
+  },
+  runtimeVersion: {
+    policy: "appVersion",
+  },
   experiments: {
     typedRoutes: true,
     reactCompiler: true,

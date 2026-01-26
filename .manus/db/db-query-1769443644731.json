@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO appVersions (version, versionCode, downloadUrl, releaseNotes, forceUpdate, platform, isActive, publishedAt) VALUES ('0.0.5', 5, 'https://expo.dev/artifacts/eas/mpHM9EaAgwWGZBCXd1iBQF.apk', 'v0.0.5 업데이트:\\n- 백그라운드 주행 기록 개선 (화면 끄거나 다른 앱 사용 시에도 기록 유지)\\n- 상단 알림바에 주행 정보 표시 (속도, 거리, 시간)\\n- 배터리 최적화 안내 팝업 추가\\n- GPS 속도 제한 300km/h로 상향\\n- GPS 신호 복구 시 기록 재개\\n- 친구 위치 화면 SafeArea 적용', false, 'android', true, NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO appVersions (version, versionCode, downloadUrl, releaseNotes, forceUpdate, platform, isActive, publishedAt) VALUES ('0.0.5', 5, 'https://expo.dev/artifacts/eas/mpHM9EaAgwWGZBCXd1iBQF.apk', 'v0.0.5 업데이트:\\n- 백그라운드 주행 기록 개선 (화면 끄거나 다른 앱 사용 시에도 기록 유지)\\n- 상단 알림바에 주행 정보 표시 (속도, 거리, 시간)\\n- 배터리 최적화 안내 팝업 추가\\n- GPS 속도 제한 300km/h로 상향\\n- GPS 신호 복구 시 기록 재개\\n- 친구 위치 화면 SafeArea 적용', false, 'android', true, NOW());",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1533
+}
