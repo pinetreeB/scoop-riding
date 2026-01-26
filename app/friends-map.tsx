@@ -10,6 +10,7 @@ import {
   FlatList,
   Modal,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -298,12 +299,12 @@ export default function FriendsMapScreen() {
       <Modal
         visible={showMapModal}
         animationType="slide"
-        presentationStyle="pageSheet"
+        presentationStyle="fullScreen"
         onRequestClose={() => setShowMapModal(false)}
       >
-        <View className="flex-1" style={{ backgroundColor: colors.background }}>
+        <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={["top", "left", "right"]}>
           {/* Modal Header */}
-          <View className="flex-row items-center px-5 pt-4 pb-3 border-b border-border">
+          <View className="flex-row items-center px-5 pt-2 pb-3 border-b border-border">
             <Pressable
               onPress={() => setShowMapModal(false)}
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
@@ -389,7 +390,7 @@ export default function FriendsMapScreen() {
               </View>
             </View>
           ) : null}
-        </View>
+        </SafeAreaView>
       </Modal>
     </ScreenContainer>
   );

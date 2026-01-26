@@ -6,14 +6,14 @@ import { Platform } from "react-native";
 // GPS filtering constants
 export const GPS_CONSTANTS = {
   MIN_SPEED_THRESHOLD: 1.0, // km/h - speeds below this are considered stationary
-  MIN_ACCURACY_THRESHOLD: 25, // meters - ignore points with worse accuracy (stricter)
-  MAX_SPEED_JUMP: 30, // km/h - maximum allowed speed change between readings (stricter)
-  MAX_DISTANCE_JUMP: 30, // meters - maximum allowed distance between consecutive points (stricter)
-  MIN_TIME_BETWEEN_POINTS: 800, // ms - minimum time between valid points
-  BACKWARD_MOVEMENT_THRESHOLD: 5, // meters - detect backward movement
-  MAX_REALISTIC_SPEED: 80, // km/h - maximum realistic speed for e-scooter
-  GPS_SPIKE_THRESHOLD: 100, // meters - distance that indicates GPS spike
-  CONSECUTIVE_INVALID_LIMIT: 3, // number of consecutive invalid points before resetting
+  MIN_ACCURACY_THRESHOLD: 100, // meters - ignore points with worse accuracy (relaxed for tunnels/poor signal)
+  MAX_SPEED_JUMP: 100, // km/h - maximum allowed speed change between readings (relaxed for high speed)
+  MAX_DISTANCE_JUMP: 300, // meters - maximum allowed distance between consecutive points (relaxed for high speed)
+  MIN_TIME_BETWEEN_POINTS: 500, // ms - minimum time between valid points (reduced for better tracking)
+  BACKWARD_MOVEMENT_THRESHOLD: 20, // meters - detect backward movement (relaxed)
+  MAX_REALISTIC_SPEED: 300, // km/h - maximum realistic speed (supports high-speed riding)
+  GPS_SPIKE_THRESHOLD: 500, // meters - distance that indicates GPS spike (relaxed for tunnels)
+  CONSECUTIVE_INVALID_LIMIT: 10, // number of consecutive invalid points before resetting (increased for tunnels)
 };
 
 export interface GpsPoint {
@@ -152,15 +152,21 @@ export function isBackwardMovement(
   return diff > 150;
 }
 
+// Time gap threshold for GPS signal recovery (30 seconds)
+// If GPS signal is lost for more than this time, treat the next valid point as a new segment start
+const GPS_SIGNAL_RECOVERY_THRESHOLD = 30000; // 30 seconds in ms
+
 /**
  * Validate a GPS point against previous points to detect GPS drift/jumps
+ * Supports GPS signal recovery after tunnels or poor signal areas
  */
 export function validateGpsPoint(
   newPoint: GpsPoint,
   lastValidPoint: GpsPoint | null,
   lastBearing: number | null
-): { isValid: boolean; reason?: string; newBearing?: number } {
-  // Check accuracy - reject points with poor GPS accuracy
+): { isValid: boolean; reason?: string; newBearing?: number; isRecovery?: boolean } {
+  // Check accuracy - reject points with very poor GPS accuracy
+  // But allow moderate accuracy for tunnel exits and recovery
   if (newPoint.accuracy !== null && newPoint.accuracy > GPS_CONSTANTS.MIN_ACCURACY_THRESHOLD) {
     return { isValid: false, reason: "accuracy_too_low" };
   }
@@ -186,6 +192,14 @@ export function validateGpsPoint(
     return { isValid: false, reason: "too_soon" };
   }
 
+  // GPS Signal Recovery: If time gap is large (e.g., tunnel), accept the point as a new segment
+  // This allows recording to continue after GPS signal is restored
+  if (timeDiff > GPS_SIGNAL_RECOVERY_THRESHOLD) {
+    console.log(`[GPS] Signal recovery detected after ${(timeDiff / 1000).toFixed(1)}s gap`);
+    // Accept this point as a new segment start - don't validate distance/speed against last point
+    return { isValid: true, isRecovery: true };
+  }
+
   // Calculate distance from last point
   const distance = calculateDistance(
     lastValidPoint.latitude,
@@ -203,8 +217,8 @@ export function validateGpsPoint(
   const timeSeconds = timeDiff / 1000;
   const maxExpectedDistance = timeSeconds * (GPS_CONSTANTS.MAX_REALISTIC_SPEED / 3.6);
   
-  // Check for unrealistic distance jump
-  if (distance > Math.min(GPS_CONSTANTS.MAX_DISTANCE_JUMP, maxExpectedDistance)) {
+  // Check for unrealistic distance jump (use the larger of the two limits)
+  if (distance > Math.max(GPS_CONSTANTS.MAX_DISTANCE_JUMP, maxExpectedDistance)) {
     return { isValid: false, reason: "distance_jump" };
   }
 
