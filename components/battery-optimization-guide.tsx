@@ -165,7 +165,7 @@ export function BatteryOptimizationGuide({
               />
             </View>
 
-            {/* Device-specific tips */}
+            {/* Device-specific tips - Samsung only */}
             <View
               style={{
                 backgroundColor: colors.surface,
@@ -188,14 +188,11 @@ export function BatteryOptimizationGuide({
                     marginLeft: 8,
                   }}
                 >
-                  제조사별 추가 설정
+                  Samsung 기기 설정
                 </Text>
               </View>
               <Text style={{ fontSize: 13, color: colors.muted, lineHeight: 20 }}>
-                • Samsung: 설정 → 배터리 → 백그라운드 사용 제한 → SCOOP 해제{"\n"}
-                • Xiaomi: 설정 → 앱 → SCOOP → 배터리 절약 → 제한 없음{"\n"}
-                • Huawei: 설정 → 배터리 → 앱 시작 → SCOOP → 수동 관리{"\n"}
-                • OnePlus: 설정 → 배터리 → 배터리 최적화 → SCOOP → 최적화 안 함
+                설정 → 배터리 → 백그라운드 사용 제한 → SCOOP 해제
               </Text>
             </View>
 
