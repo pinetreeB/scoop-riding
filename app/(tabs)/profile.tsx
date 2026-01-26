@@ -162,12 +162,20 @@ export default function ProfileScreen() {
         stack: error?.stack?.substring(0, 300),
       });
       
-      // Provide more helpful error messages
+      // Provide more helpful error messages based on error type
       let errorMsg = error?.message || "알 수 없는 오류";
-      if (errorMsg.includes('UNAUTHORIZED') || errorMsg.includes('Invalid session')) {
+      const errorCode = error?.data?.code || error?.code || '';
+      
+      if (errorMsg.includes('UNAUTHORIZED') || errorMsg.includes('Invalid session') || errorCode === 'UNAUTHORIZED') {
         errorMsg = "인증이 만료되었습니다. 다시 로그인해주세요.";
-      } else if (errorMsg.includes('Network') || errorMsg.includes('fetch')) {
+      } else if (errorMsg.includes('Network') || errorMsg.includes('fetch') || errorMsg.includes('Failed to fetch')) {
         errorMsg = "네트워크 연결을 확인해주세요.";
+      } else if (errorMsg.includes('timeout') || errorMsg.includes('Timeout')) {
+        errorMsg = "서버 응답 시간 초과. 잠시 후 다시 시도해주세요.";
+      } else if (errorMsg.includes('Duplicate') || errorMsg.includes('duplicate')) {
+        errorMsg = "이미 동기화된 기록입니다.";
+      } else if (errorMsg.includes('500') || errorMsg.includes('Internal')) {
+        errorMsg = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
       }
       
       setSyncStatus(`동기화 실패: ${errorMsg}`);

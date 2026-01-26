@@ -1,0 +1,60 @@
+{
+  "query": "SELECT userId, isRiding, updatedAt FROM liveLocations;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT userId, isRiding, updatedAt FROM liveLocations;",
+  "rows": [
+    {
+      "userId": "30030",
+      "isRiding": "0",
+      "updatedAt": "2026-01-22 23:11:53"
+    },
+    {
+      "userId": "1",
+      "isRiding": "0",
+      "updatedAt": "2026-01-23 08:40:12"
+    },
+    {
+      "userId": "120081",
+      "isRiding": "0",
+      "updatedAt": "2026-01-22 11:35:34"
+    },
+    {
+      "userId": "120051",
+      "isRiding": "0",
+      "updatedAt": "2026-01-26 16:21:30"
+    },
+    {
+      "userId": "150001",
+      "isRiding": "0",
+      "updatedAt": "2026-01-23 09:01:13"
+    },
+    {
+      "userId": "120503",
+      "isRiding": "0",
+      "updatedAt": "2026-01-23 14:12:16"
+    },
+    {
+      "userId": "330874",
+      "isRiding": "0",
+      "updatedAt": "2026-01-26 16:21:30"
+    },
+    {
+      "userId": "360443",
+      "isRiding": "0",
+      "updatedAt": "2026-01-23 01:40:44"
+    },
+    {
+      "userId": "420001",
+      "isRiding": "0",
+      "updatedAt": "2026-01-26 16:21:30"
+    },
+    {
+      "userId": "120152",
+      "isRiding": "0",
+      "updatedAt": "2026-01-26 16:21:30"
+    }
+  ],
+  "messages": [],
+  "stdout": "userId\tisRiding\tupdatedAt\n30030\t0\t2026-01-22 23:11:53\n1\t0\t2026-01-23 08:40:12\n120081\t0\t2026-01-22 11:35:34\n120051\t0\t2026-01-26 16:21:30\n150001\t0\t2026-01-23 09:01:13\n120503\t0\t2026-01-23 14:12:16\n330874\t0\t2026-01-26 16:21:30\n360443\t0\t2026-01-23 01:40:44\n420001\t0\t2026-01-26 16:21:30\n120152\t0\t2026-01-26 16:21:30\n",
+  "stderr": "",
+  "execution_time_ms": 1537
+}
