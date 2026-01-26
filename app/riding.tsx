@@ -33,6 +33,7 @@ import {
   startBackgroundLocationTracking,
   stopBackgroundLocationTracking,
   requestBackgroundLocationPermission,
+  updateForegroundNotification,
 } from "@/lib/background-location";
 import { getSelectedScooter, type SelectedScooter } from "@/app/select-scooter";
 import {
@@ -256,6 +257,14 @@ export default function RidingScreen() {
               newDuration
             );
           }
+          // Update foreground notification with current stats (every 2 seconds to reduce overhead)
+          if (Platform.OS !== "web" && isBackgroundEnabled && newDuration % 2 === 0) {
+            updateForegroundNotification(
+              distance * 1000, // km to meters
+              newDuration,
+              currentSpeed
+            );
+          }
           return newDuration;
         });
       } else if (isAutoPaused) {
@@ -269,7 +278,7 @@ export default function RidingScreen() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [voiceSettings, currentSpeed, distance, isAutoPaused]);
+  }, [voiceSettings, currentSpeed, distance, isAutoPaused, isBackgroundEnabled]);
 
   const initializeGps = async () => {
     try {
@@ -509,84 +518,127 @@ export default function RidingScreen() {
         {
           text: "저장",
           onPress: async () => {
-            stopLocationTracking();
-            if (Platform.OS !== "web") {
-              await stopBackgroundLocationTracking();
-            }
-
-            // Stop sharing live location
-            stopLiveLocation.mutate();
-
-            const finalDistance = calculateTotalDistance(gpsPointsRef.current);
-            const finalAvgSpeed = calculateAverageSpeed(gpsPointsRef.current);
-            const finalMaxSpeed = getMaxSpeed(gpsPointsRef.current);
-
-            const finalDist = finalDistance > 0 ? finalDistance : distance;
-            const finalAvg = finalAvgSpeed > 0 ? finalAvgSpeed : avgSpeed;
-            const finalMax = finalMaxSpeed > 0 ? finalMaxSpeed : maxSpeed;
-
-            // Build group riding info if applicable
-            const groupInfo = groupId && groupMembers.length > 0 ? {
-              groupId,
-              groupName: groupMembers.find(m => m.isRiding)?.name || "그룹 라이딩",
-              groupMembers: groupMembers.map(m => ({ userId: m.userId, name: m.name })),
-            } : {};
-
-            const record = {
-              id: generateId(),
-              date: new Date().toLocaleDateString("ko-KR"),
-              duration,
-              distance: finalDist,
-              avgSpeed: finalAvg,
-              maxSpeed: finalMax,
-              startTime: startTimeRef.current.toISOString(),
-              endTime: new Date().toISOString(),
-              gpsPoints: gpsPointsRef.current,
-              scooterId: selectedScooter?.id,
-              scooterName: selectedScooter?.name,
-              ...groupInfo,
-            };
-            await saveRidingRecord(record);
-
-            // Voice announcement for ride completion
             try {
-              await announceEnd(finalDist, duration, finalAvg);
-            } catch (e) {
-              console.log("[Riding] Voice announcement error:", e);
-            }
+              // Stop tracking first
+              stopLocationTracking();
+              if (Platform.OS !== "web") {
+                await stopBackgroundLocationTracking();
+              }
 
-            // Send ride completion notification
-            try {
-              await notifyRideCompleted(finalDist, duration, finalAvg);
-            } catch (e) {
-              console.log("[Riding] Notification error:", e);
-            }
+              // Stop sharing live location
+              try {
+                stopLiveLocation.mutate();
+              } catch (e) {
+                console.log("[Riding] Stop live location error:", e);
+              }
 
-            // Sync to server for ranking
-            try {
-              await syncToServer.mutateAsync({
-                recordId: record.id,
-                date: record.date,
-                duration: Math.round(record.duration),
-                distance: Math.round(record.distance),
-                avgSpeed: record.avgSpeed,
-                maxSpeed: record.maxSpeed,
-                startTime: record.startTime,
-                endTime: record.endTime,
-                gpsPointsJson: record.gpsPoints && record.gpsPoints.length > 0 
-                  ? JSON.stringify(record.gpsPoints) 
-                  : undefined,
-              });
-              console.log("[Riding] Record synced to server");
+              // Calculate final stats from GPS points
+              const gpsPointsCopy = [...gpsPointsRef.current];
+              console.log("[Riding] GPS points count:", gpsPointsCopy.length);
               
-              // Invalidate ranking queries to reflect new data
-              trpcUtils.ranking.getWeekly.invalidate();
-              trpcUtils.ranking.getMonthly.invalidate();
-            } catch (e) {
-              console.log("[Riding] Server sync error:", e);
-            }
+              const finalDistance = calculateTotalDistance(gpsPointsCopy);
+              const finalAvgSpeed = calculateAverageSpeed(gpsPointsCopy);
+              const finalMaxSpeed = getMaxSpeed(gpsPointsCopy);
 
-            router.back();
+              // Use calculated values if available, otherwise use state values
+              const finalDist = finalDistance > 0 ? finalDistance : distance;
+              const finalAvg = finalAvgSpeed > 0 ? finalAvgSpeed : avgSpeed;
+              const finalMax = finalMaxSpeed > 0 ? finalMaxSpeed : maxSpeed;
+
+              console.log("[Riding] Final stats - dist:", finalDist, "avg:", finalAvg, "max:", finalMax);
+
+              // Build group riding info if applicable
+              const groupInfo = groupId && groupMembers.length > 0 ? {
+                groupId,
+                groupName: groupMembers.find(m => m.isRiding)?.name || "그룹 라이딩",
+                groupMembers: groupMembers.map(m => ({ userId: m.userId, name: m.name })),
+              } : {};
+
+              // Generate record ID first
+              const recordId = generateId();
+              const now = new Date();
+              
+              const record = {
+                id: recordId,
+                date: now.toLocaleDateString("ko-KR"),
+                duration: duration > 0 ? duration : Math.floor((now.getTime() - startTimeRef.current.getTime()) / 1000),
+                distance: finalDist,
+                avgSpeed: finalAvg,
+                maxSpeed: finalMax,
+                startTime: startTimeRef.current.toISOString(),
+                endTime: now.toISOString(),
+                gpsPoints: gpsPointsCopy,
+                scooterId: selectedScooter?.id,
+                scooterName: selectedScooter?.name,
+                ...groupInfo,
+              };
+
+              console.log("[Riding] Saving record:", recordId, "duration:", record.duration);
+              
+              // Save to local storage with error handling
+              try {
+                await saveRidingRecord(record);
+                console.log("[Riding] Record saved to local storage");
+              } catch (saveError) {
+                console.error("[Riding] Failed to save record:", saveError);
+                Alert.alert(
+                  "저장 오류",
+                  "주행 기록을 저장하는 중 오류가 발생했습니다. 다시 시도해주세요.",
+                  [{ text: "확인" }]
+                );
+                return; // Don't navigate back if save failed
+              }
+
+              // Voice announcement for ride completion
+              try {
+                await announceEnd(finalDist, record.duration, finalAvg);
+              } catch (e) {
+                console.log("[Riding] Voice announcement error:", e);
+              }
+
+              // Send ride completion notification
+              try {
+                await notifyRideCompleted(finalDist, record.duration, finalAvg);
+              } catch (e) {
+                console.log("[Riding] Notification error:", e);
+              }
+
+              // Sync to server for ranking (non-blocking)
+              try {
+                await syncToServer.mutateAsync({
+                  recordId: record.id,
+                  date: record.date,
+                  duration: Math.round(record.duration),
+                  distance: Math.round(record.distance),
+                  avgSpeed: record.avgSpeed,
+                  maxSpeed: record.maxSpeed,
+                  startTime: record.startTime,
+                  endTime: record.endTime,
+                  gpsPointsJson: gpsPointsCopy.length > 0 
+                    ? JSON.stringify(gpsPointsCopy) 
+                    : undefined,
+                });
+                console.log("[Riding] Record synced to server");
+                
+                // Invalidate ranking queries to reflect new data
+                trpcUtils.ranking.getWeekly.invalidate();
+                trpcUtils.ranking.getMonthly.invalidate();
+              } catch (e) {
+                console.log("[Riding] Server sync error (will retry later):", e);
+              }
+
+              router.back();
+            } catch (error) {
+              console.error("[Riding] Critical error during save:", error);
+              Alert.alert(
+                "오류 발생",
+                "주행 기록 저장 중 예상치 못한 오류가 발생했습니다.",
+                [
+                  { text: "다시 시도", onPress: () => handleStop() },
+                  { text: "저장 안함", style: "destructive", onPress: () => router.back() },
+                ]
+              );
+            }
           },
         },
       ]
