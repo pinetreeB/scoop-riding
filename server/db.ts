@@ -357,6 +357,16 @@ export async function getRidingRecordById(recordId: string): Promise<RidingRecor
   return results[0];
 }
 
+export async function getRidingRecordByRecordId(recordId: string, userId: number): Promise<RidingRecord | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const results = await db.select().from(ridingRecords).where(
+    and(eq(ridingRecords.recordId, recordId), eq(ridingRecords.userId, userId))
+  );
+  return results[0];
+}
+
 // Scooter (기체) Management Functions
 
 export async function getUserScooters(userId: number): Promise<Scooter[]> {
@@ -1753,6 +1763,7 @@ export async function getFriendsLiveLocations(userId: number): Promise<{
   if (friendIds.length === 0) return [];
 
   // Get live locations of friends who are riding
+  // Only show locations updated within the last 30 minutes (1800 seconds)
   const locations = await db
     .select({
       userId: liveLocations.userId,
@@ -1768,7 +1779,8 @@ export async function getFriendsLiveLocations(userId: number): Promise<{
     .leftJoin(users, eq(liveLocations.userId, users.id))
     .where(and(
       eq(liveLocations.isRiding, true),
-      sql`${liveLocations.userId} IN (${sql.join(friendIds.map(id => sql`${id}`), sql`, `)})`
+      sql`${liveLocations.userId} IN (${sql.join(friendIds.map(id => sql`${id}`), sql`, `)})`,
+      sql`${liveLocations.updatedAt} > DATE_SUB(NOW(), INTERVAL 30 MINUTE)`
     ));
 
   return locations.map(loc => ({

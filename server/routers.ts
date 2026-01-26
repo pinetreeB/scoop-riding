@@ -283,6 +283,14 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return db.getRidingRecordById(input.recordId);
       }),
+    
+    // Check if a record exists by recordId (for sync check)
+    get: protectedProcedure
+      .input(z.object({ recordId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const record = await db.getRidingRecordByRecordId(input.recordId, ctx.user.id);
+        return record;
+      }),
 
     create: protectedProcedure
       .input(

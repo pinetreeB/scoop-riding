@@ -218,6 +218,41 @@ export async function syncRecordToCloud(
     const { getApiBaseUrl } = await import("@/constants/oauth");
     const Auth = await import("@/lib/_core/auth");
     
+    // Get the latest token directly from SecureStore
+    const token = await Auth.getSessionToken();
+    console.log("[Sync] Token status:", token ? `present (${token.substring(0, 30)}...)` : "MISSING");
+    
+    if (!token && Platform.OS !== "web") {
+      console.error("[Sync] No auth token available - user needs to re-login");
+      return false;
+    }
+    
+    const baseUrl = getApiBaseUrl();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    
+    // First, check if record already exists on server
+    try {
+      const checkUrl = `${baseUrl}/api/trpc/rides.get?input=${encodeURIComponent(JSON.stringify({ json: { recordId: record.id } }))}`;
+      console.log("[Sync] Checking if record exists:", record.id);
+      const checkResponse = await fetch(checkUrl, { headers, credentials: "include" });
+      if (checkResponse.ok) {
+        const checkData = await checkResponse.json();
+        const existingRecord = checkData?.result?.data?.json;
+        if (existingRecord && existingRecord.id) {
+          console.log("[Sync] Record already exists on server, marking as synced:", record.id);
+          await markRecordAsSynced(record.id);
+          return true;
+        }
+      }
+    } catch (checkError) {
+      console.log("[Sync] Check failed, proceeding with upload:", checkError);
+    }
+    
     // Get GPS points for this record
     const recordWithGps = await getRidingRecordWithGps(record.id);
     const gpsPointsJson = recordWithGps?.gpsPoints 
@@ -229,15 +264,6 @@ export async function syncRecordToCloud(
     const endTime = record.endTime && record.endTime.length > 0 ? record.endTime : undefined;
     
     console.log("[Sync] Uploading record:", record.id, "date:", record.date);
-    
-    // Get the latest token directly from SecureStore
-    const token = await Auth.getSessionToken();
-    console.log("[Sync] Token status:", token ? `present (${token.substring(0, 30)}...)` : "MISSING");
-    
-    if (!token && Platform.OS !== "web") {
-      console.error("[Sync] No auth token available - user needs to re-login");
-      return false;
-    }
     
     // Build request body for tRPC
     const requestBody = {
@@ -254,18 +280,9 @@ export async function syncRecordToCloud(
       }
     };
     
-    const baseUrl = getApiBaseUrl();
     const url = `${baseUrl}/api/trpc/rides.create`;
     
     console.log("[Sync] Making direct fetch to:", url);
-    
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
     
     const response = await fetch(url, {
       method: "POST",

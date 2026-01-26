@@ -1,0 +1,98 @@
+{
+  "query": "SELECT id, recordId, userId, date, distance, duration, avgSpeed, maxSpeed, createdAt FROM ridingRecords WHERE userId = 1 ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, recordId, userId, date, distance, duration, avgSpeed, maxSpeed, createdAt FROM ridingRecords WHERE userId = 1 ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "420011",
+      "recordId": "mkqmrhxziivrep7syxf",
+      "userId": "1",
+      "date": "2026. 1. 23.",
+      "distance": "1341",
+      "duration": "26",
+      "avgSpeed": "649",
+      "maxSpeed": "780",
+      "createdAt": "2026-01-23 08:40:12"
+    },
+    {
+      "id": "420010",
+      "recordId": "mkqmojxma7ipddw14i",
+      "userId": "1",
+      "date": "2026. 1. 23.",
+      "distance": "2082",
+      "duration": "109",
+      "avgSpeed": "238",
+      "maxSpeed": "800",
+      "createdAt": "2026-01-23 08:37:55"
+    },
+    {
+      "id": "420006",
+      "recordId": "mkqma95lpla41d6l9e",
+      "userId": "1",
+      "date": "2026. 1. 23.",
+      "distance": "2260",
+      "duration": "113",
+      "avgSpeed": "535",
+      "maxSpeed": "780",
+      "createdAt": "2026-01-23 08:26:47"
+    },
+    {
+      "id": "330006",
+      "recordId": "mkq9p9fsz186963cdxj",
+      "userId": "1",
+      "date": "2026. 1. 23.",
+      "distance": "16",
+      "duration": "16",
+      "avgSpeed": "20",
+      "maxSpeed": "21",
+      "createdAt": "2026-01-23 02:34:32"
+    },
+    {
+      "id": "300080",
+      "recordId": "mkq8dcyvxifw05zr7b",
+      "userId": "1",
+      "date": "2026. 1. 23.",
+      "distance": "11",
+      "duration": "15",
+      "avgSpeed": "52",
+      "maxSpeed": "129",
+      "createdAt": "2026-01-23 01:57:17"
+    },
+    {
+      "id": "240034",
+      "recordId": "mkpv2abq6rxcqyq4o1",
+      "userId": "1",
+      "date": "2026. 1. 23.",
+      "distance": "7",
+      "duration": "24",
+      "avgSpeed": "21",
+      "maxSpeed": "26",
+      "createdAt": "2026-01-22 19:44:46"
+    },
+    {
+      "id": "180002",
+      "recordId": "mkpjzzma04nidngpuw0u",
+      "userId": "1",
+      "date": "2026. 1. 22.",
+      "distance": "3",
+      "duration": "8",
+      "avgSpeed": "29",
+      "maxSpeed": "35",
+      "createdAt": "2026-01-22 14:35:03"
+    },
+    {
+      "id": "120015",
+      "recordId": "mkpes3mbu00z77o9z4",
+      "userId": "1",
+      "date": "2026. 1. 22.",
+      "distance": "731",
+      "duration": "8",
+      "avgSpeed": "668",
+      "maxSpeed": "740",
+      "createdAt": "2026-01-22 12:08:57"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\trecordId\tuserId\tdate\tdistance\tduration\tavgSpeed\tmaxSpeed\tcreatedAt\n420011\tmkqmrhxziivrep7syxf\t1\t2026. 1. 23.\t1341\t26\t649\t780\t2026-01-23 08:40:12\n420010\tmkqmojxma7ipddw14i\t1\t2026. 1. 23.\t2082\t109\t238\t800\t2026-01-23 08:37:55\n420006\tmkqma95lpla41d6l9e\t1\t2026. 1. 23.\t2260\t113\t535\t780\t2026-01-23 08:26:47\n330006\tmkq9p9fsz186963cdxj\t1\t2026. 1. 23.\t16\t16\t20\t21\t2026-01-23 02:34:32\n300080\tmkq8dcyvxifw05zr7b\t1\t2026. 1. 23.\t11\t15\t52\t129\t2026-01-23 01:57:17\n240034\tmkpv2abq6rxcqyq4o1\t1\t2026. 1. 23.\t7\t24\t21\t26\t2026-01-22 19:44:46\n180002\tmkpjzzma04nidngpuw0u\t1\t2026. 1. 22.\t3\t8\t29\t35\t2026-01-22 14:35:03\n120015\tmkpes3mbu00z77o9z4\t1\t2026. 1. 22.\t731\t8\t668\t740\t2026-01-22 12:08:57\n",
+  "stderr": "",
+  "execution_time_ms": 1516
+}
