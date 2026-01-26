@@ -100,12 +100,13 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   return token;
 }
 
-// Schedule a local notification
+// Schedule a local notification with optional deep link
 export async function scheduleLocalNotification(
   title: string,
   body: string,
   data?: Record<string, unknown>,
-  trigger?: any
+  trigger?: any,
+  deepLink?: string
 ): Promise<string> {
   const notif = await getNotificationsModule();
   if (!notif) {
@@ -118,7 +119,10 @@ export async function scheduleLocalNotification(
       content: {
         title,
         body,
-        data,
+        data: {
+          ...data,
+          url: deepLink, // expo-notifications will use this for deep linking
+        },
         sound: true,
       },
       trigger: trigger || null, // null means immediate

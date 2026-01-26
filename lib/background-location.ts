@@ -1,7 +1,8 @@
 import * as Location from "expo-location";
-import { Platform } from "react-native";
+import { Platform, Linking } from "react-native";
 import { GpsPoint } from "./gps-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ExpoLinking from "expo-linking";
 
 const BACKGROUND_LOCATION_TASK = "background-location-task";
 const BACKGROUND_RIDING_STATE_KEY = "scoop_background_riding_state";
@@ -212,6 +213,7 @@ export async function updateForegroundNotification(
         notificationTitle: `🛴 ${speedStr} | ${distanceStr} | ${durationStr}`,
         notificationBody: "SCOOP 주행 기록 중 - 탭하여 앱으로 돌아가기",
         notificationColor: "#FF6D00",
+        killServiceOnDestroy: false, // Keep service running even if app is killed
       },
       activityType: Location.ActivityType.Fitness,
       showsBackgroundLocationIndicator: true,
@@ -273,6 +275,10 @@ export async function startBackgroundLocationTracking(
     };
     await saveBackgroundRidingState(initialState);
 
+    // Get the app's deep link scheme for notification tap action
+    const appScheme = ExpoLinking.createURL("/riding");
+    console.log("[BackgroundLocation] Deep link URL:", appScheme);
+
     // Start background location updates with initial notification
     await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
       accuracy: Location.Accuracy.BestForNavigation,
@@ -282,6 +288,7 @@ export async function startBackgroundLocationTracking(
         notificationTitle: "🛴 SCOOP 주행 시작",
         notificationBody: "주행 기록 중... 탭하여 앱으로 돌아가기",
         notificationColor: "#FF6D00",
+        killServiceOnDestroy: false, // Keep service running even if app is killed
       },
       // iOS specific
       activityType: Location.ActivityType.Fitness,

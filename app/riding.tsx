@@ -48,6 +48,7 @@ import {
 import { useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GpxRoute, GpxPoint as GpxRoutePoint } from "@/lib/gpx-parser";
+import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -108,6 +109,9 @@ export default function RidingScreen() {
   
   // GPX 경로 따라가기
   const [gpxRoute, setGpxRoute] = useState<GpxRoute | null>(null);
+
+  // Battery optimization guide
+  const batteryGuide = useBatteryOptimizationGuide();
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
@@ -311,6 +315,14 @@ export default function RidingScreen() {
           setIsBackgroundEnabled(true);
           // Start background tracking
           await startBackgroundLocationTracking(handleLocationUpdate);
+          
+          // Show battery optimization guide if needed (after a short delay)
+          setTimeout(() => {
+            if (batteryGuide.shouldShow) {
+              batteryGuide.showGuide();
+              batteryGuide.markAsShown();
+            }
+          }, 3000);
         }
       }
 
@@ -819,6 +831,12 @@ export default function RidingScreen() {
           <View className="w-16 h-16 ml-8" />
         </View>
       </View>
+
+      {/* Battery Optimization Guide Modal */}
+      <BatteryOptimizationGuide
+        visible={batteryGuide.isVisible}
+        onClose={batteryGuide.hideGuide}
+      />
     </ScreenContainer>
   );
 }
