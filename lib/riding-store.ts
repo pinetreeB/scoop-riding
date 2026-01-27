@@ -28,28 +28,66 @@ export interface RidingStats {
   avgSpeed: number; // km/h
 }
 
-const STORAGE_KEY = "scoop_riding_records";
+const STORAGE_KEY_PREFIX = "scoop_riding_records";
 const GPS_STORAGE_PREFIX = "scoop_gps_track_";
 const SYNC_STATUS_KEY = "scoop_sync_status";
+const USER_ID_KEY = "scoop_current_user_id";
+
+// Get storage key for current user (user-specific data isolation)
+async function getStorageKey(): Promise<string> {
+  try {
+    const userId = await AsyncStorage.getItem(USER_ID_KEY);
+    if (userId) {
+      return `${STORAGE_KEY_PREFIX}_${userId}`;
+    }
+  } catch (error) {
+    console.error("Failed to get user ID for storage key:", error);
+  }
+  // Fallback to legacy key for backward compatibility
+  return STORAGE_KEY_PREFIX;
+}
+
+// Set current user ID for data isolation
+export async function setCurrentUserId(userId: number | string | null): Promise<void> {
+  try {
+    if (userId) {
+      await AsyncStorage.setItem(USER_ID_KEY, String(userId));
+      console.log("[RidingStore] Set current user ID:", userId);
+    } else {
+      await AsyncStorage.removeItem(USER_ID_KEY);
+      console.log("[RidingStore] Cleared current user ID");
+    }
+  } catch (error) {
+    console.error("Failed to set user ID:", error);
+  }
+}
+
+// Get GPS storage key for current user
+async function getGpsStorageKey(recordId: string): Promise<string> {
+  const userId = await AsyncStorage.getItem(USER_ID_KEY);
+  if (userId) {
+    return `${GPS_STORAGE_PREFIX}${userId}_${recordId}`;
+  }
+  return `${GPS_STORAGE_PREFIX}${recordId}`;
+}
 
 // Save riding record locally
 export async function saveRidingRecord(record: RidingRecord): Promise<void> {
   try {
-    // Save GPS points separately to avoid storage limits
+    // Save GPS points separately to avoid storage limits (user-specific)
     if (record.gpsPoints && record.gpsPoints.length > 0) {
-      await AsyncStorage.setItem(
-        `${GPS_STORAGE_PREFIX}${record.id}`,
-        JSON.stringify(record.gpsPoints)
-      );
+      const gpsKey = await getGpsStorageKey(record.id);
+      await AsyncStorage.setItem(gpsKey, JSON.stringify(record.gpsPoints));
     }
 
-    // Save record without GPS points in main storage
+    // Save record without GPS points in main storage (user-specific)
     const recordWithoutGps = { ...record, synced: false };
     delete recordWithoutGps.gpsPoints;
 
     const existing = await getRidingRecords();
     const updated = [recordWithoutGps, ...existing];
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    const storageKey = await getStorageKey();
+    await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
   } catch (error) {
     console.error("Failed to save riding record:", error);
   }
@@ -58,7 +96,8 @@ export async function saveRidingRecord(record: RidingRecord): Promise<void> {
 // Get all local riding records
 export async function getRidingRecords(): Promise<RidingRecord[]> {
   try {
-    const data = await AsyncStorage.getItem(STORAGE_KEY);
+    const storageKey = await getStorageKey();
+    const data = await AsyncStorage.getItem(storageKey);
     return data ? JSON.parse(data) : [];
   } catch (error) {
     console.error("Failed to get riding records:", error);
@@ -74,8 +113,9 @@ export async function getRidingRecordWithGps(id: string): Promise<RidingRecord |
     
     if (!record) return null;
 
-    // Load GPS points
-    const gpsData = await AsyncStorage.getItem(`${GPS_STORAGE_PREFIX}${id}`);
+    // Load GPS points (user-specific)
+    const gpsKey = await getGpsStorageKey(id);
+    const gpsData = await AsyncStorage.getItem(gpsKey);
     if (gpsData) {
       record.gpsPoints = JSON.parse(gpsData);
     }
@@ -92,10 +132,12 @@ export async function deleteRidingRecord(id: string): Promise<void> {
   try {
     const existing = await getRidingRecords();
     const updated = existing.filter((r) => r.id !== id);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    const storageKey = await getStorageKey();
+    await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
     
-    // Also delete GPS data
-    await AsyncStorage.removeItem(`${GPS_STORAGE_PREFIX}${id}`);
+    // Also delete GPS data (user-specific)
+    const gpsKey = await getGpsStorageKey(id);
+    await AsyncStorage.removeItem(gpsKey);
   } catch (error) {
     console.error("Failed to delete riding record:", error);
   }
@@ -190,13 +232,15 @@ export async function clearAllRecords(): Promise<void> {
     // Get all records to find GPS data keys
     const records = await getRidingRecords();
     
-    // Delete all GPS data
+    // Delete all GPS data (user-specific)
     for (const record of records) {
-      await AsyncStorage.removeItem(`${GPS_STORAGE_PREFIX}${record.id}`);
+      const gpsKey = await getGpsStorageKey(record.id);
+      await AsyncStorage.removeItem(gpsKey);
     }
     
-    // Clear main records
-    await AsyncStorage.removeItem(STORAGE_KEY);
+    // Clear main records (user-specific)
+    const storageKey = await getStorageKey();
+    await AsyncStorage.removeItem(storageKey);
   } catch (error) {
     console.error("Failed to clear all records:", error);
   }
@@ -369,7 +413,8 @@ async function markRecordAsSynced(id: string): Promise<void> {
     const updated = records.map((r) => 
       r.id === id ? { ...r, synced: true } : r
     );
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    const storageKey = await getStorageKey();
+    await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
   } catch (error) {
     console.error("Failed to mark record as synced:", error);
   }
@@ -447,8 +492,9 @@ export async function fetchAndMergeFromCloud(
     // Sort by date (newest first)
     localRecords.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 
-    // Save merged records
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(localRecords));
+    // Save merged records (user-specific)
+    const storageKey = await getStorageKey();
+    await AsyncStorage.setItem(storageKey, JSON.stringify(localRecords));
 
     return { added, total: localRecords.length };
   } catch (error) {

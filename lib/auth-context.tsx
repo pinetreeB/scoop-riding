@@ -2,6 +2,7 @@ import React, { createContext, useContext, useCallback, useEffect, useState, use
 import { Platform } from "react-native";
 import * as Api from "@/lib/_core/api";
 import * as Auth from "@/lib/_core/auth";
+import { setCurrentUserId } from "@/lib/riding-store";
 
 interface AuthContextType {
   user: Auth.User | null;
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             };
             setUser(userInfo);
             await Auth.setUserInfo(userInfo);
+            await setCurrentUserId(userInfo.id);
             console.log("[AuthContext] Web user set from API:", userInfo);
           } else {
             console.log("[AuthContext] Web: No authenticated user from API");
@@ -98,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           setUser(userInfo);
           await Auth.setUserInfo(userInfo);
+          await setCurrentUserId(userInfo.id);
           console.log("[AuthContext] Native user set from API:", userInfo);
         } else {
           console.log("[AuthContext] Native: No authenticated user from API, clearing token");
@@ -143,6 +146,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log("[AuthContext] Storing user info...");
     await Auth.setUserInfo(userInfo);
     
+    // Set current user ID for riding records isolation
+    await setCurrentUserId(userInfo.id);
+    console.log("[AuthContext] Set current user ID for riding records:", userInfo.id);
+    
     // Update state immediately
     setUser(userInfo);
     setError(null);
@@ -162,6 +169,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear local state and storage
     await Auth.removeSessionToken();
     await Auth.clearUserInfo();
+    
+    // Clear current user ID (riding records will use legacy key until next login)
+    await setCurrentUserId(null);
+    console.log("[AuthContext] Cleared current user ID for riding records");
     
     // Update state immediately
     setUser(null);

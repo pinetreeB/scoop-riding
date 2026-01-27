@@ -1144,7 +1144,7 @@ export default function RidingScreen() {
                 showCurrentLocation={false}
                 gpxRoute={gpxRoute}
                 groupMembers={groupMembers}
-                navigationMode={hasNavigation} // 네비게이션 모드일 때 지도 회전 활성화
+                navigationMode={true} // 주행 중에는 항상 네비게이션 스타일 (진행 방향이 위를 향하도록 지도 회전)
                 style={{ flex: 1, borderRadius: 0 }}
               />
             ) : (

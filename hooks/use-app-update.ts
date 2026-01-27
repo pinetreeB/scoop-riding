@@ -67,13 +67,23 @@ export function useAppUpdate(): UseAppUpdateResult {
     }
   }, [latestVersion]);
 
-  // Check for cached update on mount
+  // Check for cached update on mount - 버전 비교 후 유효한 경우에만 표시
   useEffect(() => {
     const loadCachedUpdate = async () => {
       const cached = await getCachedUpdateInfo();
       if (cached) {
-        setHasUpdate(true);
-        setLatestVersion(cached);
+        // 캐시된 버전이 현재 버전보다 높은지 다시 확인
+        const current = getCurrentVersion();
+        const { compareVersions } = await import("@/lib/app-update");
+        if (compareVersions(cached.version, current) > 0) {
+          setHasUpdate(true);
+          setLatestVersion(cached);
+          console.log("[useAppUpdate] Cached update is valid:", cached.version, ">", current);
+        } else {
+          // 캐시된 버전이 현재 버전보다 낮거나 같으면 삭제
+          await clearCachedUpdate();
+          console.log("[useAppUpdate] Cached update is outdated, cleared:", cached.version, "<=", current);
+        }
       }
     };
     loadCachedUpdate();

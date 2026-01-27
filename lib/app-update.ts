@@ -44,21 +44,28 @@ export function getCurrentVersionCode(): number {
 export async function checkForUpdates(): Promise<UpdateCheckResult> {
   const currentVersion = getCurrentVersion();
   
+  console.log("[AppUpdate] Checking for updates, current version:", currentVersion);
+  
   try {
     // Get latest version info from server
     // Use fetch with tRPC endpoint
     const response = await fetch(getApiBaseUrl() + "/api/trpc/app.version");
     
     if (!response.ok) {
-      console.log("Update check failed:", response.status);
+      console.log("[AppUpdate] Update check failed:", response.status);
       return { hasUpdate: false, currentVersion };
     }
     
     const data = await response.json();
     const latestVersion: AppVersion = data.result?.data || data;
     
-    // Compare versions
-    const hasUpdate = compareVersions(latestVersion.version, currentVersion) > 0;
+    console.log("[AppUpdate] Server version:", latestVersion.version, "Current version:", currentVersion);
+    
+    // Compare versions - 서버 버전이 현재 버전보다 높을 때만 업데이트 필요
+    const comparison = compareVersions(latestVersion.version, currentVersion);
+    const hasUpdate = comparison > 0;
+    
+    console.log("[AppUpdate] Version comparison result:", comparison, "hasUpdate:", hasUpdate);
     
     // Save last check time
     await AsyncStorage.setItem(LAST_CHECK_KEY, new Date().toISOString());
@@ -66,6 +73,11 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
     if (hasUpdate) {
       // Cache the update info
       await AsyncStorage.setItem(APP_UPDATE_KEY, JSON.stringify(latestVersion));
+      console.log("[AppUpdate] Update available, cached version info");
+    } else {
+      // 업데이트가 필요 없으면 캐시된 업데이트 정보 삭제
+      await AsyncStorage.removeItem(APP_UPDATE_KEY);
+      console.log("[AppUpdate] No update needed, cleared cached update info");
     }
     
     return {
@@ -74,7 +86,7 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
       latestVersion: hasUpdate ? latestVersion : undefined,
     };
   } catch (error) {
-    console.error("Failed to check for updates:", error);
+    console.error("[AppUpdate] Failed to check for updates:", error);
     return { hasUpdate: false, currentVersion };
   }
 }
@@ -167,7 +179,7 @@ export function showUpdateAlert(
  * Compare two version strings
  * Returns: 1 if a > b, -1 if a < b, 0 if equal
  */
-function compareVersions(a: string, b: string): number {
+export function compareVersions(a: string, b: string): number {
   const partsA = a.split(".").map(Number);
   const partsB = b.split(".").map(Number);
   

@@ -78,8 +78,15 @@ export function RideChart({ gpsPoints, duration }: RideChartProps) {
       }
     }
 
-    // 고도 범위 조정 (최소 10m 범위)
-    if (maxAlt - minAlt < 10) {
+    // 고도 범위 조정 - 고저차가 시각적으로 잘 보이도록 스케일 조정
+    // 실제 고저차를 기준으로 여유 추가 (10% 여유)
+    const altRange = maxAlt - minAlt;
+    if (altRange > 0) {
+      const padding = Math.max(altRange * 0.1, 2); // 최소 2m 여유
+      minAlt = minAlt - padding;
+      maxAlt = maxAlt + padding;
+    } else {
+      // 고저차가 거의 없는 경우 최소 범위 설정
       const mid = (maxAlt + minAlt) / 2;
       minAlt = mid - 5;
       maxAlt = mid + 5;

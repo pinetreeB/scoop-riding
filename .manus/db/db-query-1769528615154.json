@@ -1,0 +1,14 @@
+{
+  "query": "SELECT version, versionCode FROM appVersions WHERE isActive = 1 ORDER BY versionCode DESC LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT version, versionCode FROM appVersions WHERE isActive = 1 ORDER BY versionCode DESC LIMIT 1;",
+  "rows": [
+    {
+      "version": "0.0.11",
+      "versionCode": "11"
+    }
+  ],
+  "messages": [],
+  "stdout": "version\tversionCode\n0.0.11\t11\n",
+  "stderr": "",
+  "execution_time_ms": 1549
+}

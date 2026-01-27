@@ -216,10 +216,12 @@ export default function RoutePreviewScreen() {
       }
 
       if (!routeFound) {
-        // 상세 오류 메시지 표시
+        // 한국 지역 Google Maps Directions API 제한 안내
+        // 한국에서는 국가 보안법으로 인해 Google Maps의 도보/자전거/자동차 경로 안내가 제한됨
         let errorMessage = "해당 목적지까지의 경로를 찾을 수 없습니다.";
         if (lastError === "ZERO_RESULTS") {
-          errorMessage = "이 지역에서는 경로를 찾을 수 없습니다. 다른 목적지를 선택해주세요.";
+          // 한국 지역 제한 안내
+          errorMessage = "한국 지역에서는 Google Maps 경로 안내가 제한됩니다.\n\n네이버 지도나 카카오맵을 이용하시거나, 목적지 방향을 확인하며 직접 주행해주세요.";
         } else if (lastError === "NOT_FOUND") {
           errorMessage = "출발지 또는 목적지를 찾을 수 없습니다.";
         } else if (lastError === "REQUEST_DENIED") {
@@ -227,7 +229,35 @@ export default function RoutePreviewScreen() {
         } else if (lastError === "OVER_QUERY_LIMIT") {
           errorMessage = "API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.";
         }
-        Alert.alert("경로 없음", errorMessage);
+        
+        // 경로 없음 알림에 외부 네비게이션 앱 열기 옵션 추가
+        Alert.alert(
+          "경로 안내 제한",
+          errorMessage,
+          [
+            { text: "확인", style: "cancel" },
+            {
+              text: "네이버 지도로 열기",
+              onPress: () => {
+                // 네이버 지도 앱으로 목적지 검색 열기
+                const naverUrl = Platform.OS === "ios"
+                  ? `nmap://search?query=${encodeURIComponent(destination.name)}&appname=com.scoop.riding`
+                  : `nmap://search?query=${encodeURIComponent(destination.name)}&appname=com.scoop.riding`;
+                const webUrl = `https://map.naver.com/v5/search/${encodeURIComponent(destination.name)}`;
+                
+                import("react-native").then(({ Linking }) => {
+                  Linking.canOpenURL(naverUrl).then((supported) => {
+                    if (supported) {
+                      Linking.openURL(naverUrl);
+                    } else {
+                      Linking.openURL(webUrl);
+                    }
+                  });
+                });
+              },
+            },
+          ]
+        );
       }
     } catch (error) {
       console.error("Route fetch error:", error);

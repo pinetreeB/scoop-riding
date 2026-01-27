@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import { View, StyleSheet, Text, ActivityIndicator, Platform } from "react-native";
 
 // Only import react-native-maps on native platforms
@@ -47,6 +47,10 @@ interface GoogleRideMapProps {
   groupMembers?: GroupMemberLocation[];
   /** 네비게이션 모드 - 진행 방향이 항상 위를 향하도록 지도 회전 */
   navigationMode?: boolean;
+  /** 지도 터치 조작 허용 (라이브 모드에서도 조작 가능) */
+  allowInteraction?: boolean;
+  /** 자동 추적 모드 복귀 시간 (초, 기본 10초) */
+  autoFollowDelay?: number;
 }
 
 // Arrow marker component for current location
@@ -94,6 +98,8 @@ export function GoogleRideMap({
   gpxRoute,
   groupMembers = [],
   navigationMode = false,
+  allowInteraction = true,
+  autoFollowDelay = 10,
 }: GoogleRideMapProps) {
   const colors = useColors();
   const mapRef = useRef<any>(null);
@@ -101,6 +107,37 @@ export function GoogleRideMap({
   const [region, setRegion] = useState<any>(null);
   const animatedHeading = useRef(currentLocation?.heading || 0);
   const lastCameraHeading = useRef<number>(0);
+  
+  // 지도 터치 조작 상태 관리
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
+  const interactionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // 사용자 지도 조작 시 호출
+  const handleMapInteraction = useCallback(() => {
+    if (!allowInteraction || !isLive) return;
+    
+    setIsUserInteracting(true);
+    
+    // 기존 타이머 취소
+    if (interactionTimeoutRef.current) {
+      clearTimeout(interactionTimeoutRef.current);
+    }
+    
+    // autoFollowDelay 초 후 자동 추적 모드 복귀
+    interactionTimeoutRef.current = setTimeout(() => {
+      setIsUserInteracting(false);
+      console.log("[GoogleRideMap] Auto-follow mode resumed");
+    }, autoFollowDelay * 1000);
+  }, [allowInteraction, isLive, autoFollowDelay]);
+  
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (interactionTimeoutRef.current) {
+        clearTimeout(interactionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Calculate initial region from GPS points
   const initialRegion = useMemo(() => {
@@ -157,6 +194,11 @@ export function GoogleRideMap({
 
   // Animate to current location in live mode with optional navigation rotation
   useEffect(() => {
+    // 사용자가 지도를 조작 중이면 자동 추적 안함
+    if (isUserInteracting) {
+      return;
+    }
+    
     if (isLive && currentLocation && mapRef.current) {
       // Smooth heading animation
       if (currentLocation.heading !== undefined) {
@@ -187,7 +229,7 @@ export function GoogleRideMap({
         }, 300);
       }
     }
-  }, [isLive, navigationMode, currentLocation?.latitude, currentLocation?.longitude, currentLocation?.heading]);
+  }, [isLive, navigationMode, isUserInteracting, currentLocation?.latitude, currentLocation?.longitude, currentLocation?.heading]);
 
   // Fit to bounds when not in live mode
   useEffect(() => {
@@ -232,15 +274,17 @@ export function GoogleRideMap({
         onMapReady={() => setIsLoading(false)}
         showsUserLocation={false}
         showsMyLocationButton={false}
-        showsCompass={false}
-        showsScale={false}
-        rotateEnabled={!isLive}
-        scrollEnabled={!isLive}
-        zoomEnabled={!isLive}
+        showsCompass={isUserInteracting}
+        showsScale={isUserInteracting}
+        rotateEnabled={!isLive || allowInteraction}
+        scrollEnabled={!isLive || allowInteraction}
+        zoomEnabled={!isLive || allowInteraction}
         pitchEnabled={false}
         toolbarEnabled={false}
         mapType="standard"
         customMapStyle={mapStyle}
+        onPanDrag={handleMapInteraction}
+        onRegionChange={isLive && allowInteraction ? handleMapInteraction : undefined}
       >
         {/* GPX Guide Route (dashed blue line) */}
         {gpxCoordinates.length > 1 && (
@@ -329,8 +373,9 @@ export function GoogleRideMap({
             anchor={{ x: 0.5, y: 0.5 }}
             flat={true}
           >
+            {/* 네비게이션 모드에서는 지도가 회전하므로 화살표는 항상 위를 향함 (heading: 0) */}
             <ArrowMarker
-              heading={animatedHeading.current}
+              heading={navigationMode ? 0 : animatedHeading.current}
               color={colors.primary}
             />
           </Marker>
