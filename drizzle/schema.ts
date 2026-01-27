@@ -491,3 +491,23 @@ export const groupMembers = mysqlTable("groupMembers", {
 
 export type GroupMember = typeof groupMembers.$inferSelect;
 export type InsertGroupMember = typeof groupMembers.$inferInsert;
+
+
+/**
+ * Group chat messages table
+ */
+export const groupMessages = mysqlTable("groupMessages", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Group session ID */
+  groupId: int("groupId").notNull(),
+  /** Sender user ID */
+  userId: int("userId").notNull(),
+  /** Message content */
+  message: text("message").notNull(),
+  /** Message type: text, location, alert */
+  messageType: mysqlEnum("messageType", ["text", "location", "alert"]).default("text").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type GroupMessage = typeof groupMessages.$inferSelect;
+export type InsertGroupMessage = typeof groupMessages.$inferInsert;

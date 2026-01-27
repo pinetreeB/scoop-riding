@@ -113,6 +113,13 @@
       "when": 1769094091052,
       "tag": "0015_late_devos",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1769480820754,
+      "tag": "0016_nifty_magma",
+      "breakpoints": true
     }
   ]
 }

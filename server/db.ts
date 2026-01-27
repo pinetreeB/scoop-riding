@@ -1,6 +1,6 @@
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, gt, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -2594,5 +2594,136 @@ export async function getGroupMembersLocations(groupId: number): Promise<{
   } catch (error) {
     console.error("[Database] Failed to get group members locations:", error);
     return [];
+  }
+}
+
+
+// ============================================
+// Group Chat Functions
+// ============================================
+
+// Send a message to a group
+export async function sendGroupMessage(
+  groupId: number,
+  userId: number,
+  message: string,
+  messageType: "text" | "location" | "alert" = "text"
+): Promise<{ id: number; createdAt: Date } | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    // Verify user is a member of the group
+    const membership = await db
+      .select()
+      .from(groupMembers)
+      .where(and(
+        eq(groupMembers.groupId, groupId),
+        eq(groupMembers.userId, userId)
+      ))
+      .limit(1);
+
+    if (membership.length === 0) {
+      console.error("[Database] User is not a member of the group");
+      return null;
+    }
+
+    const result = await db.insert(groupMessages).values({
+      groupId,
+      userId,
+      message,
+      messageType,
+    });
+
+    const insertId = result[0].insertId;
+    return { id: insertId, createdAt: new Date() };
+  } catch (error) {
+    console.error("[Database] Failed to send group message:", error);
+    return null;
+  }
+}
+
+// Get messages for a group
+export async function getGroupMessages(
+  groupId: number,
+  options?: {
+    limit?: number;
+    afterId?: number;
+    beforeId?: number;
+  }
+): Promise<{
+  id: number;
+  userId: number;
+  userName: string | null;
+  userProfileImage: string | null;
+  message: string;
+  messageType: "text" | "location" | "alert";
+  createdAt: Date;
+}[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const limit = options?.limit || 50;
+    const conditions = [eq(groupMessages.groupId, groupId)];
+
+    if (options?.afterId) {
+      conditions.push(gt(groupMessages.id, options.afterId));
+    }
+    if (options?.beforeId) {
+      conditions.push(lt(groupMessages.id, options.beforeId));
+    }
+
+    const messages = await db
+      .select({
+        id: groupMessages.id,
+        userId: groupMessages.userId,
+        userName: users.name,
+        userProfileImage: users.profileImageUrl,
+        message: groupMessages.message,
+        messageType: groupMessages.messageType,
+        createdAt: groupMessages.createdAt,
+      })
+      .from(groupMessages)
+      .leftJoin(users, eq(groupMessages.userId, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(groupMessages.id))
+      .limit(limit);
+
+    // Return in chronological order (oldest first)
+    return messages.reverse();
+  } catch (error) {
+    console.error("[Database] Failed to get group messages:", error);
+    return [];
+  }
+}
+
+// Get new messages since a specific message ID
+export async function getNewGroupMessages(
+  groupId: number,
+  afterId: number
+): Promise<{
+  id: number;
+  userId: number;
+  userName: string | null;
+  userProfileImage: string | null;
+  message: string;
+  messageType: "text" | "location" | "alert";
+  createdAt: Date;
+}[]> {
+  return getGroupMessages(groupId, { afterId, limit: 100 });
+}
+
+// Delete all messages for a group (when group is deleted)
+export async function deleteGroupMessages(groupId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.delete(groupMessages).where(eq(groupMessages.groupId, groupId));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to delete group messages:", error);
+    return false;
   }
 }

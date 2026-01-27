@@ -48,6 +48,7 @@ import {
 import { useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GpxRoute, GpxPoint as GpxRoutePoint } from "@/lib/gpx-parser";
+import { GroupChat } from "@/components/group-chat";
 import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -110,6 +111,9 @@ export default function RidingScreen() {
   
   // GPX 경로 따라가기
   const [gpxRoute, setGpxRoute] = useState<GpxRoute | null>(null);
+  
+  // 그룹 채팅
+  const [showChat, setShowChat] = useState(false);
 
   // Battery optimization guide
   const batteryGuide = useBatteryOptimizationGuide();
@@ -879,7 +883,23 @@ export default function RidingScreen() {
             />
           </Pressable>
 
-          <View className="w-16 h-16 ml-8" />
+          {/* 그룹 라이딩 시 채팅 버튼 */}
+          {groupId ? (
+            <Pressable
+              onPress={() => setShowChat(true)}
+              style={({ pressed }) => [
+                {
+                  backgroundColor: "#333333",
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                },
+              ]}
+              className="w-16 h-16 rounded-full items-center justify-center ml-8"
+            >
+              <MaterialIcons name="chat" size={28} color="#FFFFFF" />
+            </Pressable>
+          ) : (
+            <View className="w-16 h-16 ml-8" />
+          )}
         </View>
       </View>
 
@@ -888,6 +908,17 @@ export default function RidingScreen() {
         visible={batteryGuide.isVisible}
         onClose={batteryGuide.hideGuide}
       />
+
+      {/* Group Chat Modal */}
+      {groupId && showChat && (
+        <View className="absolute inset-0 bg-background">
+          <GroupChat
+            groupId={groupId}
+            isVisible={showChat}
+            onClose={() => setShowChat(false)}
+          />
+        </View>
+      )}
     </ScreenContainer>
   );
 }

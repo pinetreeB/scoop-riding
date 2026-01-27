@@ -1078,6 +1078,50 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return db.getGroupMembersLocations(input.groupId);
       }),
+
+    // Send a message to the group
+    sendMessage: protectedProcedure
+      .input(z.object({
+        groupId: z.number(),
+        message: z.string().min(1).max(500),
+        messageType: z.enum(["text", "location", "alert"]).default("text"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const result = await db.sendGroupMessage(
+          input.groupId,
+          ctx.user.id,
+          input.message,
+          input.messageType
+        );
+        if (!result) throw new Error("메시지 전송에 실패했습니다.");
+        return result;
+      }),
+
+    // Get messages for a group
+    getMessages: protectedProcedure
+      .input(z.object({
+        groupId: z.number(),
+        limit: z.number().min(1).max(100).default(50),
+        afterId: z.number().optional(),
+        beforeId: z.number().optional(),
+      }))
+      .query(async ({ input }) => {
+        return db.getGroupMessages(input.groupId, {
+          limit: input.limit,
+          afterId: input.afterId,
+          beforeId: input.beforeId,
+        });
+      }),
+
+    // Get new messages since a specific ID (for polling)
+    getNewMessages: protectedProcedure
+      .input(z.object({
+        groupId: z.number(),
+        afterId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        return db.getNewGroupMessages(input.groupId, input.afterId);
+      }),
   }),
 
   // App version management

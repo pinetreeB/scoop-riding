@@ -20,6 +20,7 @@ import {
   TrackData,
 } from "@/lib/gps-utils";
 import { shareRideAsText } from "@/lib/share-utils";
+import { RideChart } from "@/components/ride-chart";
 
 export default function RideDetailScreen() {
   const router = useRouter();
@@ -260,6 +261,11 @@ export default function RideDetailScreen() {
             <MaterialIcons name="map" size={48} color={colors.muted} />
             <Text className="text-muted mt-2">GPS 데이터 없음</Text>
           </View>
+        )}
+
+        {/* Altitude/Speed Chart (Samsung Health Style) */}
+        {hasGpsData && (
+          <RideChart gpsPoints={gpsPoints} duration={record.duration} />
         )}
 
         {/* Stats Grid */}

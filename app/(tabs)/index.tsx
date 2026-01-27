@@ -21,10 +21,17 @@ import {
   getRidingRecords,
   formatDuration,
   formatDistance,
-  syncAllToCloud,
   fetchAndMergeFromCloud,
   type RidingRecord,
 } from "@/lib/riding-store";
+import {
+  enhancedFullSync,
+  getSyncStatus,
+  startBackgroundSync,
+  backupAllRecords,
+  restoreFromBackup,
+  type SyncStatus,
+} from "@/lib/sync-manager";
 import { LEVEL_DEFINITIONS, calculateLevel, getLevelTitle, formatLevelDistance } from "@/lib/level-system";
 
 export default function HomeScreen() {
@@ -49,6 +56,8 @@ export default function HomeScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month" | "all">("week");
   const [showLevelInfo, setShowLevelInfo] = useState(false);
   const [hasSynced, setHasSynced] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const trpcUtils = trpc.useUtils();
 
   // Fetch ranking data
@@ -115,19 +124,39 @@ export default function HomeScreen() {
     }, [loadStats])
   );
 
-  // Auto sync on first load when authenticated
+  // Auto sync on first load when authenticated - 강화된 동기화 로직 사용
   useEffect(() => {
     const autoSync = async () => {
       if (isAuthenticated && !hasSynced) {
-        console.log("[HomeScreen] Auto syncing with cloud...");
+        console.log("[HomeScreen] Starting enhanced sync...");
+        setIsSyncing(true);
+        
         try {
-          // First fetch from cloud and merge
+          // 1. 백업에서 복원 시도 (데이터 유실 방지)
+          const restoreResult = await restoreFromBackup();
+          if (restoreResult.restored > 0) {
+            console.log("[HomeScreen] Restored from backup:", restoreResult.restored);
+          }
+          
+          // 2. 클라우드에서 가져오기
           const fetchResult = await fetchAndMergeFromCloud(trpcUtils);
           console.log("[HomeScreen] Fetched from cloud:", fetchResult);
           
-          // Then sync local records to cloud
-          const syncResult = await syncAllToCloud(trpcUtils);
-          console.log("[HomeScreen] Synced to cloud:", syncResult);
+          // 3. 강화된 동기화 (지수 백오프 재시도 포함)
+          const syncResult = await enhancedFullSync(trpcUtils, {
+            forceRetry: false, // 첫 동기화는 실패한 것 재시도 안 함
+            onProgress: (current, total) => {
+              console.log(`[HomeScreen] Sync progress: ${current}/${total}`);
+            },
+          });
+          console.log("[HomeScreen] Enhanced sync result:", syncResult);
+          
+          // 4. 백그라운드 동기화 시작 (네트워크 복구 시 자동 동기화)
+          startBackgroundSync(trpcUtils);
+          
+          // 5. 동기화 상태 업데이트
+          const status = await getSyncStatus();
+          setSyncStatus(status);
           
           setHasSynced(true);
           
@@ -139,11 +168,48 @@ export default function HomeScreen() {
           loadStats();
         } catch (error) {
           console.error("[HomeScreen] Auto sync error:", error);
+          // 에러 발생 시에도 백업 생성
+          await backupAllRecords();
+        } finally {
+          setIsSyncing(false);
         }
       }
     };
     autoSync();
   }, [isAuthenticated, hasSynced, trpcUtils, loadStats]);
+
+  // 수동 동기화 함수
+  const handleManualSync = async () => {
+    if (isSyncing) return;
+    
+    setIsSyncing(true);
+    try {
+      const syncResult = await enhancedFullSync(trpcUtils, {
+        forceRetry: true, // 수동 동기화는 실패한 것도 재시도
+        onProgress: (current, total) => {
+          console.log(`[HomeScreen] Manual sync progress: ${current}/${total}`);
+        },
+      });
+      console.log("[HomeScreen] Manual sync result:", syncResult);
+      
+      const status = await getSyncStatus();
+      setSyncStatus(status);
+      
+      loadStats();
+      
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(
+          syncResult.failed > 0
+            ? Haptics.NotificationFeedbackType.Warning
+            : Haptics.NotificationFeedbackType.Success
+        );
+      }
+    } catch (error) {
+      console.error("[HomeScreen] Manual sync error:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleStartRiding = () => {
     if (Platform.OS !== "web") {
@@ -253,6 +319,33 @@ export default function HomeScreen() {
             </Pressable>
           </View>
         </View>
+
+        {/* Sync Status Bar */}
+        {isAuthenticated && (syncStatus?.pendingCount ?? 0) > 0 && (
+          <Pressable
+            onPress={handleManualSync}
+            disabled={isSyncing}
+            style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+            className="mx-5 mb-3"
+          >
+            <View className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 flex-row items-center">
+              {isSyncing ? (
+                <ActivityIndicator size="small" color={colors.warning} />
+              ) : (
+                <MaterialIcons name="cloud-upload" size={20} color={colors.warning} />
+              )}
+              <Text className="text-yellow-600 ml-2 flex-1 text-sm">
+                {isSyncing 
+                  ? "동기화 중..." 
+                  : `동기화 대기 중 ${syncStatus?.pendingCount}개 - 터치하여 동기화`
+                }
+              </Text>
+              {!isSyncing && (
+                <MaterialIcons name="refresh" size={20} color={colors.warning} />
+              )}
+            </View>
+          </Pressable>
+        )}
 
         {/* Search Bar (Placeholder) */}
         <View className="mx-5 mb-4">
