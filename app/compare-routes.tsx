@@ -24,6 +24,7 @@ import {
 } from "@/lib/riding-store";
 import { GpsPoint } from "@/lib/gps-utils";
 import { CompareMap } from "@/components/compare-map";
+import { GoogleCompareMap } from "@/components/google-compare-map";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -240,12 +241,21 @@ export default function CompareRoutesScreen() {
               {/* Map Comparison */}
               {firstRecord?.gpsPoints && secondRecord?.gpsPoints ? (
                 <View className="mx-4 h-64 rounded-2xl overflow-hidden mb-4">
-                  <CompareMap
-                    firstRoute={firstRecord.gpsPoints}
-                    secondRoute={secondRecord.gpsPoints}
-                    firstColor="#3B82F6"
-                    secondColor="#22C55E"
-                  />
+                  {Platform.OS !== "web" ? (
+                    <GoogleCompareMap
+                      firstRoute={firstRecord.gpsPoints}
+                      secondRoute={secondRecord.gpsPoints}
+                      firstColor="#3B82F6"
+                      secondColor="#22C55E"
+                    />
+                  ) : (
+                    <CompareMap
+                      firstRoute={firstRecord.gpsPoints}
+                      secondRoute={secondRecord.gpsPoints}
+                      firstColor="#3B82F6"
+                      secondColor="#22C55E"
+                    />
+                  )}
                 </View>
               ) : (
                 <View className="mx-4 h-48 rounded-2xl bg-surface items-center justify-center mb-4 border border-border">

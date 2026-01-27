@@ -385,3 +385,34 @@
 - [x] 3-3. 목표 달성 시 보상 알림 - 이미 구현됨 (badges.tsx)
 - [x] 3-4. 챌린지 리더보드 개선 - 이미 구현됨 (challenge-detail.tsx)
 - [x] 3-5. 홈 화면에 챌린지/목표/배지 바로가기 추가리더보드 UI
+
+
+## v0.0.7 버그 수정 및 UI 개선 (2026-01-27)
+
+### 버그 수정
+- [x] 1. 주행시간 카운터 문제 재수정 (00:00:01에서 멈춤) - interval 의존성 배열 비우고 ref로 최신 값 참조
+- [x] 2. 친구 실시간 위치 업데이트 빈도 증가 (27분전 표시 문제) - 친구 지도 5초→2초, 알림 10초→5초
+
+### UI 개선
+- [x] 3. 주행 지도 전체화면 + 반투명 검정 오버레이에 흰색 텍스트 - 지도 전체화면, 속도/거리/시간/평균/최고 오버레이, 컨트롤 버튼 오버레이
+- [x] 4. 홈화면 배지 카드 크기 통일 (챌린지, 목표와 동일하게) - minHeight: 110 적용, 텍스트 줄바꿈
+- [x] 5. 그룹 라이딩 버튼을 홈화면 라이딩 시작 아래로 이동 - 라이딩 시작 바로 아래에 그룹 라이딩 카드 추가
+
+### 신규 기능
+- [ ] 6. Google Maps API 연동
+
+## 기능 개선 (2026-01-27) - 앱 이름 변경
+- [x] 앱 이름 "SCOOP Riding" → "SCOOP 라이딩"으로 변경
+- [x] Google Cloud 프로젝트 이름 "SCOOP Riding"으로 변경
+- [x] Google Maps Platform API 키 확인 (AIzaSyBNXFzCS5S1BAYbOldscsMxnkNd-89DeEY)
+
+## Google Maps API 연동 (2026-01-27)
+- [x] 앱 이름 "SCOOP Riders"로 변경
+- [x] Google Maps API 키 환경변수 설정
+- [x] react-native-maps 패키지 설치
+- [x] app.config.ts에 Google Maps 설정 추가
+- [x] 기존 OpenStreetMap/Leaflet 지도 컴포넌트를 Google Maps로 교체
+- [x] 주행 화면 지도 Google Maps 적용
+- [x] 주행 기록 상세 화면 지도 Google Maps 적용
+- [x] 친구 위치 지도 Google Maps 적용
+- [x] 그룹 라이딩 지도 Google Maps 적용 (경로 비교 화면 포함)

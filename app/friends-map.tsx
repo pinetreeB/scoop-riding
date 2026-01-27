@@ -19,6 +19,7 @@ import * as Location from "expo-location";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { FriendLocationMap } from "@/components/friend-location-map";
+import { GoogleFriendLocationMap } from "@/components/google-friend-location-map";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 
@@ -45,7 +46,7 @@ export default function FriendsMapScreen() {
   const [showMapModal, setShowMapModal] = useState(false);
 
   const friendsLocationQuery = trpc.liveLocation.friends.useQuery(undefined, {
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 2000, // Refresh every 2 seconds for real-time tracking
   });
 
   // Get my location
@@ -338,14 +339,25 @@ export default function FriendsMapScreen() {
           {selectedFriend ? (
             <View className="flex-1">
               {/* Real Map with OpenStreetMap */}
-              <FriendLocationMap
-                latitude={selectedFriend.latitude}
-                longitude={selectedFriend.longitude}
-                heading={selectedFriend.heading}
-                name={selectedFriend.name}
-                profileImageUrl={selectedFriend.profileImageUrl}
-                style={{ flex: 1 }}
-              />
+              {Platform.OS !== "web" ? (
+                <GoogleFriendLocationMap
+                  latitude={selectedFriend.latitude}
+                  longitude={selectedFriend.longitude}
+                  heading={selectedFriend.heading}
+                  name={selectedFriend.name}
+                  profileImageUrl={selectedFriend.profileImageUrl}
+                  style={{ flex: 1 }}
+                />
+              ) : (
+                <FriendLocationMap
+                  latitude={selectedFriend.latitude}
+                  longitude={selectedFriend.longitude}
+                  heading={selectedFriend.heading}
+                  name={selectedFriend.name}
+                  profileImageUrl={selectedFriend.profileImageUrl}
+                  style={{ flex: 1 }}
+                />
+              )}
 
               {/* Info Panel */}
               <View className="p-4 border-t border-border" style={{ backgroundColor: colors.background }}>

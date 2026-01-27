@@ -7,6 +7,7 @@ import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { RideMap } from "@/components/ride-map";
+import { GoogleRideMap } from "@/components/google-ride-map";
 import {
   RidingRecord,
   getRidingRecordWithGps,
@@ -237,11 +238,19 @@ export default function RideDetailScreen() {
         {/* Map */}
         {hasGpsData ? (
           <View className="mx-4 h-64 rounded-2xl overflow-hidden mb-4">
-            <RideMap
-              gpsPoints={gpsPoints}
-              isLive={false}
-              showCurrentLocation={false}
-            />
+            {Platform.OS !== "web" ? (
+              <GoogleRideMap
+                gpsPoints={gpsPoints}
+                isLive={false}
+                showCurrentLocation={false}
+              />
+            ) : (
+              <RideMap
+                gpsPoints={gpsPoints}
+                isLive={false}
+                showCurrentLocation={false}
+              />
+            )}
             <View className="absolute top-3 right-3">
               <Pressable
                 onPress={() => {

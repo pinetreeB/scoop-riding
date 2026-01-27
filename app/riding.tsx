@@ -9,6 +9,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { RideMap } from "@/components/ride-map";
+import { GoogleRideMap } from "@/components/google-ride-map";
 import { trpc } from "@/lib/trpc";
 import {
   saveRidingRecord,
@@ -129,10 +130,33 @@ export default function RidingScreen() {
   const speedHistoryRef = useRef<number[]>([]);
   const isFirstLocationRef = useRef(true);
   const SPEED_SMOOTHING_SAMPLES = 3;
+  
+  // ref로 최신 값 추적 (interval 클로저 문제 해결)
+  const currentSpeedRef = useRef(0);
+  const distanceRef = useRef(0);
+  const voiceSettingsRef = useRef<VoiceSettings | null>(null);
+  const isBackgroundEnabledRef = useRef(false);
 
   useEffect(() => {
     isRunningRef.current = isRunning;
   }, [isRunning]);
+  
+  // 최신 값을 ref에 동기화
+  useEffect(() => {
+    currentSpeedRef.current = currentSpeed;
+  }, [currentSpeed]);
+  
+  useEffect(() => {
+    distanceRef.current = distance;
+  }, [distance]);
+  
+  useEffect(() => {
+    voiceSettingsRef.current = voiceSettings;
+  }, [voiceSettings]);
+  
+  useEffect(() => {
+    isBackgroundEnabledRef.current = isBackgroundEnabled;
+  }, [isBackgroundEnabled]);
 
   // isAutoPaused 상태를 ref에도 동기화
   useEffect(() => {
@@ -288,6 +312,7 @@ export default function RidingScreen() {
   }, []);
 
   useEffect(() => {
+    // interval은 한 번만 생성하고 ref로 최신 값 참조
     intervalRef.current = setInterval(() => {
       // ref를 사용하여 클로저 문제 해결
       if (isRunningRef.current && !isAutoPausedRef.current) {
@@ -295,20 +320,21 @@ export default function RidingScreen() {
         setDuration((prev) => {
           const newDuration = prev + 1;
           // Voice announcement check (every second, let the function handle interval)
-          if (voiceSettings) {
+          const settings = voiceSettingsRef.current;
+          if (settings) {
             announceRidingStatus(
-              voiceSettings,
-              currentSpeed,
-              distance,
+              settings,
+              currentSpeedRef.current,
+              distanceRef.current,
               newDuration
             );
           }
           // Update foreground notification with current stats (every second for real-time display)
-          if (Platform.OS !== "web" && isBackgroundEnabled) {
+          if (Platform.OS !== "web" && isBackgroundEnabledRef.current) {
             updateForegroundNotification(
-              distance, // already in meters
+              distanceRef.current, // already in meters
               newDuration,
-              currentSpeed
+              currentSpeedRef.current
             );
           }
           return newDuration;
@@ -324,7 +350,7 @@ export default function RidingScreen() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [voiceSettings, currentSpeed, distance, isBackgroundEnabled]);
+  }, []); // 의존성 배열 비움 - ref로 최신 값 참조
 
   const initializeGps = async () => {
     try {
@@ -766,32 +792,113 @@ export default function RidingScreen() {
 
         {/* Map or Speed Display */}
         {showMap ? (
-          <View className="flex-1 overflow-hidden">
-            <RideMap
-              gpsPoints={gpsPoints}
-              currentLocation={currentLocation}
-              isLive={true}
-              showCurrentLocation={false}
-              gpxRoute={gpxRoute}
-              groupMembers={groupMembers}
-              style={{ borderRadius: 0 }}
-            />
-            {/* Speed overlay on map - 전체 화면에 맞게 위치 조정 */}
-            <View className="absolute bottom-4 left-4 bg-black/80 rounded-xl px-4 py-2 shadow-lg">
-              <Text className="text-4xl font-bold text-white">
+          <View style={{ flex: 1, position: 'absolute', top: 50, left: 0, right: 0, bottom: 0 }}>
+            {Platform.OS !== "web" ? (
+              <GoogleRideMap
+                gpsPoints={gpsPoints}
+                currentLocation={currentLocation}
+                isLive={true}
+                showCurrentLocation={false}
+                gpxRoute={gpxRoute}
+                groupMembers={groupMembers}
+                style={{ flex: 1, borderRadius: 0 }}
+              />
+            ) : (
+              <RideMap
+                gpsPoints={gpsPoints}
+                currentLocation={currentLocation}
+                isLive={true}
+                showCurrentLocation={false}
+                gpxRoute={gpxRoute}
+                groupMembers={groupMembers}
+                style={{ flex: 1, borderRadius: 0 }}
+              />
+            )}
+            {/* 속도 오버레이 - 좌하단 */}
+            <View style={{
+              position: 'absolute',
+              bottom: 180,
+              left: 16,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              borderRadius: 12,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+            }}>
+              <Text style={{ fontSize: 48, fontWeight: 'bold', color: '#FFFFFF' }}>
                 {currentSpeed.toFixed(1)}
               </Text>
-              <Text className="text-xs text-gray-300">km/h</Text>
+              <Text style={{ fontSize: 14, color: '#CCCCCC' }}>km/h</Text>
             </View>
-            {/* 거리/시간 오버레이 */}
-            <View className="absolute bottom-4 right-4 bg-black/80 rounded-xl px-3 py-2 shadow-lg">
-              <Text className="text-lg font-bold text-white">
-                {(distance / 1000).toFixed(2)} km
+            {/* 거리 오버레이 - 우상단 */}
+            <View style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              borderRadius: 12,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+            }}>
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' }}>
+                {(distance / 1000).toFixed(2)}
               </Text>
-              <Text className="text-xs text-gray-300 text-right">
+              <Text style={{ fontSize: 12, color: '#CCCCCC', textAlign: 'right' }}>km</Text>
+            </View>
+            {/* 시간 오버레이 - 좌상단 */}
+            <View style={{
+              position: 'absolute',
+              top: 16,
+              left: 16,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              borderRadius: 12,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+            }}>
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' }}>
                 {formatDuration(duration)}
               </Text>
+              <Text style={{ fontSize: 12, color: '#CCCCCC' }}>주행 시간</Text>
             </View>
+            {/* 평균/최고 속도 오버레이 - 우하단 */}
+            <View style={{
+              position: 'absolute',
+              bottom: 180,
+              right: 16,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              borderRadius: 12,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' }}>
+                  {avgSpeed.toFixed(1)}
+                </Text>
+                <Text style={{ fontSize: 10, color: '#CCCCCC', marginLeft: 4 }}>평균</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#FF6B6B' }}>
+                  {maxSpeed.toFixed(1)}
+                </Text>
+                <Text style={{ fontSize: 10, color: '#CCCCCC', marginLeft: 4 }}>최고</Text>
+              </View>
+            </View>
+            {/* 휴식 중 표시 */}
+            {isAutoPaused && (
+              <View style={{
+                position: 'absolute',
+                top: 80,
+                left: '50%',
+                transform: [{ translateX: -60 }],
+                backgroundColor: 'rgba(234, 179, 8, 0.9)',
+                borderRadius: 20,
+                paddingHorizontal: 16,
+                paddingVertical: 6,
+              }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#000000' }}>
+                  휴식 중 ({formatDuration(restTime)})
+                </Text>
+              </View>
+            )}
           </View>
         ) : (
           <View className="items-center py-8">
@@ -802,65 +909,85 @@ export default function RidingScreen() {
           </View>
         )}
 
-        {/* Time Display */}
-        <View className="items-center mb-4">
-          {isAutoPaused && (
-            <View className="bg-yellow-500/20 px-4 py-1 rounded-full mb-2">
-              <Text className="text-yellow-400 text-sm font-medium">
-                휴식 중 ({formatDuration(restTime)})
+        {/* Time Display - 지도 모드일 때는 숨김 */}
+        {!showMap && (
+          <>
+            <View className="items-center mb-4">
+              {isAutoPaused && (
+                <View className="bg-yellow-500/20 px-4 py-1 rounded-full mb-2">
+                  <Text className="text-yellow-400 text-sm font-medium">
+                    휴식 중 ({formatDuration(restTime)})
+                  </Text>
+                </View>
+              )}
+              <Text className="text-4xl font-bold text-white">
+                {formatDuration(duration)}
+              </Text>
+              <Text className="text-sm text-gray-400 mt-1">
+                주행 시간{restTime > 0 ? ` (휴식 ${formatDuration(restTime)})` : ""}
               </Text>
             </View>
-          )}
-          <Text className="text-4xl font-bold text-white">
-            {formatDuration(duration)}
-          </Text>
-          <Text className="text-sm text-gray-400 mt-1">
-            주행 시간{restTime > 0 ? ` (휴식 ${formatDuration(restTime)})` : ""}
-          </Text>
-        </View>
 
-        {/* Stats Row */}
-        <View className="flex-row justify-around mx-4 mb-4 bg-[#2A2A2A] rounded-2xl p-4">
-          <View className="items-center">
-            <Text className="text-2xl font-bold text-white">
-              {(distance / 1000).toFixed(2)}
-            </Text>
-            <Text className="text-xs text-gray-400 mt-1">거리 (km)</Text>
-          </View>
-          <View className="w-px bg-gray-600" />
-          <View className="items-center">
-            <Text className="text-2xl font-bold text-white">
-              {avgSpeed.toFixed(1)}
-            </Text>
-            <Text className="text-xs text-gray-400 mt-1">평균 (km/h)</Text>
-          </View>
-          <View className="w-px bg-gray-600" />
-          <View className="items-center">
-            <Text className="text-2xl font-bold text-white">
-              {maxSpeed.toFixed(1)}
-            </Text>
-            <Text className="text-xs text-gray-400 mt-1">최고 (km/h)</Text>
-          </View>
-        </View>
+            {/* Stats Row */}
+            <View className="flex-row justify-around mx-4 mb-4 bg-[#2A2A2A] rounded-2xl p-4">
+              <View className="items-center">
+                <Text className="text-2xl font-bold text-white">
+                  {(distance / 1000).toFixed(2)}
+                </Text>
+                <Text className="text-xs text-gray-400 mt-1">거리 (km)</Text>
+              </View>
+              <View className="w-px bg-gray-600" />
+              <View className="items-center">
+                <Text className="text-2xl font-bold text-white">
+                  {avgSpeed.toFixed(1)}
+                </Text>
+                <Text className="text-xs text-gray-400 mt-1">평균 (km/h)</Text>
+              </View>
+              <View className="w-px bg-gray-600" />
+              <View className="items-center">
+                <Text className="text-2xl font-bold text-white">
+                  {maxSpeed.toFixed(1)}
+                </Text>
+                <Text className="text-xs text-gray-400 mt-1">최고 (km/h)</Text>
+              </View>
+            </View>
 
-        {/* GPS Points Counter */}
-        <View className="items-center mb-2">
-          <Text className="text-gray-500 text-xs">
-            GPS 포인트: {gpsPointCount}개 기록됨
-          </Text>
-        </View>
+            {/* GPS Points Counter */}
+            <View className="items-center mb-2">
+              <Text className="text-gray-500 text-xs">
+                GPS 포인트: {gpsPointCount}개 기록됨
+              </Text>
+            </View>
+          </>
+        )}
 
-        {/* Control Buttons */}
-        <View className="flex-row justify-center items-center py-4 mb-4">
+        {/* Control Buttons - 지도 모드일 때는 하단에 오버레이로 표시 */}
+        <View style={showMap ? {
+          position: 'absolute',
+          bottom: 40,
+          left: 0,
+          right: 0,
+          flexDirection: 'row',
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingVertical: 16,
+        } : undefined}
+        className={!showMap ? "flex-row justify-center items-center py-4 mb-4" : undefined}
+        >
           <Pressable
             onPress={handleStop}
             style={({ pressed }) => [
               {
-                backgroundColor: "#333333",
+                backgroundColor: showMap ? "rgba(51, 51, 51, 0.9)" : "#333333",
                 transform: [{ scale: pressed ? 0.95 : 1 }],
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 32,
               },
             ]}
-            className="w-16 h-16 rounded-full items-center justify-center mr-8"
           >
             <MaterialIcons name="stop" size={28} color="#FFFFFF" />
           </Pressable>
@@ -872,9 +999,13 @@ export default function RidingScreen() {
                 backgroundColor: colors.primary,
                 transform: [{ scale: pressed ? 0.95 : 1 }],
                 opacity: pressed ? 0.9 : 1,
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                alignItems: 'center',
+                justifyContent: 'center',
               },
             ]}
-            className="w-20 h-20 rounded-full items-center justify-center"
           >
             <MaterialIcons
               name={isRunning ? "pause" : "play-arrow"}
@@ -889,16 +1020,21 @@ export default function RidingScreen() {
               onPress={() => setShowChat(true)}
               style={({ pressed }) => [
                 {
-                  backgroundColor: "#333333",
+                  backgroundColor: showMap ? "rgba(51, 51, 51, 0.9)" : "#333333",
                   transform: [{ scale: pressed ? 0.95 : 1 }],
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginLeft: 32,
                 },
               ]}
-              className="w-16 h-16 rounded-full items-center justify-center ml-8"
             >
               <MaterialIcons name="chat" size={28} color="#FFFFFF" />
             </Pressable>
           ) : (
-            <View className="w-16 h-16 ml-8" />
+            <View style={{ width: 64, height: 64, marginLeft: 32 }} />
           )}
         </View>
       </View>

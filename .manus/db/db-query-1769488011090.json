@@ -1,0 +1,27 @@
+{
+  "query": "SELECT * FROM appVersions WHERE version = '0.0.6';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT * FROM appVersions WHERE version = '0.0.6';",
+  "rows": [],
+  "messages": [
+    "120001\t0.0.6\t6\thttps://expo.dev/artifacts/eas/buULhf8TG8YuedTzzR21SU.apk\tv0.0.6 업데이트:",
+    "[버그 수정]",
+    "- 상단 알림바 거리 표시 오류 수정",
+    "- 최고속도 100km/h 제한 해제 (300km/h까지 기록 가능)",
+    "- 주행시간 카운터 휴식 후 멈춤 문제 수정",
+    "- 주행 지도 깜빡임 및 급격한 위치 이동 개선",
+    "[UI 개선]",
+    "- 주행 지도 전체화면으로 변경",
+    "- 속도/거리/시간 오버레이 추가",
+    "[신규 기능]",
+    "- 그룹 라이딩 채팅 기능 추가",
+    "- 그룹원 3km 이상 멀어짐 알림",
+    "- 그룹원 주행 종료 알림",
+    "- 주행 기록 상세 분석 (고도/속도 그래프)",
+    "- 주행 경로 비교 기능",
+    "- 동기화 안정성 강화 (자동 재시도, 백업)",
+    "- 홈 화면 챌린지/목표/배지 바로가기\t0\tandroid\t1\t2026-01-27 04:26:45\t2026-01-27 04:26:45"
+  ],
+  "stdout": "id\tversion\tversionCode\tdownloadUrl\treleaseNotes\tforceUpdate\tplatform\tisActive\tpublishedAt\tcreatedAt\n120001\t0.0.6\t6\thttps://expo.dev/artifacts/eas/buULhf8TG8YuedTzzR21SU.apk\tv0.0.6 업데이트:\n\n[버그 수정]\n- 상단 알림바 거리 표시 오류 수정\n- 최고속도 100km/h 제한 해제 (300km/h까지 기록 가능)\n- 주행시간 카운터 휴식 후 멈춤 문제 수정\n- 주행 지도 깜빡임 및 급격한 위치 이동 개선\n\n[UI 개선]\n- 주행 지도 전체화면으로 변경\n- 속도/거리/시간 오버레이 추가\n\n[신규 기능]\n- 그룹 라이딩 채팅 기능 추가\n- 그룹원 3km 이상 멀어짐 알림\n- 그룹원 주행 종료 알림\n- 주행 기록 상세 분석 (고도/속도 그래프)\n- 주행 경로 비교 기능\n- 동기화 안정성 강화 (자동 재시도, 백업)\n- 홈 화면 챌린지/목표/배지 바로가기\t0\tandroid\t1\t2026-01-27 04:26:45\t2026-01-27 04:26:45\n",
+  "stderr": "",
+  "execution_time_ms": 1525
+}

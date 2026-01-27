@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO appVersions (version, versionCode, downloadUrl, releaseNotes, forceUpdate, platform, isActive, createdAt, updatedAt) VALUES ('0.0.6', 6, 'https://expo.dev/artifacts/eas/buULhf8TG8YuedTzzR21SU.apk', 'v0.0.6 업데이트:\\n\\n[버그 수정]\\n- 상단 알림바 거리 표시 오류 수정\\n- 최고속도 100km/h 제한 해제 (300km/h까지 기록 가능)\\n- 주행시간 카운터 휴식 후 멈춤 문제 수정\\n- 주행 지도 깜빡임 및 급격한 위치 이동 개선\\n\\n[UI 개선]\\n- 주행 지도 전체화면으로 변경\\n- 속도/거리/시간 오버레이 추가\\n\\n[신규 기능]\\n- 그룹 라이딩 채팅 기능 추가\\n- 그룹원 3km 이상 멀어짐 알림\\n- 그룹원 주행 종료 알림\\n- 주행 기록 상세 분석 (고도/속도 그래프)\\n- 주행 경로 비교 기능\\n- 동기화 안정성 강화 (자동 재시도, 백업)\\n- 홈 화면 챌린지/목표/배지 바로가기', 0, 'android', 1, NOW(), NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO appVersions (version, versionCode, downloadUrl, releaseNotes, forceUpdate, platform, isActive, createdAt, updatedAt) VALUES ('0.0.6', 6, 'https://expo.dev/artifacts/eas/buULhf8TG8YuedTzzR21SU.apk', 'v0.0.6 업데이트:\\n\\n[버그 수정]\\n- 상단 알림바 거리 표시 오류 수정\\n- 최고속도 100km/h 제한 해제 (300km/h까지 기록 가능)\\n- 주행시간 카운터 휴식 후 멈춤 문제 수정\\n- 주행 지도 깜빡임 및 급격한 위치 이동 개선\\n\\n[UI 개선]\\n- 주행 지도 전체화면으로 변경\\n- 속도/거리/시간 오버레이 추가\\n\\n[신규 기능]\\n- 그룹 라이딩 채팅 기능 추가\\n- 그룹원 3km 이상 멀어짐 알림\\n- 그룹원 주행 종료 알림\\n- 주행 기록 상세 분석 (고도/속도 그래프)\\n- 주행 경로 비교 기능\\n- 동기화 안정성 강화 (자동 재시도, 백업)\\n- 홈 화면 챌린지/목표/배지 바로가기', 0, 'android', 1, NOW(), NOW());",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'updatedAt' in 'field list'"
+  ]
+}

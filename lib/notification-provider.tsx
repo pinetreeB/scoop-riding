@@ -42,7 +42,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   // Poll for friend ride starts
   const { data: friendsRiding } = trpc.liveLocation.friends.useQuery(undefined, {
     enabled: isAuthenticated,
-    refetchInterval: 10000, // Poll every 10 seconds
+    refetchInterval: 5000, // Poll every 5 seconds for faster updates
   });
 
   // Track which friends we've already notified about

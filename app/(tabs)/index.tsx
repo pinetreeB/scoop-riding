@@ -364,7 +364,7 @@ export default function HomeScreen() {
               opacity: pressed ? 0.95 : 1,
             },
           ]}
-          className="mx-5 mb-4"
+          className="mx-5 mb-2"
         >
           <View className="bg-[#1A1A1A] rounded-2xl p-5 flex-row items-center justify-between">
             <View>
@@ -379,6 +379,41 @@ export default function HomeScreen() {
             </View>
           </View>
         </Pressable>
+
+        {/* Group Riding Card */}
+        {isAuthenticated && (
+          <Pressable
+            onPress={() => {
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.push("/group-riding" as any);
+            }}
+            style={({ pressed }) => [
+              {
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+                opacity: pressed ? 0.95 : 1,
+              },
+            ]}
+            className="mx-5 mb-4"
+          >
+            <View className="bg-surface rounded-2xl p-4 flex-row items-center justify-between border border-border">
+              <View className="flex-row items-center">
+                <View 
+                  className="w-12 h-12 rounded-full items-center justify-center mr-3"
+                  style={{ backgroundColor: '#6366F1' + '20' }}
+                >
+                  <MaterialIcons name="groups" size={24} color="#6366F1" />
+                </View>
+                <View>
+                  <Text className="text-foreground font-bold">그룹 라이딩</Text>
+                  <Text className="text-muted text-xs">친구들과 함께 실시간 그룹 주행</Text>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </View>
+          </Pressable>
+        )}
 
         {/* Quick Stats Widget */}
         <View className="mx-5 mb-4">
@@ -655,14 +690,14 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border">
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
                   <View className="flex-row items-center mb-2">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: colors.primary + '20' }}>
                       <MaterialIcons name="flag" size={20} color={colors.primary} />
                     </View>
                   </View>
                   <Text className="text-foreground font-bold">챌린지</Text>
-                  <Text className="text-muted text-xs mt-1">친구들과 경쟁하기</Text>
+                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>친구들과{"\n"}경쟁하기</Text>
                 </View>
               </Pressable>
 
@@ -676,14 +711,14 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border">
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
                   <View className="flex-row items-center mb-2">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: colors.success + '20' }}>
                       <MaterialIcons name="track-changes" size={20} color={colors.success} />
                     </View>
                   </View>
                   <Text className="text-foreground font-bold">나의 목표</Text>
-                  <Text className="text-muted text-xs mt-1">주간/월간 목표 설정</Text>
+                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>주간/월간{"\n"}목표 설정</Text>
                 </View>
               </Pressable>
 
@@ -697,14 +732,14 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border">
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
                   <View className="flex-row items-center mb-2">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#F59E0B' + '20' }}>
                       <MaterialIcons name="military-tech" size={20} color="#F59E0B" />
                     </View>
                   </View>
                   <Text className="text-foreground font-bold">배지</Text>
-                  <Text className="text-muted text-xs mt-1">업적 확인하기</Text>
+                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>업적{"\n"}확인하기</Text>
                 </View>
               </Pressable>
             </View>
