@@ -28,6 +28,7 @@ import {
   type RidingRecord,
 } from "@/lib/riding-store";
 import { calculateLevel, getLevelTitle, getLevelColor, LEVEL_DEFINITIONS } from "@/lib/level-system";
+import Constants from "expo-constants";
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -59,7 +60,7 @@ export default function ProfileScreen() {
     releaseNotes: string | null;
   }>({ hasUpdate: false, latestVersion: null, downloadUrl: null, releaseNotes: null });
 
-  const CURRENT_APP_VERSION = "0.0.10";
+  const CURRENT_APP_VERSION = Constants.expoConfig?.version || "0.0.12";
 
   // Check for app updates
   const { data: updateData } = trpc.appVersion.checkUpdate.useQuery(

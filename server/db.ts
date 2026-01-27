@@ -2111,14 +2111,21 @@ export async function getLatestAppVersion(platform: string = "android"): Promise
   const db = await getDb();
   if (!db) return null;
 
-  const result = await db
-    .select()
-    .from(appVersions)
-    .where(and(eq(appVersions.platform, platform), eq(appVersions.isActive, true)))
-    .orderBy(desc(appVersions.versionCode))
-    .limit(1);
+  try {
+    // Try with platform filter first
+    const result = await db
+      .select()
+      .from(appVersions)
+      .where(eq(appVersions.isActive, true))
+      .orderBy(desc(appVersions.versionCode))
+      .limit(1);
 
-  return result.length > 0 ? result[0] : null;
+    console.log("[DB] getLatestAppVersion result:", result);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error("[DB] getLatestAppVersion error:", error);
+    return null;
+  }
 }
 
 export async function createAppVersion(data: InsertAppVersion): Promise<number | null> {

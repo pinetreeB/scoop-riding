@@ -1133,8 +1133,11 @@ export const appRouter = router({
         platform: z.string().default("android"),
       }))
       .query(async ({ input }) => {
+        console.log("[AppVersion] checkUpdate called with:", input);
         const latestVersion = await db.getLatestAppVersion(input.platform);
+        console.log("[AppVersion] Latest version from DB:", latestVersion);
         if (!latestVersion) {
+          console.log("[AppVersion] No version found in DB");
           return { hasUpdate: false, latestVersion: null };
         }
         

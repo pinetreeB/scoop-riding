@@ -1,0 +1,28 @@
+{
+  "query": "SELECT * FROM app_versions;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT * FROM app_versions;",
+  "rows": [
+    {
+      "id": "1",
+      "version": "0.0.9",
+      "build_number": "9",
+      "release_notes": "v0.0.9 - 경로 안내 기능 강화: 이동 수단 모드 확장(이륜자동차/오토바이 추가), TTS 음성 안내 기능(턴바이턴, 도착, 경로 이탈), 경로 재탐색 기능(100m 이탈 시 자동 재계산), 즐겨찾기 장소 기능(추가/삭제/바로 경로 안내)",
+      "download_url": "https://expo.dev/artifacts/eas/bwpTCxZUekaSFAD4tyQhaP.apk",
+      "is_force_update": "0",
+      "is_active": "0",
+      "created_at": "2026-01-27 07:25:55"
+    }
+  ],
+  "messages": [
+    "30001\t0.0.12\t12\t버그 수정:",
+    "- 주행기록 데이터 유저 ID 기반 저장으로 변경",
+    "- 지도 회전 네비게이션 스타일 수정",
+    "- 고도 그래프 Y축 스케일 수정",
+    "- 업데이트 알림 버전 비교 로직 수정",
+    "- 경로 검색 API 호출 개선",
+    "- 주행 중 지도 터치 조작 기능 추가\thttps://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/62c32715-bd72-40ee-9d86-bb2d0237021c\t0\t1\t2026-01-27 16:11:57"
+  ],
+  "stdout": "id\tversion\tbuild_number\trelease_notes\tdownload_url\tis_force_update\tis_active\tcreated_at\n1\t0.0.9\t9\tv0.0.9 - 경로 안내 기능 강화: 이동 수단 모드 확장(이륜자동차/오토바이 추가), TTS 음성 안내 기능(턴바이턴, 도착, 경로 이탈), 경로 재탐색 기능(100m 이탈 시 자동 재계산), 즐겨찾기 장소 기능(추가/삭제/바로 경로 안내)\thttps://expo.dev/artifacts/eas/bwpTCxZUekaSFAD4tyQhaP.apk\t0\t0\t2026-01-27 07:25:55\n30001\t0.0.12\t12\t버그 수정:\n- 주행기록 데이터 유저 ID 기반 저장으로 변경\n- 지도 회전 네비게이션 스타일 수정\n- 고도 그래프 Y축 스케일 수정\n- 업데이트 알림 버전 비교 로직 수정\n- 경로 검색 API 호출 개선\n- 주행 중 지도 터치 조작 기능 추가\thttps://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/62c32715-bd72-40ee-9d86-bb2d0237021c\t0\t1\t2026-01-27 16:11:57\n",
+  "stderr": "",
+  "execution_time_ms": 1573
+}

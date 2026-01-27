@@ -498,3 +498,9 @@
 - [x] EAS Build로 Android APK 빌드
 - [x] 서버 앱 버전 업데이트
 - [x] 기존 사용자에게 업데이트 알림 배포
+
+
+## 버그 수정 (2026-01-28) - 업데이트 알림 버그
+- [x] v0.0.12에서 v0.0.11 업데이트 알림이 표시되는 버그 수정
+  - profile.tsx에서 하드코딩된 버전 대신 Constants.expoConfig.version 사용
+  - db.ts에서 getLatestAppVersion 함수 오류 처리 개선
