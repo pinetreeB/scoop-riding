@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO app_versions (version, download_url, release_notes, is_active, created_at) VALUES ('0.0.12', 'https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/62c32715-bd72-40ee-9d86-bb2d0237021c', '버그 수정:\\n- 주행기록 데이터 유저 ID 기반 저장으로 변경\\n- 지도 회전 네비게이션 스타일 수정\\n- 고도 그래프 Y축 스케일 수정\\n- 업데이트 알림 버전 비교 로직 수정\\n- 경로 검색 API 호출 개선\\n- 주행 중 지도 터치 조작 기능 추가', true, NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO app_versions (version, download_url, release_notes, is_active, created_at) VALUES ('0.0.12', 'https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/62c32715-bd72-40ee-9d86-bb2d0237021c', '버그 수정:\\n- 주행기록 데이터 유저 ID 기반 저장으로 변경\\n- 지도 회전 네비게이션 스타일 수정\\n- 고도 그래프 Y축 스케일 수정\\n- 업데이트 알림 버전 비교 로직 수정\\n- 경로 검색 API 호출 개선\\n- 주행 중 지도 터치 조작 기능 추가', true, NOW());",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1364 (HY000) at line 1: Field 'build_number' doesn't have a default value"
+  ]
+}
