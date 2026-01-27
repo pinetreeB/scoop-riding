@@ -424,8 +424,8 @@ export function getMaxSpeed(points: GpsPoint[]): number {
     .filter((p) => {
       if (p.speed === null) return false;
       const speedKmh = msToKmh(p.speed);
-      // Exclude speeds below threshold and unrealistically high speeds (> 100 km/h for e-scooter)
-      return speedKmh >= GPS_CONSTANTS.MIN_SPEED_THRESHOLD && speedKmh <= 100;
+      // Exclude speeds below threshold and unrealistically high speeds
+      return speedKmh >= GPS_CONSTANTS.MIN_SPEED_THRESHOLD && speedKmh <= GPS_CONSTANTS.MAX_REALISTIC_SPEED;
     })
     .map((p) => msToKmh(p.speed!));
 

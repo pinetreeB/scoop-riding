@@ -384,13 +384,13 @@ export function RideMap({
     function animate() {
       if (!isLiveMode) return;
 
-      // Smooth position interpolation
-      const positionFactor = 0.12;
+      // Smooth position interpolation - 더 부드러운 애니메이션을 위해 계수 낮춤
+      const positionFactor = 0.08;
       currentLat = lerp(currentLat, targetLat, positionFactor);
       currentLng = lerp(currentLng, targetLng, positionFactor);
 
-      // Smooth heading interpolation
-      const headingFactor = 0.08;
+      // Smooth heading interpolation - 더 부드러운 회전을 위해 계수 낮춤
+      const headingFactor = 0.05;
       displayHeading = lerpAngle(displayHeading, targetHeading, headingFactor);
 
       // Update marker position
@@ -476,7 +476,9 @@ export function RideMap({
 </body>
 </html>
     `;
-  }, [gpsPoints.length, isLive, colors.primary]);
+  // 지도 HTML은 초기 로드 시에만 생성하고, 이후에는 JavaScript 주입으로만 업데이트
+  // gpsPoints.length를 의존성에서 제거하여 불필요한 재렌더링 방지
+  }, [isLive, colors.primary]);
 
   // Update map when location changes in live mode - throttled for performance
   useEffect(() => {

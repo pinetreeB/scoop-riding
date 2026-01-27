@@ -102,6 +102,7 @@ export default function RidingScreen() {
   
   // Auto-pause when stationary
   const [isAutoPaused, setIsAutoPaused] = useState(false);
+  const isAutoPausedRef = useRef(false); // ref로도 추적하여 클로저 문제 해결
   const [restTime, setRestTime] = useState(0); // 휴식 시간 (초)
   const stationaryCountRef = useRef(0); // 정지 상태 카운터
   const AUTO_PAUSE_SPEED_THRESHOLD = 1.5; // km/h 이하면 정지로 판단
@@ -129,6 +130,11 @@ export default function RidingScreen() {
     isRunningRef.current = isRunning;
   }, [isRunning]);
 
+  // isAutoPaused 상태를 ref에도 동기화
+  useEffect(() => {
+    isAutoPausedRef.current = isAutoPaused;
+  }, [isAutoPaused]);
+
   // Load selected scooter on mount
   useEffect(() => {
     getSelectedScooter().then(setSelectedScooter);
@@ -144,9 +150,40 @@ export default function RidingScreen() {
     }
   }, [params.groupId]);
 
-  // Update group members when data changes
+  // Track previous group members for detecting ride end
+  const previousMembersRef = useRef<Map<number, boolean>>(new Map());
+  const rideEndAlertedRef = useRef<Set<number>>(new Set());
+
+  // Update group members when data changes and detect ride end
   useEffect(() => {
     if (groupMembersData) {
+      // 그룹원 주행 종료 감지
+      groupMembersData.forEach(member => {
+        const wasRiding = previousMembersRef.current.get(member.userId);
+        const isNowRiding = member.isRiding;
+        
+        // 이전에 주행 중이었는데 지금은 주행 중이 아니면 종료 알림
+        if (wasRiding === true && isNowRiding === false) {
+          if (!rideEndAlertedRef.current.has(member.userId)) {
+            rideEndAlertedRef.current.add(member.userId);
+            Alert.alert(
+              "그룹원 주행 종료",
+              `${member.name || '그룹원'}님이 주행을 종료하였습니다.`,
+              [{ text: "확인" }]
+            );
+            if (Platform.OS !== "web") {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            }
+          }
+        } else if (isNowRiding) {
+          // 다시 주행 시작하면 알림 상태 리셋
+          rideEndAlertedRef.current.delete(member.userId);
+        }
+        
+        // 현재 상태 저장
+        previousMembersRef.current.set(member.userId, isNowRiding);
+      });
+      
       setGroupMembers(groupMembersData);
     }
   }, [groupMembersData]);
@@ -156,7 +193,7 @@ export default function RidingScreen() {
   useEffect(() => {
     if (!groupId || !currentLocation || groupMembers.length === 0) return;
 
-    const DISTANCE_THRESHOLD_METERS = 500; // 500m 이상 떨어지면 경고
+    const DISTANCE_THRESHOLD_METERS = 3000; // 3km 이상 떨어지면 경고
     
     groupMembers.forEach(member => {
       if (!member.latitude || !member.longitude) return;
@@ -173,8 +210,8 @@ export default function RidingScreen() {
         if (!distantMemberAlertedRef.current.has(member.userId)) {
           distantMemberAlertedRef.current.add(member.userId);
           Alert.alert(
-            "그룹원 이탈 경고",
-            `${member.name || '그룹원'}님이 ${Math.round(distanceToMember)}m 떨어져 있습니다.`,
+            "팀원이 멀어졌습니다",
+            `${member.name || '그룹원'}님이 ${(distanceToMember / 1000).toFixed(1)}km 떨어져 있습니다.`,
             [{ text: "확인" }]
           );
           if (Platform.OS !== "web") {
@@ -248,7 +285,8 @@ export default function RidingScreen() {
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
-      if (isRunningRef.current && !isAutoPaused) {
+      // ref를 사용하여 클로저 문제 해결
+      if (isRunningRef.current && !isAutoPausedRef.current) {
         // 주행 중일 때만 시간 카운트
         setDuration((prev) => {
           const newDuration = prev + 1;
@@ -261,17 +299,17 @@ export default function RidingScreen() {
               newDuration
             );
           }
-          // Update foreground notification with current stats (every 2 seconds to reduce overhead)
-          if (Platform.OS !== "web" && isBackgroundEnabled && newDuration % 2 === 0) {
+          // Update foreground notification with current stats (every second for real-time display)
+          if (Platform.OS !== "web" && isBackgroundEnabled) {
             updateForegroundNotification(
-              distance * 1000, // km to meters
+              distance, // already in meters
               newDuration,
               currentSpeed
             );
           }
           return newDuration;
         });
-      } else if (isAutoPaused) {
+      } else if (isAutoPausedRef.current) {
         // 자동 일시정지 중일 때 휴식 시간 카운트
         setRestTime((prev) => prev + 1);
       }
@@ -282,7 +320,7 @@ export default function RidingScreen() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [voiceSettings, currentSpeed, distance, isAutoPaused, isBackgroundEnabled]);
+  }, [voiceSettings, currentSpeed, distance, isBackgroundEnabled]);
 
   const initializeGps = async () => {
     try {
@@ -315,6 +353,9 @@ export default function RidingScreen() {
           setIsBackgroundEnabled(true);
           // Start background tracking
           await startBackgroundLocationTracking(handleLocationUpdate);
+          
+          // Initialize notification with zeros to clear any stale data
+          updateForegroundNotification(0, 0, 0);
           
           // Show battery optimization guide if needed (after a short delay)
           setTimeout(() => {
@@ -721,21 +762,31 @@ export default function RidingScreen() {
 
         {/* Map or Speed Display */}
         {showMap ? (
-          <View className="flex-1 mx-4 mb-4 rounded-2xl overflow-hidden">
-<RideMap
-               gpsPoints={gpsPoints}
-               currentLocation={currentLocation}
-               isLive={true}
-               showCurrentLocation={false}
-               gpxRoute={gpxRoute}
-               groupMembers={groupMembers}
-             />
-            {/* Speed overlay on map */}
-            <View className="absolute bottom-4 left-4 bg-black/70 rounded-xl px-4 py-2">
+          <View className="flex-1 overflow-hidden">
+            <RideMap
+              gpsPoints={gpsPoints}
+              currentLocation={currentLocation}
+              isLive={true}
+              showCurrentLocation={false}
+              gpxRoute={gpxRoute}
+              groupMembers={groupMembers}
+              style={{ borderRadius: 0 }}
+            />
+            {/* Speed overlay on map - 전체 화면에 맞게 위치 조정 */}
+            <View className="absolute bottom-4 left-4 bg-black/80 rounded-xl px-4 py-2 shadow-lg">
               <Text className="text-4xl font-bold text-white">
                 {currentSpeed.toFixed(1)}
               </Text>
               <Text className="text-xs text-gray-300">km/h</Text>
+            </View>
+            {/* 거리/시간 오버레이 */}
+            <View className="absolute bottom-4 right-4 bg-black/80 rounded-xl px-3 py-2 shadow-lg">
+              <Text className="text-lg font-bold text-white">
+                {(distance / 1000).toFixed(2)} km
+              </Text>
+              <Text className="text-xs text-gray-300 text-right">
+                {formatDuration(duration)}
+              </Text>
             </View>
           </View>
         ) : (
