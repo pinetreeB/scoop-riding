@@ -554,10 +554,13 @@ export default function RidingScreen() {
     setCurrentSpeed(displaySpeed);
 
     // 자동 일시정지 로직: 속도가 임계값 이하면 정지 카운터 증가
+    // isAutoPausedRef.current를 사용하여 클로저 문제 해결
     if (displaySpeed < AUTO_PAUSE_SPEED_THRESHOLD) {
       stationaryCountRef.current += 1;
-      if (stationaryCountRef.current >= AUTO_PAUSE_DELAY_SECONDS && !isAutoPaused) {
+      if (stationaryCountRef.current >= AUTO_PAUSE_DELAY_SECONDS && !isAutoPausedRef.current) {
         setIsAutoPaused(true);
+        isAutoPausedRef.current = true; // ref도 즉시 업데이트
+        console.log("[Riding] Auto-pause activated - stationary for", AUTO_PAUSE_DELAY_SECONDS, "seconds");
         if (Platform.OS !== "web") {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
@@ -565,8 +568,10 @@ export default function RidingScreen() {
     } else {
       // 움직이면 카운터 리셋 및 자동 일시정지 해제
       stationaryCountRef.current = 0;
-      if (isAutoPaused) {
+      if (isAutoPausedRef.current) {
         setIsAutoPaused(false);
+        isAutoPausedRef.current = false; // ref도 즉시 업데이트
+        console.log("[Riding] Auto-pause deactivated - movement detected, speed:", displaySpeed.toFixed(1), "km/h");
         if (Platform.OS !== "web") {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }
@@ -1139,6 +1144,7 @@ export default function RidingScreen() {
                 showCurrentLocation={false}
                 gpxRoute={gpxRoute}
                 groupMembers={groupMembers}
+                navigationMode={hasNavigation} // 네비게이션 모드일 때 지도 회전 활성화
                 style={{ flex: 1, borderRadius: 0 }}
               />
             ) : (

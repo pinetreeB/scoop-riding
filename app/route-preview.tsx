@@ -142,41 +142,96 @@ export default function RoutePreviewScreen() {
 
     setIsLoading(true);
     try {
-      // TWO_WHEELER uses DRIVING mode with avoid=highways for scooter-friendly routes
-      const apiMode = selectedMode === "TWO_WHEELER" ? "driving" : selectedMode.toLowerCase();
-      const avoidParam = selectedMode === "TWO_WHEELER" ? "&avoid=highways" : "";
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${currentLocation.lat},${currentLocation.lng}&destination=${destination.lat},${destination.lng}&mode=${apiMode}${avoidParam}&language=ko&key=${GOOGLE_MAPS_API_KEY}`;
+      // 목적지 좌표 유효성 검사
+      if (!destination.lat || !destination.lng || destination.lat === 0 || destination.lng === 0) {
+        Alert.alert("오류", "목적지 좌표가 유효하지 않습니다.");
+        setIsLoading(false);
+        return;
+      }
 
-      const response = await fetch(url);
-      const data = await response.json();
+      // API 키 확인
+      if (!GOOGLE_MAPS_API_KEY) {
+        console.error("[Route] Google Maps API key is missing");
+        Alert.alert("설정 오류", "Google Maps API 키가 설정되지 않았습니다.");
+        setIsLoading(false);
+        return;
+      }
 
-      if (data.status === "OK" && data.routes.length > 0) {
-        const route = data.routes[0];
-        const leg = route.legs[0];
+      // 모드별 API 호출 시도 (실패 시 대체 모드 시도)
+      const modesToTry = selectedMode === "TWO_WHEELER" 
+        ? ["driving", "bicycling", "walking"] // 이륨차는 driving 우선, 실패 시 bicycling, walking
+        : selectedMode === "BICYCLING"
+        ? ["bicycling", "walking", "driving"] // 자전거는 bicycling 우선
+        : selectedMode === "WALKING"
+        ? ["walking", "bicycling"] // 도보는 walking 우선
+        : ["driving", "bicycling", "walking"]; // 기본
 
-        const steps: RouteStep[] = leg.steps.map((step: any) => ({
-          instruction: stripHtmlTags(step.html_instructions),
-          distance: step.distance.text,
-          duration: step.duration.text,
-          maneuver: step.maneuver,
-        }));
+      let routeFound = false;
+      let lastError = "";
 
-        const polylinePoints = decodePolyline(route.overview_polyline.points);
+      for (const mode of modesToTry) {
+        try {
+          const avoidParam = mode === "driving" ? "&avoid=highways" : "";
+          const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${currentLocation.lat},${currentLocation.lng}&destination=${destination.lat},${destination.lng}&mode=${mode}${avoidParam}&language=ko&key=${GOOGLE_MAPS_API_KEY}`;
 
-        setRouteInfo({
-          distance: leg.distance.text,
-          duration: leg.duration.text,
-          distanceValue: leg.distance.value,
-          durationValue: leg.duration.value,
-          steps,
-          polylinePoints,
-        });
-      } else {
-        Alert.alert("경로 없음", "해당 목적지까지의 경로를 찾을 수 없습니다.");
+          console.log(`[Route] Trying mode: ${mode}`);
+          const response = await fetch(url);
+          const data = await response.json();
+
+          console.log(`[Route] Response status: ${data.status}`);
+
+          if (data.status === "OK" && data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            const leg = route.legs[0];
+
+            const steps: RouteStep[] = leg.steps.map((step: any) => ({
+              instruction: stripHtmlTags(step.html_instructions),
+              distance: step.distance.text,
+              duration: step.duration.text,
+              maneuver: step.maneuver,
+            }));
+
+            const polylinePoints = decodePolyline(route.overview_polyline.points);
+
+            setRouteInfo({
+              distance: leg.distance.text,
+              duration: leg.duration.text,
+              distanceValue: leg.distance.value,
+              durationValue: leg.duration.value,
+              steps,
+              polylinePoints,
+            });
+
+            routeFound = true;
+            console.log(`[Route] Route found using mode: ${mode}`);
+            break;
+          } else {
+            lastError = data.status || "UNKNOWN_ERROR";
+            console.log(`[Route] Mode ${mode} failed: ${lastError}`);
+          }
+        } catch (modeError) {
+          console.error(`[Route] Mode ${mode} error:`, modeError);
+          lastError = String(modeError);
+        }
+      }
+
+      if (!routeFound) {
+        // 상세 오류 메시지 표시
+        let errorMessage = "해당 목적지까지의 경로를 찾을 수 없습니다.";
+        if (lastError === "ZERO_RESULTS") {
+          errorMessage = "이 지역에서는 경로를 찾을 수 없습니다. 다른 목적지를 선택해주세요.";
+        } else if (lastError === "NOT_FOUND") {
+          errorMessage = "출발지 또는 목적지를 찾을 수 없습니다.";
+        } else if (lastError === "REQUEST_DENIED") {
+          errorMessage = "API 요청이 거부되었습니다. API 키를 확인해주세요.";
+        } else if (lastError === "OVER_QUERY_LIMIT") {
+          errorMessage = "API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.";
+        }
+        Alert.alert("경로 없음", errorMessage);
       }
     } catch (error) {
       console.error("Route fetch error:", error);
-      Alert.alert("오류", "경로를 가져오는 중 오류가 발생했습니다.");
+      Alert.alert("오류", "경로를 가져오는 중 오류가 발생했습니다.\n네트워크 연결을 확인해주세요.");
     } finally {
       setIsLoading(false);
     }

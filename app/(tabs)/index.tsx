@@ -125,7 +125,12 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadStats();
-    }, [loadStats])
+      // 화면에 포커스될 때마다 랭킹 데이터도 새로고침
+      if (isAuthenticated) {
+        trpcUtils.ranking.getWeekly.invalidate();
+        trpcUtils.ranking.getMonthly.invalidate();
+      }
+    }, [loadStats, isAuthenticated, trpcUtils])
   );
 
   // Auto sync on first load when authenticated - 강화된 동기화 로직 사용

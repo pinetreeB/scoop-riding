@@ -45,6 +45,8 @@ interface GoogleRideMapProps {
   style?: any;
   gpxRoute?: { points: GpxRoutePoint[]; name?: string } | null;
   groupMembers?: GroupMemberLocation[];
+  /** 네비게이션 모드 - 진행 방향이 항상 위를 향하도록 지도 회전 */
+  navigationMode?: boolean;
 }
 
 // Arrow marker component for current location
@@ -91,12 +93,14 @@ export function GoogleRideMap({
   style,
   gpxRoute,
   groupMembers = [],
+  navigationMode = false,
 }: GoogleRideMapProps) {
   const colors = useColors();
   const mapRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [region, setRegion] = useState<any>(null);
   const animatedHeading = useRef(currentLocation?.heading || 0);
+  const lastCameraHeading = useRef<number>(0);
 
   // Calculate initial region from GPS points
   const initialRegion = useMemo(() => {
@@ -151,22 +155,39 @@ export function GoogleRideMap({
   const startPoint = gpsPoints.length > 0 ? gpsPoints[0] : null;
   const endPoint = gpsPoints.length > 1 ? gpsPoints[gpsPoints.length - 1] : null;
 
-  // Animate to current location in live mode
+  // Animate to current location in live mode with optional navigation rotation
   useEffect(() => {
     if (isLive && currentLocation && mapRef.current) {
-      mapRef.current.animateToRegion({
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
-        latitudeDelta: 0.005,
-        longitudeDelta: 0.005,
-      }, 300);
-
       // Smooth heading animation
       if (currentLocation.heading !== undefined) {
         animatedHeading.current = currentLocation.heading;
       }
+
+      if (navigationMode) {
+        // 네비게이션 모드: 카메라를 회전하여 진행 방향이 항상 위를 향하도록
+        const heading = currentLocation.heading ?? lastCameraHeading.current;
+        lastCameraHeading.current = heading;
+        
+        mapRef.current.animateCamera({
+          center: {
+            latitude: currentLocation.latitude,
+            longitude: currentLocation.longitude,
+          },
+          heading: heading, // 카메라가 진행 방향을 향하도록 회전
+          pitch: 45, // 약간 기울어진 시점 (네비게이션 스타일)
+          zoom: 17, // 적절한 줌 레벨
+        }, { duration: 300 });
+      } else {
+        // 일반 라이브 모드: 위치만 업데이트
+        mapRef.current.animateToRegion({
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        }, 300);
+      }
     }
-  }, [isLive, currentLocation?.latitude, currentLocation?.longitude, currentLocation?.heading]);
+  }, [isLive, navigationMode, currentLocation?.latitude, currentLocation?.longitude, currentLocation?.heading]);
 
   // Fit to bounds when not in live mode
   useEffect(() => {

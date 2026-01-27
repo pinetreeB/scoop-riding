@@ -331,6 +331,7 @@ function escapeXml(str: string): string {
 
 /**
  * Save GPX file and share/download it
+ * 네이티브 플랫폼에서는 공유 다이얼로그를 통해 파일을 다운로드하거나 다른 앱으로 전송할 수 있습니다.
  */
 export async function saveAndShareGpx(
   track: TrackData,
@@ -338,11 +339,25 @@ export async function saveAndShareGpx(
 ): Promise<boolean> {
   try {
     const gpxContent = generateGpxContent(track);
-    const fileUri = `${FileSystem.documentDirectory || ''}${filename}.gpx`;
+    
+    // 파일명 살균화 (특수문자 제거)
+    const safeFilename = filename.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const fileUri = `${FileSystem.documentDirectory || ''}${safeFilename}.gpx`;
+
+    console.log("[GPX] Saving GPX file to:", fileUri);
+    console.log("[GPX] Track points count:", track.points.length);
 
     await FileSystem.writeAsStringAsync(fileUri, gpxContent, {
       encoding: 'utf8',
     });
+
+    // 파일이 제대로 저장되었는지 확인
+    const fileInfo = await FileSystem.getInfoAsync(fileUri);
+    if (!fileInfo.exists) {
+      console.error("[GPX] File was not saved properly");
+      return false;
+    }
+    console.log("[GPX] File saved, size:", (fileInfo as any).size || 'unknown');
 
     if (Platform.OS === "web") {
       // For web, create a download link
@@ -350,28 +365,37 @@ export async function saveAndShareGpx(
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${filename}.gpx`;
+      a.download = `${safeFilename}.gpx`;
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // 약간의 딜레이 후 정리
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
       return true;
     }
 
     // For native platforms, use sharing
     const isAvailable = await Sharing.isAvailableAsync();
+    console.log("[GPX] Sharing available:", isAvailable);
+    
     if (isAvailable) {
       await Sharing.shareAsync(fileUri, {
         mimeType: "application/gpx+xml",
-        dialogTitle: "GPX 파일 공유",
+        dialogTitle: "GPX 파일 내보내기",
         UTI: "com.topografix.gpx",
       });
+      console.log("[GPX] Share dialog opened successfully");
+      return true;
+    } else {
+      console.error("[GPX] Sharing is not available on this device");
+      // 공유가 불가능한 경우에도 파일은 저장되었으므로 부분 성공
       return true;
     }
-
-    return false;
   } catch (error) {
-    console.error("Error saving GPX file:", error);
+    console.error("[GPX] Error saving GPX file:", error);
     return false;
   }
 }
