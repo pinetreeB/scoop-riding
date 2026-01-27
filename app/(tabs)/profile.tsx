@@ -59,7 +59,7 @@ export default function ProfileScreen() {
     releaseNotes: string | null;
   }>({ hasUpdate: false, latestVersion: null, downloadUrl: null, releaseNotes: null });
 
-  const CURRENT_APP_VERSION = "0.0.5";
+  const CURRENT_APP_VERSION = "0.0.10";
 
   // Check for app updates
   const { data: updateData } = trpc.appVersion.checkUpdate.useQuery(

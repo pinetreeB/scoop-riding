@@ -76,11 +76,15 @@ export default function HomeScreen() {
       ? records.reduce((sum, r) => sum + r.avgSpeed, 0) / records.length
       : 0;
 
-    // Calculate weekly stats
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    // Calculate weekly stats (Monday to Sunday)
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    const weekStart = new Date(now);
+    weekStart.setDate(diff);
+    weekStart.setHours(0, 0, 0, 0);
     const weeklyRecords = records.filter(
-      (r) => new Date(r.startTime) >= oneWeekAgo
+      (r) => new Date(r.startTime) >= weekStart
     );
     const weeklyDistance = weeklyRecords.reduce((sum, r) => sum + r.distance, 0);
     const weeklyDuration = weeklyRecords.reduce((sum, r) => sum + r.duration, 0);

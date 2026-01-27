@@ -1,0 +1,106 @@
+{
+  "query": "SELECT r.id, r.userId, r.distance, r.date, r.createdAt, u.name \nFROM ridingRecords r \nJOIN users u ON r.userId = u.id \nWHERE u.name LIKE '%소나무%' OR u.email LIKE '%tmd7221%'\nORDER BY r.createdAt DESC \nLIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT r.id, r.userId, r.distance, r.date, r.createdAt, u.name \nFROM ridingRecords r \nJOIN users u ON r.userId = u.id \nWHERE u.name LIKE '%소나무%' OR u.email LIKE '%tmd7221%'\nORDER BY r.createdAt DESC \nLIMIT 20;",
+  "rows": [
+    {
+      "id": "1230003",
+      "userId": "1",
+      "distance": "0",
+      "date": "2026. 1. 27.",
+      "createdAt": "2026-01-27 04:35:17",
+      "name": "소나무군"
+    },
+    {
+      "id": "1200001",
+      "userId": "1",
+      "distance": "22",
+      "date": "2026. 1. 27.",
+      "createdAt": "2026-01-27 03:49:01",
+      "name": "소나무군"
+    },
+    {
+      "id": "1080158",
+      "userId": "1",
+      "distance": "434",
+      "date": "2026. 1. 27.",
+      "createdAt": "2026-01-26 16:56:14",
+      "name": "소나무군"
+    },
+    {
+      "id": "1080077",
+      "userId": "1",
+      "distance": "0",
+      "date": "2026. 1. 27.",
+      "createdAt": "2026-01-26 16:19:32",
+      "name": "소나무군"
+    },
+    {
+      "id": "420011",
+      "userId": "1",
+      "distance": "1341",
+      "date": "2026. 1. 23.",
+      "createdAt": "2026-01-23 08:40:12",
+      "name": "소나무군"
+    },
+    {
+      "id": "420010",
+      "userId": "1",
+      "distance": "2082",
+      "date": "2026. 1. 23.",
+      "createdAt": "2026-01-23 08:37:55",
+      "name": "소나무군"
+    },
+    {
+      "id": "420006",
+      "userId": "1",
+      "distance": "2260",
+      "date": "2026. 1. 23.",
+      "createdAt": "2026-01-23 08:26:47",
+      "name": "소나무군"
+    },
+    {
+      "id": "330006",
+      "userId": "1",
+      "distance": "16",
+      "date": "2026. 1. 23.",
+      "createdAt": "2026-01-23 02:34:32",
+      "name": "소나무군"
+    },
+    {
+      "id": "300080",
+      "userId": "1",
+      "distance": "11",
+      "date": "2026. 1. 23.",
+      "createdAt": "2026-01-23 01:57:17",
+      "name": "소나무군"
+    },
+    {
+      "id": "240034",
+      "userId": "1",
+      "distance": "7",
+      "date": "2026. 1. 23.",
+      "createdAt": "2026-01-22 19:44:46",
+      "name": "소나무군"
+    },
+    {
+      "id": "180002",
+      "userId": "1",
+      "distance": "3",
+      "date": "2026. 1. 22.",
+      "createdAt": "2026-01-22 14:35:03",
+      "name": "소나무군"
+    },
+    {
+      "id": "120015",
+      "userId": "1",
+      "distance": "731",
+      "date": "2026. 1. 22.",
+      "createdAt": "2026-01-22 12:08:57",
+      "name": "소나무군"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tdistance\tdate\tcreatedAt\tname\n1230003\t1\t0\t2026. 1. 27.\t2026-01-27 04:35:17\t소나무군\n1200001\t1\t22\t2026. 1. 27.\t2026-01-27 03:49:01\t소나무군\n1080158\t1\t434\t2026. 1. 27.\t2026-01-26 16:56:14\t소나무군\n1080077\t1\t0\t2026. 1. 27.\t2026-01-26 16:19:32\t소나무군\n420011\t1\t1341\t2026. 1. 23.\t2026-01-23 08:40:12\t소나무군\n420010\t1\t2082\t2026. 1. 23.\t2026-01-23 08:37:55\t소나무군\n420006\t1\t2260\t2026. 1. 23.\t2026-01-23 08:26:47\t소나무군\n330006\t1\t16\t2026. 1. 23.\t2026-01-23 02:34:32\t소나무군\n300080\t1\t11\t2026. 1. 23.\t2026-01-23 01:57:17\t소나무군\n240034\t1\t7\t2026. 1. 23.\t2026-01-22 19:44:46\t소나무군\n180002\t1\t3\t2026. 1. 22.\t2026-01-22 14:35:03\t소나무군\n120015\t1\t731\t2026. 1. 22.\t2026-01-22 12:08:57\t소나무군\n",
+  "stderr": "",
+  "execution_time_ms": 1550
+}

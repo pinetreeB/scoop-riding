@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO appVersions (version, platform, downloadUrl, releaseNotes, createdAt)\nVALUES (\n  '0.0.10',\n  'android',\n  'https://expo.dev/artifacts/eas/nXBbH7MWtNuM8VLZqZNmeG.apk',\n  'v0.0.10 업데이트:\\n[버그 수정]\\n- 주행 기록 시 강제종료 오류 수정 (Google Maps API 키 포함)\\n- 같은 버전인데 업데이트 알림 뜨는 문제 수정\\n- 주간 랭킹 데이터 불일치 수정 (주간 기준 월요일~일요일로 통일)\\n\\n[개선]\\n- Google Maps 네이티브 지도 적용\\n- 경로 안내 기능 강화',\n  NOW()\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO appVersions (version, platform, downloadUrl, releaseNotes, createdAt)\nVALUES (\n  '0.0.10',\n  'android',\n  'https://expo.dev/artifacts/eas/nXBbH7MWtNuM8VLZqZNmeG.apk',\n  'v0.0.10 업데이트:\\n[버그 수정]\\n- 주행 기록 시 강제종료 오류 수정 (Google Maps API 키 포함)\\n- 같은 버전인데 업데이트 알림 뜨는 문제 수정\\n- 주간 랭킹 데이터 불일치 수정 (주간 기준 월요일~일요일로 통일)\\n\\n[개선]\\n- Google Maps 네이티브 지도 적용\\n- 경로 안내 기능 강화',\n  NOW()\n);",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1364 (HY000) at line 1: Field 'versionCode' doesn't have a default value"
+  ]
+}

@@ -444,3 +444,14 @@
 - [x] 빌드 완료 (2026-01-27 02:22:18)
 - [x] APK 다운로드 완료 (scoop-riders-v0.0.9.apk, 57MB)
 - [x] 앱 배포 및 업데이트 알림 설정 (DB에 v0.0.9 버전 등록 완료)
+
+## 버그 수정 (2026-01-27) - v0.0.9 긴급
+- [x] 주행 기록 시 강제종료 오류 수정 (Google Maps 임시 비활성화, OpenStreetMap 사용)
+- [x] 같은 버전인데 업데이트 알림 뜨는 문제 수정 (CURRENT_APP_VERSION 0.0.5 -> 0.0.9 업데이트)
+- [x] 주간 랭킹 데이터 불일치 수정 (주간 기준 월요일~일요일로 통일)
+
+## v0.0.10 빌드 (2026-01-27) - Google Maps API 키 포함
+- [x] Google Maps 재활성화 (riding.tsx)
+- [x] EAS 환경변수에 Google Maps API 키 설정
+- [x] APK 빌드 시작 (Build ID: b1d380a4-a74e-4433-9964-6bbcba42fdea)
+- [x] 빌드 완료 및 배포 (APK: nXBbH7MWtNuM8VLZqZNmeG.apk, DB 등록 완료)
