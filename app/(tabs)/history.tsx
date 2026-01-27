@@ -239,10 +239,31 @@ export default function HistoryScreen() {
     <ScreenContainer>
       {/* Header */}
       <View className="px-4 py-3 border-b border-border">
-        <Text className="text-2xl font-bold text-foreground">주행 기록</Text>
-        <Text className="text-sm text-muted mt-1">
-          총 {records.length}개의 기록 • 탭하여 상세 보기
-        </Text>
+        <View className="flex-row items-center justify-between">
+          <View>
+            <Text className="text-2xl font-bold text-foreground">주행 기록</Text>
+            <Text className="text-sm text-muted mt-1">
+              총 {records.length}개의 기록 • 탭하여 상세 보기
+            </Text>
+          </View>
+          {records.length >= 2 && (
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                router.push("/compare-routes");
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center bg-primary/10 px-3 py-2 rounded-lg"
+            >
+              <MaterialIcons name="compare-arrows" size={18} color={colors.primary} />
+              <Text style={{ color: colors.primary }} className="text-sm font-medium ml-1">
+                경로 비교
+              </Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
       <FlatList

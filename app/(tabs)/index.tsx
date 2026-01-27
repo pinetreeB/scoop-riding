@@ -641,6 +641,76 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Quick Access: Challenges & Goals */}
+        {isAuthenticated && (
+          <View className="mx-5 mb-4">
+            <View className="flex-row gap-3">
+              {/* Challenges */}
+              <Pressable
+                onPress={() => {
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  router.push("/challenges" as any);
+                }}
+                style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
+              >
+                <View className="bg-surface rounded-2xl p-4 border border-border">
+                  <View className="flex-row items-center mb-2">
+                    <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: colors.primary + '20' }}>
+                      <MaterialIcons name="flag" size={20} color={colors.primary} />
+                    </View>
+                  </View>
+                  <Text className="text-foreground font-bold">챌린지</Text>
+                  <Text className="text-muted text-xs mt-1">친구들과 경쟁하기</Text>
+                </View>
+              </Pressable>
+
+              {/* Goals */}
+              <Pressable
+                onPress={() => {
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  router.push("/goals" as any);
+                }}
+                style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
+              >
+                <View className="bg-surface rounded-2xl p-4 border border-border">
+                  <View className="flex-row items-center mb-2">
+                    <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: colors.success + '20' }}>
+                      <MaterialIcons name="track-changes" size={20} color={colors.success} />
+                    </View>
+                  </View>
+                  <Text className="text-foreground font-bold">나의 목표</Text>
+                  <Text className="text-muted text-xs mt-1">주간/월간 목표 설정</Text>
+                </View>
+              </Pressable>
+
+              {/* Badges */}
+              <Pressable
+                onPress={() => {
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  router.push("/badges" as any);
+                }}
+                style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
+              >
+                <View className="bg-surface rounded-2xl p-4 border border-border">
+                  <View className="flex-row items-center mb-2">
+                    <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#F59E0B' + '20' }}>
+                      <MaterialIcons name="military-tech" size={20} color="#F59E0B" />
+                    </View>
+                  </View>
+                  <Text className="text-foreground font-bold">배지</Text>
+                  <Text className="text-muted text-xs mt-1">업적 확인하기</Text>
+                </View>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
         {/* Recent Rides */}
         {recentRides.length > 0 && (
           <View className="mx-5 mb-4">
