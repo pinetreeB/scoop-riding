@@ -57,7 +57,16 @@ const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 export default function RidingScreen() {
   const router = useRouter();
   const colors = useColors();
-  const params = useLocalSearchParams<{ withRoute?: string; groupId?: string }>();
+  const params = useLocalSearchParams<{ 
+    withRoute?: string; 
+    groupId?: string;
+    withNavigation?: string;
+    destinationName?: string;
+    destinationLat?: string;
+    destinationLng?: string;
+    routePolyline?: string;
+    routeSteps?: string;
+  }>();
 
   // Group riding state
   const [groupId, setGroupId] = useState<number | null>(null);
@@ -112,6 +121,23 @@ export default function RidingScreen() {
   
   // GPX 경로 따라가기
   const [gpxRoute, setGpxRoute] = useState<GpxRoute | null>(null);
+  
+  // 네비게이션 상태
+  const [hasNavigation, setHasNavigation] = useState(false);
+  const [navigationDestination, setNavigationDestination] = useState<{
+    name: string;
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [navigationRoute, setNavigationRoute] = useState<GpsPoint[]>([]);
+  const [navigationSteps, setNavigationSteps] = useState<{
+    instruction: string;
+    distance: string;
+    duration: string;
+    maneuver?: string;
+  }[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [distanceToDestination, setDistanceToDestination] = useState<number | null>(null);
   
   // 그룹 채팅
   const [showChat, setShowChat] = useState(false);
@@ -177,6 +203,53 @@ export default function RidingScreen() {
       }
     }
   }, [params.groupId]);
+
+  // Parse navigation params
+  useEffect(() => {
+    if (params.withNavigation === "true") {
+      setHasNavigation(true);
+      
+      // Parse destination
+      if (params.destinationName && params.destinationLat && params.destinationLng) {
+        setNavigationDestination({
+          name: params.destinationName,
+          lat: parseFloat(params.destinationLat),
+          lng: parseFloat(params.destinationLng),
+        });
+      }
+      
+      // Parse route polyline
+      if (params.routePolyline) {
+        try {
+          const points = JSON.parse(params.routePolyline) as GpsPoint[];
+          setNavigationRoute(points);
+          
+          // Set as GPX route for map display
+          setGpxRoute({
+            name: params.destinationName || "네비게이션 경로",
+            points: points.map(p => ({
+              latitude: p.latitude,
+              longitude: p.longitude,
+            })),
+            totalDistance: 0, // Will be calculated from route
+            estimatedDuration: 0, // Will be calculated from route
+          });
+        } catch (e) {
+          console.error("Failed to parse route polyline:", e);
+        }
+      }
+      
+      // Parse route steps
+      if (params.routeSteps) {
+        try {
+          const steps = JSON.parse(params.routeSteps);
+          setNavigationSteps(steps);
+        } catch (e) {
+          console.error("Failed to parse route steps:", e);
+        }
+      }
+    }
+  }, [params.withNavigation, params.destinationName, params.destinationLat, params.destinationLng, params.routePolyline, params.routeSteps]);
 
   // Track previous group members for detecting ride end
   const previousMembersRef = useRef<Map<number, boolean>>(new Map());
@@ -554,6 +627,54 @@ export default function RidingScreen() {
         const avgSpd = validPoints.reduce((sum, p) => sum + msToKmh(p.speed!), 0) / validPoints.length;
         setAvgSpeed(avgSpd);
       }
+
+      // Update navigation step if navigation is active
+      if (hasNavigation && navigationRoute.length > 0) {
+        updateNavigationProgress(latitude, longitude);
+      }
+    }
+  };
+
+  // Update navigation progress based on current location
+  const updateNavigationProgress = (lat: number, lng: number) => {
+    if (!navigationDestination || navigationRoute.length === 0) return;
+
+    // Calculate distance to destination
+    const distToDest = calculateDistance(lat, lng, navigationDestination.lat, navigationDestination.lng);
+    setDistanceToDestination(distToDest);
+
+    // Check if arrived at destination (within 50 meters)
+    if (distToDest < 0.05) { // 50 meters in km
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      Alert.alert(
+        "목적지 도착",
+        `${navigationDestination.name}에 도착했습니다!`,
+        [{ text: "확인" }]
+      );
+      setHasNavigation(false);
+      return;
+    }
+
+    // Update current step based on proximity to route points
+    // Find the closest point on the route and determine which step we're on
+    if (navigationSteps.length > 0 && currentStepIndex < navigationSteps.length - 1) {
+      // Simple heuristic: advance step when we've traveled enough distance
+      // In a real app, you'd use more sophisticated logic with route geometry
+      const stepProgress = gpsPointsRef.current.length;
+      const estimatedStepsPerPoint = Math.max(1, Math.floor(navigationRoute.length / navigationSteps.length));
+      const newStepIndex = Math.min(
+        Math.floor(stepProgress / estimatedStepsPerPoint),
+        navigationSteps.length - 1
+      );
+      
+      if (newStepIndex > currentStepIndex) {
+        setCurrentStepIndex(newStepIndex);
+        if (Platform.OS !== "web") {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+      }
     }
   };
 
@@ -728,6 +849,33 @@ export default function RidingScreen() {
     );
   };
 
+  const getNavigationIcon = (maneuver?: string): string => {
+    switch (maneuver) {
+      case "turn-left":
+        return "turn-left";
+      case "turn-right":
+        return "turn-right";
+      case "turn-slight-left":
+        return "turn-slight-left";
+      case "turn-slight-right":
+        return "turn-slight-right";
+      case "turn-sharp-left":
+        return "turn-sharp-left";
+      case "turn-sharp-right":
+        return "turn-sharp-right";
+      case "uturn-left":
+      case "uturn-right":
+        return "u-turn-left";
+      case "roundabout-left":
+      case "roundabout-right":
+        return "roundabout-left";
+      case "straight":
+        return "straight";
+      default:
+        return "arrow-forward";
+    }
+  };
+
   const getGpsStatusColor = () => {
     switch (gpsStatus) {
       case "active":
@@ -789,6 +937,44 @@ export default function RidingScreen() {
             />
           </Pressable>
         </View>
+
+        {/* Navigation Turn-by-Turn Banner */}
+        {hasNavigation && navigationSteps.length > 0 && currentStepIndex < navigationSteps.length && (
+          <View style={{
+            backgroundColor: colors.primary,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            marginHorizontal: 8,
+            marginBottom: 8,
+            borderRadius: 12,
+          }}>
+            <View className="flex-row items-center">
+              <View style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 12,
+              }}>
+                <MaterialIcons 
+                  name={getNavigationIcon(navigationSteps[currentStepIndex]?.maneuver) as any} 
+                  size={24} 
+                  color="#FFFFFF" 
+                />
+              </View>
+              <View className="flex-1">
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' }} numberOfLines={2}>
+                  {navigationSteps[currentStepIndex]?.instruction}
+                </Text>
+                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 }}>
+                  {navigationSteps[currentStepIndex]?.distance} · {navigationDestination?.name}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Map or Speed Display */}
         {showMap ? (

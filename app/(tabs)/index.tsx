@@ -347,13 +347,23 @@ export default function HomeScreen() {
           </Pressable>
         )}
 
-        {/* Search Bar (Placeholder) */}
-        <View className="mx-5 mb-4">
+        {/* Search Bar - Navigate to destination search */}
+        <Pressable
+          onPress={() => {
+            if (Platform.OS !== "web") {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            router.push("/search-destination" as any);
+          }}
+          style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+          className="mx-5 mb-4"
+        >
           <View className="bg-surface rounded-full px-4 py-3 flex-row items-center border border-border">
             <MaterialIcons name="search" size={20} color={colors.muted} />
             <Text className="text-muted ml-2 flex-1">어디로 달릴까요?</Text>
+            <MaterialIcons name="navigation" size={18} color={colors.primary} />
           </View>
-        </View>
+        </Pressable>
 
         {/* Start Riding Card */}
         <Pressable

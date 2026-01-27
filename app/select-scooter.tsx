@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ScreenContainer } from "@/components/screen-container";
@@ -50,8 +50,19 @@ export async function setSelectedScooter(scooter: SelectedScooter | null): Promi
 export default function SelectScooterScreen() {
   const colors = useColors();
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    withNavigation?: string;
+    destinationName?: string;
+    destinationLat?: string;
+    destinationLng?: string;
+    routePolyline?: string;
+    routeSteps?: string;
+  }>();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  // Check if this is a navigation-enabled ride
+  const hasNavigation = params.withNavigation === "true";
 
   const scootersQuery = trpc.scooters.list.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -89,7 +100,23 @@ export default function SelectScooterScreen() {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    router.push("/riding");
+    
+    // Pass navigation params to riding screen if available
+    if (hasNavigation) {
+      router.push({
+        pathname: "/riding",
+        params: {
+          withNavigation: "true",
+          destinationName: params.destinationName,
+          destinationLat: params.destinationLat,
+          destinationLng: params.destinationLng,
+          routePolyline: params.routePolyline,
+          routeSteps: params.routeSteps,
+        },
+      } as any);
+    } else {
+      router.push("/riding");
+    }
   };
 
   const handleSkip = () => {
@@ -97,7 +124,23 @@ export default function SelectScooterScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setSelectedScooter(null);
-    router.push("/riding");
+    
+    // Pass navigation params to riding screen if available
+    if (hasNavigation) {
+      router.push({
+        pathname: "/riding",
+        params: {
+          withNavigation: "true",
+          destinationName: params.destinationName,
+          destinationLat: params.destinationLat,
+          destinationLng: params.destinationLng,
+          routePolyline: params.routePolyline,
+          routeSteps: params.routeSteps,
+        },
+      } as any);
+    } else {
+      router.push("/riding");
+    }
   };
 
   if (authLoading) {
