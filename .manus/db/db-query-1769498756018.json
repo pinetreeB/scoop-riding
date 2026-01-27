@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO app_versions (version, build_number, release_notes, download_url, is_force_update, is_active, created_at)\nVALUES ('0.0.9', 9, 'v0.0.9 - 경로 안내 기능 강화: 이동 수단 모드 확장(이륜자동차/오토바이 추가), TTS 음성 안내 기능(턴바이턴, 도착, 경로 이탈), 경로 재탐색 기능(100m 이탈 시 자동 재계산), 즐겨찾기 장소 기능(추가/삭제/바로 경로 안내)', 'https://expo.dev/artifacts/eas/bwpTCxZUekaSFAD4tyQhaP.apk', false, true, NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO app_versions (version, build_number, release_notes, download_url, is_force_update, is_active, created_at)\nVALUES ('0.0.9', 9, 'v0.0.9 - 경로 안내 기능 강화: 이동 수단 모드 확장(이륜자동차/오토바이 추가), TTS 음성 안내 기능(턴바이턴, 도착, 경로 이탈), 경로 재탐색 기능(100m 이탈 시 자동 재계산), 즐겨찾기 장소 기능(추가/삭제/바로 경로 안내)', 'https://expo.dev/artifacts/eas/bwpTCxZUekaSFAD4tyQhaP.apk', false, true, NOW());",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1564
+}
