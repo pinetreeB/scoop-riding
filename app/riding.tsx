@@ -45,6 +45,10 @@ import {
   resetAnnouncementTimer,
   stopSpeech,
   VoiceSettings,
+  announceNavigationStep,
+  announceArrival,
+  announceRouteDeviation,
+  announceNavigationStarted,
 } from "@/lib/voice-guidance";
 import { useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -247,6 +251,11 @@ export default function RidingScreen() {
         } catch (e) {
           console.error("Failed to parse route steps:", e);
         }
+      }
+      
+      // Voice announcement for navigation start
+      if (params.destinationName) {
+        announceNavigationStarted(params.destinationName);
       }
     }
   }, [params.withNavigation, params.destinationName, params.destinationLat, params.destinationLng, params.routePolyline, params.routeSteps]);
@@ -635,6 +644,134 @@ export default function RidingScreen() {
     }
   };
 
+  // Track route deviation state
+  const lastRerouteTimeRef = useRef<number>(0);
+  const REROUTE_COOLDOWN = 30000; // 30 seconds cooldown between reroutes
+  const ROUTE_DEVIATION_THRESHOLD = 0.1; // 100 meters in km
+
+  // Calculate minimum distance from current position to route
+  const getDistanceToRoute = (lat: number, lng: number): number => {
+    if (navigationRoute.length === 0) return 0;
+    
+    let minDistance = Infinity;
+    for (const point of navigationRoute) {
+      const dist = calculateDistance(lat, lng, point.latitude, point.longitude);
+      if (dist < minDistance) {
+        minDistance = dist;
+      }
+    }
+    return minDistance;
+  };
+
+  // Recalculate route from current position
+  const recalculateRoute = async (lat: number, lng: number) => {
+    if (!navigationDestination) return;
+    
+    const now = Date.now();
+    if (now - lastRerouteTimeRef.current < REROUTE_COOLDOWN) {
+      return; // Still in cooldown
+    }
+    lastRerouteTimeRef.current = now;
+    
+    // Voice announcement for route deviation
+    announceRouteDeviation();
+    
+    if (Platform.OS !== "web") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+    
+    try {
+      const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${lat},${lng}&destination=${navigationDestination.lat},${navigationDestination.lng}&mode=bicycling&language=ko&key=${GOOGLE_MAPS_API_KEY}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.status === "OK" && data.routes.length > 0) {
+        const route = data.routes[0];
+        const leg = route.legs[0];
+        
+        // Decode new polyline
+        const newPoints = decodePolylineForReroute(route.overview_polyline.points);
+        setNavigationRoute(newPoints);
+        
+        // Update GPX route for map display
+        setGpxRoute({
+          name: navigationDestination.name,
+          points: newPoints.map(p => ({
+            latitude: p.latitude,
+            longitude: p.longitude,
+          })),
+          totalDistance: leg.distance.value / 1000,
+          estimatedDuration: leg.duration.value,
+        });
+        
+        // Update steps
+        const newSteps = leg.steps.map((step: any) => ({
+          instruction: step.html_instructions.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim(),
+          distance: step.distance.text,
+          duration: step.duration.text,
+          maneuver: step.maneuver,
+        }));
+        setNavigationSteps(newSteps);
+        setCurrentStepIndex(0);
+        
+        // Announce first step of new route
+        if (newSteps.length > 0) {
+          announceNavigationStep(newSteps[0]);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to recalculate route:", error);
+    }
+  };
+
+  // Decode polyline helper for reroute
+  const decodePolylineForReroute = (encoded: string): GpsPoint[] => {
+    const points: GpsPoint[] = [];
+    let index = 0;
+    let lat = 0;
+    let lng = 0;
+
+    while (index < encoded.length) {
+      let b;
+      let shift = 0;
+      let result = 0;
+
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+
+      const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+
+      const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+      lng += dlng;
+
+      points.push({
+        latitude: lat / 1e5,
+        longitude: lng / 1e5,
+        timestamp: Date.now(),
+        altitude: null,
+        speed: null,
+        accuracy: null,
+      });
+    }
+
+    return points;
+  };
+
   // Update navigation progress based on current location
   const updateNavigationProgress = (lat: number, lng: number) => {
     if (!navigationDestination || navigationRoute.length === 0) return;
@@ -648,12 +785,22 @@ export default function RidingScreen() {
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
+      // Voice announcement for arrival
+      announceArrival(navigationDestination.name);
       Alert.alert(
         "목적지 도착",
         `${navigationDestination.name}에 도착했습니다!`,
         [{ text: "확인" }]
       );
       setHasNavigation(false);
+      return;
+    }
+
+    // Check for route deviation
+    const distanceToRoute = getDistanceToRoute(lat, lng);
+    if (distanceToRoute > ROUTE_DEVIATION_THRESHOLD) {
+      // User has deviated from route, recalculate
+      recalculateRoute(lat, lng);
       return;
     }
 
@@ -673,6 +820,11 @@ export default function RidingScreen() {
         setCurrentStepIndex(newStepIndex);
         if (Platform.OS !== "web") {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+        // Voice announcement for next step
+        const nextStep = navigationSteps[newStepIndex];
+        if (nextStep) {
+          announceNavigationStep(nextStep);
         }
       }
     }

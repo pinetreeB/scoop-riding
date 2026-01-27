@@ -50,7 +50,7 @@ export default function RoutePreviewScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
-  const [selectedMode, setSelectedMode] = useState<"BICYCLING" | "WALKING">("BICYCLING");
+  const [selectedMode, setSelectedMode] = useState<"BICYCLING" | "WALKING" | "DRIVING" | "TWO_WHEELER">("BICYCLING");
 
   const destination = useMemo(() => ({
     name: params.destinationName || "목적지",
@@ -142,7 +142,10 @@ export default function RoutePreviewScreen() {
 
     setIsLoading(true);
     try {
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${currentLocation.lat},${currentLocation.lng}&destination=${destination.lat},${destination.lng}&mode=${selectedMode.toLowerCase()}&language=ko&key=${GOOGLE_MAPS_API_KEY}`;
+      // TWO_WHEELER uses DRIVING mode with avoid=highways for scooter-friendly routes
+      const apiMode = selectedMode === "TWO_WHEELER" ? "driving" : selectedMode.toLowerCase();
+      const avoidParam = selectedMode === "TWO_WHEELER" ? "&avoid=highways" : "";
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${currentLocation.lat},${currentLocation.lng}&destination=${destination.lat},${destination.lng}&mode=${apiMode}${avoidParam}&language=ko&key=${GOOGLE_MAPS_API_KEY}`;
 
       const response = await fetch(url);
       const data = await response.json();
@@ -312,52 +315,98 @@ export default function RoutePreviewScreen() {
           <View className="px-4 py-3 border-b border-border">
             <View className="flex-row items-center justify-between mb-3">
               {/* Mode Buttons */}
-              <View className="flex-row">
-                <Pressable
-                  onPress={() => setSelectedMode("BICYCLING")}
-                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-                  className={`px-4 py-2 rounded-full mr-2 ${
-                    selectedMode === "BICYCLING" ? "bg-primary" : "bg-surface"
-                  }`}
-                >
-                  <View className="flex-row items-center">
-                    <MaterialIcons
-                      name="directions-bike"
-                      size={18}
-                      color={selectedMode === "BICYCLING" ? "#FFFFFF" : colors.muted}
-                    />
-                    <Text
-                      className={`ml-1 font-medium ${
-                        selectedMode === "BICYCLING" ? "text-white" : "text-muted"
-                      }`}
-                    >
-                      자전거
-                    </Text>
-                  </View>
-                </Pressable>
-                <Pressable
-                  onPress={() => setSelectedMode("WALKING")}
-                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-                  className={`px-4 py-2 rounded-full ${
-                    selectedMode === "WALKING" ? "bg-primary" : "bg-surface"
-                  }`}
-                >
-                  <View className="flex-row items-center">
-                    <MaterialIcons
-                      name="directions-walk"
-                      size={18}
-                      color={selectedMode === "WALKING" ? "#FFFFFF" : colors.muted}
-                    />
-                    <Text
-                      className={`ml-1 font-medium ${
-                        selectedMode === "WALKING" ? "text-white" : "text-muted"
-                      }`}
-                    >
-                      도보
-                    </Text>
-                  </View>
-                </Pressable>
-              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View className="flex-row">
+                  <Pressable
+                    onPress={() => setSelectedMode("TWO_WHEELER")}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                    className={`px-4 py-2 rounded-full mr-2 ${
+                      selectedMode === "TWO_WHEELER" ? "bg-primary" : "bg-surface"
+                    }`}
+                  >
+                    <View className="flex-row items-center">
+                      <MaterialIcons
+                        name="two-wheeler"
+                        size={18}
+                        color={selectedMode === "TWO_WHEELER" ? "#FFFFFF" : colors.muted}
+                      />
+                      <Text
+                        className={`ml-1 font-medium ${
+                          selectedMode === "TWO_WHEELER" ? "text-white" : "text-muted"
+                        }`}
+                      >
+                        이륜차
+                      </Text>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setSelectedMode("BICYCLING")}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                    className={`px-4 py-2 rounded-full mr-2 ${
+                      selectedMode === "BICYCLING" ? "bg-primary" : "bg-surface"
+                    }`}
+                  >
+                    <View className="flex-row items-center">
+                      <MaterialIcons
+                        name="directions-bike"
+                        size={18}
+                        color={selectedMode === "BICYCLING" ? "#FFFFFF" : colors.muted}
+                      />
+                      <Text
+                        className={`ml-1 font-medium ${
+                          selectedMode === "BICYCLING" ? "text-white" : "text-muted"
+                        }`}
+                      >
+                        자전거
+                      </Text>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setSelectedMode("WALKING")}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                    className={`px-4 py-2 rounded-full mr-2 ${
+                      selectedMode === "WALKING" ? "bg-primary" : "bg-surface"
+                    }`}
+                  >
+                    <View className="flex-row items-center">
+                      <MaterialIcons
+                        name="directions-walk"
+                        size={18}
+                        color={selectedMode === "WALKING" ? "#FFFFFF" : colors.muted}
+                      />
+                      <Text
+                        className={`ml-1 font-medium ${
+                          selectedMode === "WALKING" ? "text-white" : "text-muted"
+                        }`}
+                      >
+                        도보
+                      </Text>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setSelectedMode("DRIVING")}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                    className={`px-4 py-2 rounded-full ${
+                      selectedMode === "DRIVING" ? "bg-primary" : "bg-surface"
+                    }`}
+                  >
+                    <View className="flex-row items-center">
+                      <MaterialIcons
+                        name="directions-car"
+                        size={18}
+                        color={selectedMode === "DRIVING" ? "#FFFFFF" : colors.muted}
+                      />
+                      <Text
+                        className={`ml-1 font-medium ${
+                          selectedMode === "DRIVING" ? "text-white" : "text-muted"
+                        }`}
+                      >
+                        자동차
+                      </Text>
+                    </View>
+                  </Pressable>
+                </View>
+              </ScrollView>
             </View>
 
             {/* Distance & Duration */}

@@ -18,6 +18,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import {
+  getFavoritePlaces,
+  addFavoritePlace,
+  removeFavoritePlace,
+  FavoritePlace,
+  getFavoriteIcon,
+} from "@/lib/favorite-places";
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 const RECENT_SEARCHES_KEY = "@scoop_recent_destinations";
@@ -64,6 +71,7 @@ export default function SearchDestinationScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [recentDestinations, setRecentDestinations] = useState<RecentDestination[]>([]);
+  const [favoritePlaces, setFavoritePlaces] = useState<FavoritePlace[]>([]);
 
   // Get current location for biasing search results
   useEffect(() => {
@@ -79,9 +87,10 @@ export default function SearchDestinationScreen() {
     })();
   }, []);
 
-  // Load recent destinations
+  // Load recent destinations and favorites
   useEffect(() => {
     loadRecentDestinations();
+    loadFavoritePlaces();
   }, []);
 
   // Focus input on mount
@@ -100,6 +109,65 @@ export default function SearchDestinationScreen() {
     } catch (error) {
       console.error("Failed to load recent destinations:", error);
     }
+  };
+
+  const loadFavoritePlaces = async () => {
+    const favorites = await getFavoritePlaces();
+    setFavoritePlaces(favorites);
+  };
+
+  const handleAddFavorite = async (destination: RecentDestination) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    
+    await addFavoritePlace({
+      name: destination.name,
+      address: destination.address,
+      lat: destination.latitude,
+      lng: destination.longitude,
+    });
+    
+    await loadFavoritePlaces();
+    Alert.alert("즐겨찾기 추가", `${destination.name}이(가) 즐겨찾기에 추가되었습니다.`);
+  };
+
+  const handleRemoveFavorite = async (id: string, name: string) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    
+    Alert.alert(
+      "즐겨찾기 삭제",
+      `${name}을(를) 즐겨찾기에서 삭제하시겠습니까?`,
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "삭제",
+          style: "destructive",
+          onPress: async () => {
+            await removeFavoritePlace(id);
+            await loadFavoritePlaces();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSelectFavorite = (favorite: FavoritePlace) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    router.push({
+      pathname: "/route-preview" as any,
+      params: {
+        destinationName: favorite.name,
+        destinationAddress: favorite.address,
+        destinationLat: favorite.lat.toString(),
+        destinationLng: favorite.lng.toString(),
+      },
+    });
   };
 
   const saveRecentDestination = async (destination: RecentDestination) => {
@@ -385,37 +453,119 @@ export default function SearchDestinationScreen() {
         </View>
       )}
 
-      {/* Recent Destinations */}
+      {/* Favorites & Recent Destinations */}
       {searchQuery.length === 0 && (
-        <>
-          {recentDestinations.length > 0 && (
-            <View className="flex-row items-center justify-between px-4 py-3">
-              <Text className="text-foreground font-bold">최근 검색</Text>
-              <Pressable
-                onPress={clearRecentDestinations}
-                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-              >
-                <Text className="text-muted text-sm">전체 삭제</Text>
-              </Pressable>
-            </View>
-          )}
-          
-          <FlatList
-            data={recentDestinations}
-            keyExtractor={(item) => item.place_id}
-            renderItem={renderRecentItem}
-            keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={
-              <View className="py-8 items-center">
-                <MaterialIcons name="explore" size={48} color={colors.muted} />
-                <Text className="text-muted mt-2">목적지를 검색해보세요</Text>
-                <Text className="text-muted text-sm mt-1">
-                  경로 안내와 함께 라이딩을 시작할 수 있습니다
-                </Text>
-              </View>
-            }
-          />
-        </>
+        <FlatList
+          data={[]}
+          keyExtractor={() => "empty"}
+          renderItem={() => null}
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <>
+              {/* Favorite Places Section */}
+              {favoritePlaces.length > 0 && (
+                <>
+                  <View className="flex-row items-center justify-between px-4 py-3">
+                    <View className="flex-row items-center">
+                      <MaterialIcons name="star" size={18} color={colors.warning} />
+                      <Text className="text-foreground font-bold ml-1">즐겨찾기</Text>
+                    </View>
+                  </View>
+                  {favoritePlaces.map((favorite) => (
+                    <Pressable
+                      key={favorite.id}
+                      onPress={() => handleSelectFavorite(favorite)}
+                      onLongPress={() => handleRemoveFavorite(favorite.id, favorite.name)}
+                      style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                      className="px-4 py-3 border-b border-border"
+                    >
+                      <View className="flex-row items-center">
+                        <View
+                          className="w-10 h-10 rounded-full items-center justify-center mr-3"
+                          style={{ backgroundColor: colors.warning + "20" }}
+                        >
+                          <MaterialIcons
+                            name={getFavoriteIcon(favorite.icon) as any}
+                            size={20}
+                            color={colors.warning}
+                          />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-foreground font-medium" numberOfLines={1}>
+                            {favorite.name}
+                          </Text>
+                          <Text className="text-muted text-sm" numberOfLines={1}>
+                            {favorite.address}
+                          </Text>
+                        </View>
+                        <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+                      </View>
+                    </Pressable>
+                  ))}
+                </>
+              )}
+
+              {/* Recent Destinations Section */}
+              {recentDestinations.length > 0 && (
+                <View className="flex-row items-center justify-between px-4 py-3">
+                  <Text className="text-foreground font-bold">최근 검색</Text>
+                  <Pressable
+                    onPress={clearRecentDestinations}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                  >
+                    <Text className="text-muted text-sm">전체 삭제</Text>
+                  </Pressable>
+                </View>
+              )}
+              {recentDestinations.map((item) => (
+                <Pressable
+                  key={item.place_id}
+                  onPress={() => handleSelectRecent(item)}
+                  onLongPress={() => handleAddFavorite(item)}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                  className="px-4 py-3 border-b border-border"
+                >
+                  <View className="flex-row items-center">
+                    <View
+                      className="w-10 h-10 rounded-full items-center justify-center mr-3"
+                      style={{ backgroundColor: colors.muted + "20" }}
+                    >
+                      <MaterialIcons name="history" size={20} color={colors.muted} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-foreground font-medium" numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <Text className="text-muted text-sm" numberOfLines={1}>
+                        {item.address}
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => handleAddFavorite(item)}
+                      style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1, padding: 8 }]}
+                    >
+                      <MaterialIcons name="star-border" size={20} color={colors.muted} />
+                    </Pressable>
+                  </View>
+                </Pressable>
+              ))}
+
+              {/* Empty State */}
+              {favoritePlaces.length === 0 && recentDestinations.length === 0 && (
+                <View className="py-8 items-center">
+                  <MaterialIcons name="explore" size={48} color={colors.muted} />
+                  <Text className="text-muted mt-2">목적지를 검색해보세요</Text>
+                  <Text className="text-muted text-sm mt-1">
+                    경로 안내와 함께 라이딩을 시작할 수 있습니다
+                  </Text>
+                  <Text className="text-muted text-xs mt-3">
+                    팁: 최근 검색을 길게 누르면 즐겨찾기에 추가됩니다
+                  </Text>
+                </View>
+              )}
+            </>
+          }
+        />
       )}
     </ScreenContainer>
   );

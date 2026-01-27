@@ -42,6 +42,20 @@ const TEXTS = {
     meters: '미터',
     speedUnit: '시속',
     kmPerHour: '킬로미터',
+    // Navigation
+    arrivedAt: '목적지에 도착했습니다',
+    inDistance: '앞에서',
+    turnLeft: '좌회전 하세요',
+    turnRight: '우회전 하세요',
+    turnSlightLeft: '약간 좌회전 하세요',
+    turnSlightRight: '약간 우회전 하세요',
+    turnSharpLeft: '급하게 좌회전 하세요',
+    turnSharpRight: '급하게 우회전 하세요',
+    uTurn: '유턴 하세요',
+    roundabout: '회전교차로를 돌아서 진행하세요',
+    straight: '직진하세요',
+    routeDeviated: '경로를 이탈했습니다. 경로를 재계산합니다',
+    navigationStarted: '경로 안내를 시작합니다',
   },
   'en-US': {
     ridingTime: 'Riding time',
@@ -59,6 +73,20 @@ const TEXTS = {
     meters: 'meters',
     speedUnit: '',
     kmPerHour: 'kilometers per hour',
+    // Navigation
+    arrivedAt: 'You have arrived at your destination',
+    inDistance: 'In',
+    turnLeft: 'turn left',
+    turnRight: 'turn right',
+    turnSlightLeft: 'turn slight left',
+    turnSlightRight: 'turn slight right',
+    turnSharpLeft: 'turn sharp left',
+    turnSharpRight: 'turn sharp right',
+    uTurn: 'make a U-turn',
+    roundabout: 'enter the roundabout',
+    straight: 'continue straight',
+    routeDeviated: 'You have left the route. Recalculating',
+    navigationStarted: 'Navigation started',
   },
 };
 
@@ -256,4 +284,160 @@ export function getAvailableLanguages(): { code: VoiceLanguage; name: string }[]
     { code: 'ko-KR', name: '한국어' },
     { code: 'en-US', name: 'English' },
   ];
+}
+
+
+// Navigation voice guidance functions
+export interface NavigationStep {
+  instruction: string;
+  distance: string;
+  duration: string;
+  maneuver?: string;
+}
+
+// Get maneuver text for voice announcement
+function getManeuverText(maneuver: string | undefined, language: VoiceLanguage): string {
+  const t = TEXTS[language];
+  
+  switch (maneuver) {
+    case 'turn-left':
+      return t.turnLeft;
+    case 'turn-right':
+      return t.turnRight;
+    case 'turn-slight-left':
+      return t.turnSlightLeft;
+    case 'turn-slight-right':
+      return t.turnSlightRight;
+    case 'turn-sharp-left':
+      return t.turnSharpLeft;
+    case 'turn-sharp-right':
+      return t.turnSharpRight;
+    case 'uturn-left':
+    case 'uturn-right':
+      return t.uTurn;
+    case 'roundabout-left':
+    case 'roundabout-right':
+      return t.roundabout;
+    case 'straight':
+      return t.straight;
+    default:
+      return t.straight;
+  }
+}
+
+// Announce navigation step (turn-by-turn)
+export async function announceNavigationStep(
+  step: NavigationStep,
+  distanceToStep?: number // distance in meters to the next turn
+): Promise<void> {
+  const settings = await getVoiceSettings();
+  if (!settings.enabled || Platform.OS === 'web') return;
+  
+  const t = TEXTS[settings.language];
+  
+  let announcement: string;
+  
+  if (distanceToStep !== undefined && distanceToStep > 0) {
+    const distanceText = formatDistanceForSpeech(distanceToStep, settings.language);
+    const maneuverText = getManeuverText(step.maneuver, settings.language);
+    
+    if (settings.language === 'ko-KR') {
+      announcement = `${distanceText} ${t.inDistance} ${maneuverText}`;
+    } else {
+      announcement = `${t.inDistance} ${distanceText}, ${maneuverText}`;
+    }
+  } else {
+    // Use the instruction directly if no distance
+    announcement = step.instruction;
+  }
+  
+  try {
+    await Speech.stop();
+    Speech.speak(announcement, {
+      language: settings.language,
+      pitch: 1.0,
+      rate: 1.0,
+    });
+  } catch (error) {
+    console.error('Failed to speak navigation step:', error);
+  }
+}
+
+// Announce arrival at destination
+export async function announceArrival(destinationName?: string): Promise<void> {
+  const settings = await getVoiceSettings();
+  if (!settings.enabled || Platform.OS === 'web') return;
+  
+  const t = TEXTS[settings.language];
+  
+  let announcement: string;
+  if (destinationName) {
+    if (settings.language === 'ko-KR') {
+      announcement = `${destinationName}에 ${t.arrivedAt}`;
+    } else {
+      announcement = `${t.arrivedAt}. ${destinationName}`;
+    }
+  } else {
+    announcement = t.arrivedAt;
+  }
+  
+  try {
+    await Speech.stop();
+    Speech.speak(announcement, {
+      language: settings.language,
+      pitch: 1.0,
+      rate: 1.0,
+    });
+  } catch (error) {
+    console.error('Failed to speak arrival announcement:', error);
+  }
+}
+
+// Announce route deviation
+export async function announceRouteDeviation(): Promise<void> {
+  const settings = await getVoiceSettings();
+  if (!settings.enabled || Platform.OS === 'web') return;
+  
+  const t = TEXTS[settings.language];
+  
+  try {
+    await Speech.stop();
+    Speech.speak(t.routeDeviated, {
+      language: settings.language,
+      pitch: 1.0,
+      rate: 1.0,
+    });
+  } catch (error) {
+    console.error('Failed to speak route deviation:', error);
+  }
+}
+
+// Announce navigation started
+export async function announceNavigationStarted(destinationName?: string): Promise<void> {
+  const settings = await getVoiceSettings();
+  if (!settings.enabled || Platform.OS === 'web') return;
+  
+  const t = TEXTS[settings.language];
+  
+  let announcement: string;
+  if (destinationName) {
+    if (settings.language === 'ko-KR') {
+      announcement = `${destinationName}까지 ${t.navigationStarted}`;
+    } else {
+      announcement = `${t.navigationStarted} to ${destinationName}`;
+    }
+  } else {
+    announcement = t.navigationStarted;
+  }
+  
+  try {
+    await Speech.stop();
+    Speech.speak(announcement, {
+      language: settings.language,
+      pitch: 1.0,
+      rate: 1.0,
+    });
+  } catch (error) {
+    console.error('Failed to speak navigation started:', error);
+  }
 }
