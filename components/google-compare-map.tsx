@@ -1,6 +1,19 @@
 import { useMemo, useRef, useState } from "react";
-import { View, StyleSheet, ActivityIndicator, Text } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import { View, StyleSheet, ActivityIndicator, Text, Platform } from "react-native";
+
+// Only import react-native-maps on native platforms
+let MapView: any = null;
+let Marker: any = null;
+let Polyline: any = null;
+let PROVIDER_GOOGLE: any = null;
+
+if (Platform.OS !== "web") {
+  const maps = require("react-native-maps");
+  MapView = maps.default;
+  Marker = maps.Marker;
+  Polyline = maps.Polyline;
+  PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
+}
 import { useColors } from "@/hooks/use-colors";
 import { GpsPoint } from "@/lib/gps-utils";
 
@@ -18,7 +31,7 @@ export function GoogleCompareMap({
   secondColor = "#22C55E",
 }: GoogleCompareMapProps) {
   const colors = useColors();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // 두 경로의 중심점 및 경계 계산

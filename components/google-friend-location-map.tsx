@@ -1,6 +1,17 @@
-import { useState, useRef } from "react";
-import { View, StyleSheet, Text, ActivityIndicator, Image } from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import { useMemo, useRef, useState } from "react";
+import { View, StyleSheet, Text, ActivityIndicator, Platform, Image } from "react-native";
+
+// Only import react-native-maps on native platforms
+let MapView: any = null;
+let Marker: any = null;
+let PROVIDER_GOOGLE: any = null;
+
+if (Platform.OS !== "web") {
+  const maps = require("react-native-maps");
+  MapView = maps.default;
+  Marker = maps.Marker;
+  PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
+}
 import { useColors } from "@/hooks/use-colors";
 import Svg, { Path } from "react-native-svg";
 
@@ -22,7 +33,7 @@ export function GoogleFriendLocationMap({
   style,
 }: GoogleFriendLocationMapProps) {
   const colors = useColors();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const initial = name?.[0]?.toUpperCase() || "?";
 

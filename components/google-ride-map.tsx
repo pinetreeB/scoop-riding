@@ -1,6 +1,21 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { View, StyleSheet, Text, ActivityIndicator, Platform } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE, Region } from "react-native-maps";
+
+// Only import react-native-maps on native platforms
+let MapView: any = null;
+let Marker: any = null;
+let Polyline: any = null;
+let PROVIDER_GOOGLE: any = null;
+let Region: any = null;
+
+if (Platform.OS !== "web") {
+  const maps = require("react-native-maps");
+  MapView = maps.default;
+  Marker = maps.Marker;
+  Polyline = maps.Polyline;
+  PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
+  Region = maps.Region;
+}
 import { GpsPoint, getBoundingBox } from "@/lib/gps-utils";
 import { useColors } from "@/hooks/use-colors";
 import Svg, { Path } from "react-native-svg";
@@ -78,9 +93,9 @@ export function GoogleRideMap({
   groupMembers = [],
 }: GoogleRideMapProps) {
   const colors = useColors();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [region, setRegion] = useState<Region | null>(null);
+  const [region, setRegion] = useState<any>(null);
   const animatedHeading = useRef(currentLocation?.heading || 0);
 
   // Calculate initial region from GPS points
