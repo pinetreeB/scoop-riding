@@ -18,6 +18,7 @@ if (Platform.OS !== "web") {
 }
 import { GpsPoint, getBoundingBox } from "@/lib/gps-utils";
 import { useColors } from "@/hooks/use-colors";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import Svg, { Path } from "react-native-svg";
 
 interface GpxRoutePoint {
@@ -111,6 +112,8 @@ export function GoogleRideMap({
   onRecenterPress,
 }: GoogleRideMapProps) {
   const colors = useColors();
+  const colorScheme = useColorScheme();
+  const mapStyle = colorScheme === 'dark' ? darkMapStyle : lightMapStyle;
   const mapRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [region, setRegion] = useState<any>(null);
@@ -392,8 +395,11 @@ export function GoogleRideMap({
         )}
 
         {/* Group Member Markers */}
-        {groupMembers
-          .filter(m => m.latitude && m.longitude && m.isRiding)
+        {(() => {
+          const ridingMembers = groupMembers.filter(m => m.latitude && m.longitude && m.isRiding);
+          console.log(`[GoogleRideMap] Rendering ${ridingMembers.length} group members out of ${groupMembers.length} total`);
+          return ridingMembers;
+        })()
           .map(member => (
             <Marker
               key={member.userId}
@@ -448,8 +454,8 @@ export function GoogleRideMap({
   );
 }
 
-// Custom map style for cleaner look
-const mapStyle = [
+// Custom map style for cleaner look (light mode)
+const lightMapStyle = [
   {
     featureType: "poi",
     elementType: "labels",
@@ -459,6 +465,76 @@ const mapStyle = [
     featureType: "transit",
     elementType: "labels",
     stylers: [{ visibility: "off" }],
+  },
+];
+
+// Dark map style for night mode
+const darkMapStyle = [
+  {
+    elementType: "geometry",
+    stylers: [{ color: "#212121" }],
+  },
+  {
+    elementType: "labels.icon",
+    stylers: [{ visibility: "off" }],
+  },
+  {
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#757575" }],
+  },
+  {
+    elementType: "labels.text.stroke",
+    stylers: [{ color: "#212121" }],
+  },
+  {
+    featureType: "administrative",
+    elementType: "geometry",
+    stylers: [{ color: "#757575" }],
+  },
+  {
+    featureType: "poi",
+    elementType: "labels",
+    stylers: [{ visibility: "off" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry.fill",
+    stylers: [{ color: "#2c2c2c" }],
+  },
+  {
+    featureType: "road",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#8a8a8a" }],
+  },
+  {
+    featureType: "road.arterial",
+    elementType: "geometry",
+    stylers: [{ color: "#373737" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry",
+    stylers: [{ color: "#3c3c3c" }],
+  },
+  {
+    featureType: "road.highway.controlled_access",
+    elementType: "geometry",
+    stylers: [{ color: "#4e4e4e" }],
+  },
+  {
+    featureType: "transit",
+    elementType: "labels",
+    stylers: [{ visibility: "off" }],
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#000000" }],
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#3d3d3d" }],
   },
 ];
 

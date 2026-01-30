@@ -200,10 +200,13 @@ export default function RidingScreen() {
 
   // Parse groupId from params
   useEffect(() => {
+    console.log("[Riding] params.groupId:", params.groupId);
     if (params.groupId) {
       const id = parseInt(params.groupId, 10);
+      console.log("[Riding] Parsed groupId:", id);
       if (!isNaN(id)) {
         setGroupId(id);
+        console.log("[Riding] Group riding mode enabled, groupId:", id);
       }
     }
   }, [params.groupId]);
@@ -267,6 +270,10 @@ export default function RidingScreen() {
   // Update group members when data changes and detect ride end
   useEffect(() => {
     if (groupMembersData) {
+      console.log("[Riding] Group members data received:", groupMembersData.length, "members");
+      groupMembersData.forEach(m => {
+        console.log(`[Riding] Member ${m.userId}: lat=${m.latitude}, lng=${m.longitude}, isRiding=${m.isRiding}`);
+      });
       // 그룹원 주행 종료 감지
       groupMembersData.forEach(member => {
         const wasRiding = previousMembersRef.current.get(member.userId);
@@ -599,6 +606,7 @@ export default function RidingScreen() {
 
       // Update group location if in group riding
       if (groupId) {
+        console.log(`[Riding] Updating group location: groupId=${groupId}, lat=${latitude}, lng=${longitude}`);
         updateGroupLocation.mutate({
           groupId,
           latitude,
@@ -607,6 +615,10 @@ export default function RidingScreen() {
           duration: duration,
           currentSpeed: displaySpeed,
           isRiding: true,
+        }, {
+          onError: (error) => {
+            console.error("[Riding] Failed to update group location:", error);
+          },
         });
       }
 
@@ -1178,20 +1190,34 @@ export default function RidingScreen() {
                 style={{ flex: 1, borderRadius: 0 }}
               />
             )}
-            {/* 속도 오버레이 - 좌하단 */}
+            {/* 속도계 - 중앙 하단 (더 크고 눈에 띄게) */}
             <View style={{
               position: 'absolute',
-              bottom: 180,
-              left: 16,
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              borderRadius: 12,
-              paddingHorizontal: 16,
-              paddingVertical: 10,
+              bottom: 160,
+              left: 0,
+              right: 0,
+              alignItems: 'center',
             }}>
-              <Text style={{ fontSize: 48, fontWeight: 'bold', color: '#FFFFFF' }}>
-                {currentSpeed.toFixed(1)}
-              </Text>
-              <Text style={{ fontSize: 14, color: '#CCCCCC' }}>km/h</Text>
+              <View style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                borderRadius: 20,
+                paddingHorizontal: 32,
+                paddingVertical: 16,
+                alignItems: 'center',
+                minWidth: 160,
+                borderWidth: 2,
+                borderColor: currentSpeed > 50 ? '#FF6D00' : 'rgba(255, 255, 255, 0.2)',
+              }}>
+                <Text style={{ 
+                  fontSize: 72, 
+                  fontWeight: 'bold', 
+                  color: currentSpeed > 50 ? '#FF6D00' : '#FFFFFF',
+                  lineHeight: 80,
+                }}>
+                  {currentSpeed.toFixed(0)}
+                </Text>
+                <Text style={{ fontSize: 18, color: '#AAAAAA', marginTop: -4 }}>km/h</Text>
+              </View>
             </View>
             {/* 거리 오버레이 - 우상단 */}
             <View style={{

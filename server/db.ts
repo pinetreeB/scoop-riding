@@ -2479,7 +2479,9 @@ export async function updateGroupMemberLocation(
   if (!db) return false;
 
   try {
-    await db
+    console.log(`[Database] Updating group member location: groupId=${groupId}, userId=${userId}, lat=${data.latitude}, lng=${data.longitude}, isRiding=${data.isRiding}`);
+    
+    const result = await db
       .update(groupMembers)
       .set({
         latitude: data.latitude.toString(),
@@ -2492,6 +2494,7 @@ export async function updateGroupMemberLocation(
       })
       .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
 
+    console.log(`[Database] Update result:`, result);
     return true;
   } catch (error) {
     console.error("[Database] Failed to update member location:", error);
