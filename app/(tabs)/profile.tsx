@@ -272,7 +272,7 @@ export default function ProfileScreen() {
     const emailSubject = `[SCOOP 버그 리포트] v${CURRENT_APP_VERSION}`;
     
     // 임시 이메일 주소 - 사용자가 설정할 예정
-    const supportEmail = "support@scoop-riding.app";
+    const supportEmail = "scoop@scoopmotor.com";
     
     const mailtoUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
     
