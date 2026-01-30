@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 import {
   Text,
   View,
@@ -31,6 +31,8 @@ import {
 } from "@/lib/riding-store";
 import { calculateLevel, getLevelTitle, getLevelColor, LEVEL_DEFINITIONS } from "@/lib/level-system";
 import Constants from "expo-constants";
+import * as Sharing from "expo-sharing";
+import { captureScreen } from "react-native-view-shot";
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -57,6 +59,10 @@ export default function ProfileScreen() {
   const [showMaxSpeedModal, setShowMaxSpeedModal] = useState(false);
   const [showBugReportModal, setShowBugReportModal] = useState(false);
   const [bugReportText, setBugReportText] = useState("");
+  const [showFeatureRequestModal, setShowFeatureRequestModal] = useState(false);
+  const [featureRequestText, setFeatureRequestText] = useState("");
+  const [isCapturingScreen, setIsCapturingScreen] = useState(false);
+  const [capturedScreenshot, setCapturedScreenshot] = useState<string | null>(null);
   const [appUpdateInfo, setAppUpdateInfo] = useState<{
     hasUpdate: boolean;
     latestVersion: string | null;
@@ -253,6 +259,39 @@ export default function ProfileScreen() {
 
   // getLevelTitle is now imported from @/lib/level-system
 
+  // Capture screenshot for bug report
+  const handleCaptureScreenshot = async () => {
+    if (Platform.OS === "web") {
+      Alert.alert("알림", "웹에서는 스크린샷 기능을 사용할 수 없습니다.");
+      return;
+    }
+
+    try {
+      setIsCapturingScreen(true);
+      // Close modal temporarily to capture the actual screen
+      setShowBugReportModal(false);
+      
+      // Wait for modal to close
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const uri = await captureScreen({
+        format: "jpg",
+        quality: 0.8,
+      });
+      
+      setCapturedScreenshot(uri);
+      setShowBugReportModal(true);
+      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error("Screenshot capture error:", error);
+      setShowBugReportModal(true);
+      Alert.alert("오류", "스크린샷을 캡처하는 중 오류가 발생했습니다.");
+    } finally {
+      setIsCapturingScreen(false);
+    }
+  };
+
   // Bug Report Email Handler
   const handleSendBugReport = async () => {
     if (!bugReportText.trim()) {
@@ -266,14 +305,40 @@ export default function ProfileScreen() {
       `사용자 ID: ${user?.id || "비로그인"}`,
       `사용자 이메일: ${user?.email || "없음"}`,
       `시간: ${new Date().toISOString()}`,
+      `스크린샷 첨부: ${capturedScreenshot ? "예" : "아니오"}`,
     ].join("\n");
 
-    const emailBody = `[버그 리포트]\n\n${bugReportText}\n\n--- 기기 정보 ---\n${deviceInfo}`;
+    const emailBody = `[버그 리포트]\n\n${bugReportText}\n\n--- 기기 정보 ---\n${deviceInfo}${capturedScreenshot ? "\n\n[스크린샷이 첨부되어 있습니다]" : ""}`;
     const emailSubject = `[SCOOP 버그 리포트] v${CURRENT_APP_VERSION}`;
-    
-    // 임시 이메일 주소 - 사용자가 설정할 예정
     const supportEmail = "scoop@scoopmotor.com";
+
+    // If screenshot exists, use sharing API to include it
+    if (capturedScreenshot && Platform.OS !== "web") {
+      try {
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(capturedScreenshot, {
+            mimeType: "image/jpeg",
+            dialogTitle: "SCOOP 버그 리포트 - 스크린샷 공유",
+            UTI: "public.jpeg",
+          });
+          // After sharing screenshot, open email
+          const mailtoUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+          await Linking.openURL(mailtoUrl);
+          
+          setShowBugReportModal(false);
+          setBugReportText("");
+          setCapturedScreenshot(null);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          return;
+        }
+      } catch (error) {
+        console.error("Sharing error:", error);
+        // Fall through to email-only approach
+      }
+    }
     
+    // Fallback: email only without screenshot
     const mailtoUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
     
     try {
@@ -282,6 +347,7 @@ export default function ProfileScreen() {
         await Linking.openURL(mailtoUrl);
         setShowBugReportModal(false);
         setBugReportText("");
+        setCapturedScreenshot(null);
         if (Platform.OS !== "web") {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
@@ -290,6 +356,45 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error("Bug report email error:", error);
+      Alert.alert("오류", "이메일을 보내는 중 오류가 발생했습니다.");
+    }
+  };
+
+  // Feature Request Email Handler
+  const handleSendFeatureRequest = async () => {
+    if (!featureRequestText.trim()) {
+      Alert.alert("오류", "기능 제안 내용을 입력해주세요.");
+      return;
+    }
+
+    const deviceInfo = [
+      `앱 버전: v${CURRENT_APP_VERSION}`,
+      `플랫폼: ${Platform.OS} ${Platform.Version}`,
+      `사용자 ID: ${user?.id || "비로그인"}`,
+      `사용자 이메일: ${user?.email || "없음"}`,
+      `시간: ${new Date().toISOString()}`,
+    ].join("\n");
+
+    const emailBody = `[기능 제안]\n\n${featureRequestText}\n\n--- 사용자 정보 ---\n${deviceInfo}`;
+    const emailSubject = `[SCOOP 기능 제안] v${CURRENT_APP_VERSION}`;
+    const supportEmail = "scoop@scoopmotor.com";
+    
+    const mailtoUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    
+    try {
+      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl);
+        setShowFeatureRequestModal(false);
+        setFeatureRequestText("");
+        if (Platform.OS !== "web") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      } else {
+        Alert.alert("오류", "이메일 앱을 열 수 없습니다. 이메일 앱이 설치되어 있는지 확인해주세요.");
+      }
+    } catch (error) {
+      console.error("Feature request email error:", error);
       Alert.alert("오류", "이메일을 보내는 중 오류가 발생했습니다.");
     }
   };
@@ -927,6 +1032,25 @@ export default function ProfileScreen() {
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
 
+            {/* Feature Request */}
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                setShowFeatureRequestModal(true);
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4 border-b border-border"
+            >
+              <MaterialIcons name="lightbulb" size={24} color={colors.warning} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">기능 제안</Text>
+                <Text className="text-muted text-xs">원하는 기능이나 아이디어를 알려주세요</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+
             {/* Data Management */}
             <Pressable
               onPress={handleClearData}
@@ -1071,6 +1195,47 @@ export default function ProfileScreen() {
               />
             </View>
 
+            {/* Screenshot Preview */}
+            {capturedScreenshot && (
+              <View className="mb-4">
+                <View className="flex-row items-center justify-between mb-2">
+                  <Text className="text-foreground font-medium text-sm">첨부된 스크린샷</Text>
+                  <Pressable
+                    onPress={() => setCapturedScreenshot(null)}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                  >
+                    <MaterialIcons name="close" size={20} color={colors.muted} />
+                  </Pressable>
+                </View>
+                <Image
+                  source={{ uri: capturedScreenshot }}
+                  style={{ width: "100%", height: 150, borderRadius: 8 }}
+                  resizeMode="cover"
+                />
+              </View>
+            )}
+
+            {/* Screenshot Capture Button */}
+            {Platform.OS !== "web" && (
+              <Pressable
+                onPress={handleCaptureScreenshot}
+                disabled={isCapturingScreen}
+                className="border border-border rounded-xl py-3 items-center mb-3"
+                style={({ pressed }) => [{ opacity: pressed || isCapturingScreen ? 0.7 : 1 }]}
+              >
+                <View className="flex-row items-center">
+                  {isCapturingScreen ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <MaterialIcons name="screenshot" size={20} color={colors.primary} />
+                  )}
+                  <Text className="text-primary font-medium ml-2">
+                    {capturedScreenshot ? "스크린샷 다시 캡처" : "현재 화면 스크린샷 첨부"}
+                  </Text>
+                </View>
+              </Pressable>
+            )}
+
             <View className="bg-surface/50 rounded-xl p-3 mb-4 border border-border">
               <Text className="text-muted text-xs">
                 포함되는 정보: 앱 버전 v{CURRENT_APP_VERSION}, {Platform.OS} {Platform.Version}
@@ -1084,7 +1249,9 @@ export default function ProfileScreen() {
             >
               <View className="flex-row items-center">
                 <MaterialIcons name="email" size={20} color="#FFFFFF" />
-                <Text className="text-background font-semibold ml-2">이메일로 보내기</Text>
+                <Text className="text-background font-semibold ml-2">
+                  {capturedScreenshot ? "스크린샷과 함께 보내기" : "이메일로 보내기"}
+                </Text>
               </View>
             </Pressable>
 
@@ -1092,6 +1259,77 @@ export default function ProfileScreen() {
               onPress={() => {
                 setShowBugReportModal(false);
                 setBugReportText("");
+                setCapturedScreenshot(null);
+              }}
+              className="py-3 items-center"
+              style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+            >
+              <Text className="text-muted font-medium">취소</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Feature Request Modal */}
+      <Modal
+        visible={showFeatureRequestModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFeatureRequestModal(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black/50 justify-center items-center p-6"
+          onPress={() => setShowFeatureRequestModal(false)}
+        >
+          <Pressable
+            className="bg-background rounded-2xl p-6 w-full max-w-sm"
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View className="flex-row items-center mb-4">
+              <MaterialIcons name="lightbulb" size={28} color={colors.warning} />
+              <Text className="text-xl font-bold text-foreground ml-2">
+                기능 제안
+              </Text>
+            </View>
+
+            <Text className="text-muted text-sm mb-4">
+              원하는 기능이나 아이디어를 알려주세요.{"\n"}
+              여러분의 의견이 SCOOP을 더 좋게 만듭니다.
+            </Text>
+
+            <View className="bg-surface rounded-xl border border-border mb-4">
+              <TextInput
+                value={featureRequestText}
+                onChangeText={setFeatureRequestText}
+                placeholder="어떤 기능이 있으면 좋겠나요? 자세히 설명해주세요..."
+                placeholderTextColor={colors.muted}
+                multiline
+                numberOfLines={5}
+                textAlignVertical="top"
+                style={{
+                  padding: 16,
+                  color: colors.foreground,
+                  minHeight: 120,
+                  fontSize: 14,
+                }}
+              />
+            </View>
+
+            <Pressable
+              onPress={handleSendFeatureRequest}
+              className="rounded-xl py-3 items-center mb-3"
+              style={({ pressed }) => [{ backgroundColor: colors.warning, opacity: pressed ? 0.8 : 1 }]}
+            >
+              <View className="flex-row items-center">
+                <MaterialIcons name="email" size={20} color="#FFFFFF" />
+                <Text className="text-white font-semibold ml-2">이메일로 보내기</Text>
+              </View>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                setShowFeatureRequestModal(false);
+                setFeatureRequestText("");
               }}
               className="py-3 items-center"
               style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
