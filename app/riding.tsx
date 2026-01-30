@@ -74,6 +74,7 @@ export default function RidingScreen() {
 
   // Group riding state
   const [groupId, setGroupId] = useState<number | null>(null);
+  const groupIdRef = useRef<number | null>(null); // ref로도 추적하여 클로저 문제 해결
   const [groupMembers, setGroupMembers] = useState<{
     userId: number;
     name: string | null;
@@ -164,6 +165,7 @@ export default function RidingScreen() {
   // ref로 최신 값 추적 (interval 클로저 문제 해결)
   const currentSpeedRef = useRef(0);
   const distanceRef = useRef(0);
+  const durationRef = useRef(0);
   const voiceSettingsRef = useRef<VoiceSettings | null>(null);
   const isBackgroundEnabledRef = useRef(false);
 
@@ -206,6 +208,7 @@ export default function RidingScreen() {
       console.log("[Riding] Parsed groupId:", id);
       if (!isNaN(id)) {
         setGroupId(id);
+        groupIdRef.current = id; // ref도 즉시 업데이트
         console.log("[Riding] Group riding mode enabled, groupId:", id);
       }
     }
@@ -426,6 +429,7 @@ export default function RidingScreen() {
               currentSpeedRef.current
             );
           }
+          durationRef.current = newDuration; // ref도 동기화
           return newDuration;
         });
       } else if (isAutoPausedRef.current) {
@@ -561,14 +565,16 @@ export default function RidingScreen() {
     setCurrentSpeed(displaySpeed);
 
     // 그룹 라이딩 위치 업데이트 - validation 전에 항상 실행 (정지 상태에서도 위치 공유)
-    if (groupId) {
-      console.log(`[Riding] Updating group location (always): groupId=${groupId}, lat=${latitude}, lng=${longitude}, speed=${displaySpeed}`);
+    // groupIdRef를 사용하여 클로저 문제 해결
+    const currentGroupId = groupIdRef.current;
+    if (currentGroupId) {
+      console.log(`[Riding] Updating group location (always): groupId=${currentGroupId}, lat=${latitude}, lng=${longitude}, speed=${displaySpeed}`);
       updateGroupLocation.mutate({
-        groupId,
+        groupId: currentGroupId,
         latitude,
         longitude,
-        distance: distance,
-        duration: duration,
+        distance: distanceRef.current,
+        duration: durationRef.current,
         currentSpeed: displaySpeed,
         isRiding: true,
       }, {

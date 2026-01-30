@@ -1,0 +1,38 @@
+{
+  "query": "SELECT id, groupId, userId, isHost, status, isRiding, distance, duration, currentSpeed, latitude, longitude, lastLocationUpdate FROM groupMembers WHERE groupId = 90001;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, groupId, userId, isHost, status, isRiding, distance, duration, currentSpeed, latitude, longitude, lastLocationUpdate FROM groupMembers WHERE groupId = 90001;",
+  "rows": [
+    {
+      "id": "90001",
+      "groupId": "90001",
+      "userId": "1920694",
+      "isHost": "1",
+      "status": "approved",
+      "isRiding": "0",
+      "distance": "0",
+      "duration": "0",
+      "currentSpeed": "0",
+      "latitude": "NULL",
+      "longitude": "NULL",
+      "lastLocationUpdate": "NULL"
+    },
+    {
+      "id": "90002",
+      "groupId": "90001",
+      "userId": "30030",
+      "isHost": "0",
+      "status": "pending",
+      "isRiding": "0",
+      "distance": "0",
+      "duration": "0",
+      "currentSpeed": "0",
+      "latitude": "NULL",
+      "longitude": "NULL",
+      "lastLocationUpdate": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tgroupId\tuserId\tisHost\tstatus\tisRiding\tdistance\tduration\tcurrentSpeed\tlatitude\tlongitude\tlastLocationUpdate\n90001\t90001\t1920694\t1\tapproved\t0\t0\t0\t0\tNULL\tNULL\tNULL\n90002\t90001\t30030\t0\tpending\t0\t0\t0\t0\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1536
+}
