@@ -472,6 +472,8 @@ export const groupMembers = mysqlTable("groupMembers", {
   userId: int("userId").notNull(),
   /** Whether this member is the host */
   isHost: boolean("isHost").default(false).notNull(),
+  /** Member status: pending (waiting approval), approved, rejected */
+  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
   /** Whether this member is currently riding */
   isRiding: boolean("isRiding").default(false).notNull(),
   /** Current distance in meters */

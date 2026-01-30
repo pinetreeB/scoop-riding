@@ -71,13 +71,20 @@ async function getGpsStorageKey(recordId: string): Promise<string> {
   return `${GPS_STORAGE_PREFIX}${recordId}`;
 }
 
-// Save riding record locally
-export async function saveRidingRecord(record: RidingRecord): Promise<void> {
+// Save riding record locally with retry logic
+export async function saveRidingRecord(record: RidingRecord, retryCount = 0): Promise<void> {
+  const MAX_RETRIES = 3;
+  
   try {
+    console.log(`[RidingStore] Saving record ${record.id} (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
+    console.log(`[RidingStore] Record data: distance=${record.distance}m, duration=${record.duration}s, gpsPoints=${record.gpsPoints?.length || 0}`);
+    
     // Save GPS points separately to avoid storage limits (user-specific)
     if (record.gpsPoints && record.gpsPoints.length > 0) {
       const gpsKey = await getGpsStorageKey(record.id);
+      console.log(`[RidingStore] Saving ${record.gpsPoints.length} GPS points to key: ${gpsKey}`);
       await AsyncStorage.setItem(gpsKey, JSON.stringify(record.gpsPoints));
+      console.log(`[RidingStore] GPS points saved successfully`);
     }
 
     // Save record without GPS points in main storage (user-specific)
@@ -85,11 +92,39 @@ export async function saveRidingRecord(record: RidingRecord): Promise<void> {
     delete recordWithoutGps.gpsPoints;
 
     const existing = await getRidingRecords();
+    console.log(`[RidingStore] Existing records count: ${existing.length}`);
+    
     const updated = [recordWithoutGps, ...existing];
     const storageKey = await getStorageKey();
+    console.log(`[RidingStore] Saving to storage key: ${storageKey}`);
+    
     await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
+    
+    // Verify the save was successful
+    const verifyData = await AsyncStorage.getItem(storageKey);
+    if (!verifyData) {
+      throw new Error("Verification failed: saved data is empty");
+    }
+    
+    const verifyRecords = JSON.parse(verifyData);
+    const savedRecord = verifyRecords.find((r: RidingRecord) => r.id === record.id);
+    if (!savedRecord) {
+      throw new Error("Verification failed: record not found after save");
+    }
+    
+    console.log(`[RidingStore] Record ${record.id} saved and verified successfully. Total records: ${verifyRecords.length}`);
   } catch (error) {
-    console.error("Failed to save riding record:", error);
+    console.error(`[RidingStore] Failed to save riding record (attempt ${retryCount + 1}):`, error);
+    
+    // Retry if we haven't exceeded max retries
+    if (retryCount < MAX_RETRIES) {
+      console.log(`[RidingStore] Retrying save in 500ms...`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return saveRidingRecord(record, retryCount + 1);
+    }
+    
+    // If all retries failed, throw the error to be handled by caller
+    throw error;
   }
 }
 

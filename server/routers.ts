@@ -1122,6 +1122,42 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return db.getNewGroupMessages(input.groupId, input.afterId);
       }),
+
+    // Get pending members (host only)
+    getPendingMembers: protectedProcedure
+      .input(z.object({ groupId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        // Verify user is host
+        const group = await db.getGroupById(input.groupId);
+        if (!group || group.hostId !== ctx.user.id) {
+          throw new Error("호스트만 대기 멤버를 확인할 수 있습니다.");
+        }
+        return db.getPendingMembers(input.groupId);
+      }),
+
+    // Approve a pending member (host only)
+    approveMember: protectedProcedure
+      .input(z.object({
+        groupId: z.number(),
+        memberId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.approveMember(input.groupId, ctx.user.id, input.memberId);
+        if (!success) throw new Error("멤버 승인에 실패했습니다.");
+        return { success };
+      }),
+
+    // Reject a pending member (host only)
+    rejectMember: protectedProcedure
+      .input(z.object({
+        groupId: z.number(),
+        memberId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.rejectMember(input.groupId, ctx.user.id, input.memberId);
+        if (!success) throw new Error("멤버 거절에 실패했습니다.");
+        return { success };
+      }),
   }),
 
   // App version management

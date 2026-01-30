@@ -25,6 +25,7 @@ import { getRidingRecords, type RidingRecord, formatDuration } from "@/lib/ridin
 const POST_TYPES = [
   { value: "general", label: "일반", icon: "chat-bubble-outline" },
   { value: "ride_share", label: "주행기록", icon: "route" },
+  { value: "group_recruit", label: "그룹모집", icon: "groups" },
   { value: "question", label: "질문", icon: "help-outline" },
   { value: "tip", label: "팁", icon: "lightbulb-outline" },
 ] as const;
@@ -45,6 +46,7 @@ export default function CreatePostScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [groupCode, setGroupCode] = useState(""); // 그룹 모집 게시글용 그룹 코드
 
   const trpcUtils = trpc.useUtils();
   
@@ -188,9 +190,14 @@ export default function CreatePostScreen() {
 
     setIsSubmitting(true);
     try {
+      // 그룹 모집 게시글인 경우 그룹 코드를 내용에 포함
+      const finalContent = postType === "group_recruit" && groupCode.trim()
+        ? `${content.trim()}\n\n👥 그룹 코드: ${groupCode.trim()}`
+        : content.trim();
+      
       await createPostMutation.mutateAsync({
         title: title.trim(),
-        content: content.trim(),
+        content: finalContent,
         postType: postType as any,
         ridingRecordId: selectedRide?.id,
         imageUrls: images.length > 0 ? images : undefined,
@@ -285,6 +292,27 @@ export default function CreatePostScreen() {
               ))}
             </View>
           </View>
+
+          {/* 그룹 모집 선택 시 그룹 코드 입력 */}
+          {postType === "group_recruit" && (
+            <View className="px-5 pb-4 bg-surface/50 py-3 mx-4 rounded-lg mb-2">
+              <Text className="text-muted text-sm mb-2">
+                👥 그룹 코드 (선택사항)
+              </Text>
+              <TextInput
+                value={groupCode}
+                onChangeText={setGroupCode}
+                placeholder="그룹 라이딩에서 생성한 코드를 입력하세요"
+                placeholderTextColor={colors.muted}
+                maxLength={20}
+                className="text-base text-foreground py-2 px-3 bg-background rounded-lg border border-border"
+                style={{ color: colors.foreground }}
+              />
+              <Text className="text-muted text-xs mt-2">
+                그룹 코드를 입력하면 다른 사용자가 코드를 복사해 그룹에 참여할 수 있습니다.
+              </Text>
+            </View>
+          )}
 
           {/* Title Input */}
           <View className="px-5 pb-4">

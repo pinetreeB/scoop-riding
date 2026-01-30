@@ -17,7 +17,8 @@ import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 
-const SELECTED_SCOOTER_KEY = "@scoop_selected_scooter";
+const SELECTED_SCOOTER_KEY_PREFIX = "@scoop_selected_scooter";
+const USER_ID_KEY = "scoop_current_user_id";
 
 export interface SelectedScooter {
   id: number;
@@ -25,10 +26,25 @@ export interface SelectedScooter {
   color: string;
 }
 
+// Get storage key for current user (user-specific data isolation)
+async function getScooterStorageKey(): Promise<string> {
+  try {
+    const userId = await AsyncStorage.getItem(USER_ID_KEY);
+    if (userId) {
+      return `${SELECTED_SCOOTER_KEY_PREFIX}_${userId}`;
+    }
+  } catch (error) {
+    console.error("Failed to get user ID for scooter storage key:", error);
+  }
+  // Fallback to legacy key for backward compatibility
+  return SELECTED_SCOOTER_KEY_PREFIX;
+}
+
 // Helper functions for scooter selection
 export async function getSelectedScooter(): Promise<SelectedScooter | null> {
   try {
-    const data = await AsyncStorage.getItem(SELECTED_SCOOTER_KEY);
+    const key = await getScooterStorageKey();
+    const data = await AsyncStorage.getItem(key);
     return data ? JSON.parse(data) : null;
   } catch {
     return null;
@@ -37,10 +53,11 @@ export async function getSelectedScooter(): Promise<SelectedScooter | null> {
 
 export async function setSelectedScooter(scooter: SelectedScooter | null): Promise<void> {
   try {
+    const key = await getScooterStorageKey();
     if (scooter) {
-      await AsyncStorage.setItem(SELECTED_SCOOTER_KEY, JSON.stringify(scooter));
+      await AsyncStorage.setItem(key, JSON.stringify(scooter));
     } else {
-      await AsyncStorage.removeItem(SELECTED_SCOOTER_KEY);
+      await AsyncStorage.removeItem(key);
     }
   } catch (e) {
     console.error("Failed to save selected scooter:", e);

@@ -964,9 +964,11 @@ export default function RidingScreen() {
                 console.log("[Riding] Notification error:", e);
               }
 
-              // Sync to server for ranking (non-blocking)
+              // Sync to server for ranking - blocking with verification
+              let serverSyncSuccess = false;
               try {
-                await syncToServer.mutateAsync({
+                console.log("[Riding] Starting server sync for record:", record.id);
+                const syncResult = await syncToServer.mutateAsync({
                   recordId: record.id,
                   date: record.date,
                   duration: Math.round(record.duration),
@@ -979,16 +981,32 @@ export default function RidingScreen() {
                     ? JSON.stringify(gpsPointsCopy) 
                     : undefined,
                 });
-                console.log("[Riding] Record synced to server");
+                console.log("[Riding] Server sync result:", syncResult);
+                
+                // Verify the record was uploaded by checking if we got a valid response
+                if (syncResult && (syncResult.id || syncResult.success)) {
+                  serverSyncSuccess = true;
+                  console.log("[Riding] Server sync verified successfully");
+                } else {
+                  console.log("[Riding] Server sync response invalid, will retry");
+                }
                 
                 // Invalidate ranking queries to reflect new data
-                trpcUtils.ranking.getWeekly.invalidate();
-                trpcUtils.ranking.getMonthly.invalidate();
+                await trpcUtils.ranking.getWeekly.invalidate();
+                await trpcUtils.ranking.getMonthly.invalidate();
+                await trpcUtils.rides.list.invalidate();
               } catch (e) {
-                console.log("[Riding] Server sync error (will retry later):", e);
+                console.error("[Riding] Server sync error:", e);
+                // Show warning but don't block navigation
+                Alert.alert(
+                  "동기화 알림",
+                  "주행 기록이 로컬에 저장되었습니다. 서버 동기화는 다음 접속 시 자동으로 시도됩니다.",
+                  [{ text: "확인" }]
+                );
               }
 
-              router.back();
+              // Navigate to home screen instead of back
+              router.replace("/(tabs)");
             } catch (error) {
               console.error("[Riding] Critical error during save:", error);
               Alert.alert(

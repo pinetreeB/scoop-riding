@@ -7,6 +7,7 @@ import {
   Platform,
   Alert,
   ScrollView,
+  Linking,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -291,6 +292,67 @@ export default function RoutePreviewScreen() {
     } as any);
   };
 
+  // 외부 네비게이션 앱 열기 함수들
+  const openExternalNavigation = (app: "kakao" | "tmap" | "naver") => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    const destName = encodeURIComponent(destination.name);
+    const destLat = destination.lat;
+    const destLng = destination.lng;
+
+    let appUrl = "";
+    let webUrl = "";
+    let storeUrl = "";
+
+    switch (app) {
+      case "kakao":
+        // 카카오내비 URL Scheme
+        appUrl = `kakaomap://route?ep=${destLat},${destLng}&by=CAR`;
+        webUrl = `https://map.kakao.com/link/to/${destName},${destLat},${destLng}`;
+        storeUrl = Platform.OS === "ios"
+          ? "https://apps.apple.com/kr/app/kakaomap/id304608425"
+          : "https://play.google.com/store/apps/details?id=net.daum.android.map";
+        break;
+      case "tmap":
+        // T Map URL Scheme
+        appUrl = `tmap://route?goalx=${destLng}&goaly=${destLat}&goalname=${destName}`;
+        webUrl = `https://tmap.life/`;
+        storeUrl = Platform.OS === "ios"
+          ? "https://apps.apple.com/kr/app/tmap/id431589174"
+          : "https://play.google.com/store/apps/details?id=com.skt.tmap.ku";
+        break;
+      case "naver":
+        // 네이버 지도 URL Scheme
+        appUrl = `nmap://route/car?dlat=${destLat}&dlng=${destLng}&dname=${destName}&appname=com.scoop.riding`;
+        webUrl = `https://map.naver.com/v5/directions/-/-/-/car?c=${destLng},${destLat},15,0,0,0,dh`;
+        storeUrl = Platform.OS === "ios"
+          ? "https://apps.apple.com/kr/app/naver-map/id311867728"
+          : "https://play.google.com/store/apps/details?id=com.nhn.android.nmap";
+        break;
+    }
+
+    Linking.canOpenURL(appUrl).then((supported) => {
+      if (supported) {
+        Linking.openURL(appUrl);
+      } else {
+        // 앱이 설치되지 않은 경우 스토어로 안내
+        Alert.alert(
+          "앱 설치 필요",
+          `${app === "kakao" ? "카카오맵" : app === "tmap" ? "T Map" : "네이버 지도"} 앱이 설치되어 있지 않습니다. 설치 페이지로 이동하시겠습니까?`,
+          [
+            { text: "취소", style: "cancel" },
+            { text: "설치하기", onPress: () => Linking.openURL(storeUrl) },
+            { text: "웹으로 보기", onPress: () => Linking.openURL(webUrl) },
+          ]
+        );
+      }
+    }).catch(() => {
+      Linking.openURL(webUrl);
+    });
+  };
+
   const getManeuverIcon = (maneuver?: string): string => {
     switch (maneuver) {
       case "turn-left":
@@ -538,6 +600,45 @@ export default function RoutePreviewScreen() {
             </View>
           </ScrollView>
 
+          {/* External Navigation Apps */}
+          <View className="px-4 py-3 border-t border-border">
+            <Text className="text-muted text-sm mb-2 text-center">
+              한국에서는 외부 네비게이션 앱을 추천합니다
+            </Text>
+            <View className="flex-row justify-center">
+              <Pressable
+                onPress={() => openExternalNavigation("kakao")}
+                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                className="items-center mx-4"
+              >
+                <View className="w-12 h-12 rounded-full bg-[#FEE500] items-center justify-center mb-1">
+                  <Text className="text-black font-bold text-lg">K</Text>
+                </View>
+                <Text className="text-muted text-xs">카카오맵</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => openExternalNavigation("tmap")}
+                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                className="items-center mx-4"
+              >
+                <View className="w-12 h-12 rounded-full bg-[#FF0000] items-center justify-center mb-1">
+                  <Text className="text-white font-bold text-lg">T</Text>
+                </View>
+                <Text className="text-muted text-xs">T Map</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => openExternalNavigation("naver")}
+                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                className="items-center mx-4"
+              >
+                <View className="w-12 h-12 rounded-full bg-[#03C75A] items-center justify-center mb-1">
+                  <Text className="text-white font-bold text-lg">N</Text>
+                </View>
+                <Text className="text-muted text-xs">네이버</Text>
+              </Pressable>
+            </View>
+          </View>
+
           {/* Start Button */}
           <View className="px-4 py-4 border-t border-border">
             <Pressable
@@ -553,10 +654,13 @@ export default function RoutePreviewScreen() {
               <View className="flex-row items-center">
                 <MaterialIcons name="navigation" size={24} color="#FFFFFF" />
                 <Text className="text-white font-bold text-lg ml-2">
-                  경로 안내 시작
+                  앱 내 경로 안내 시작
                 </Text>
               </View>
             </Pressable>
+            <Text className="text-muted text-xs text-center mt-2">
+              * Google Maps 기반으로 한국에서는 제한될 수 있습니다
+            </Text>
           </View>
         </>
       )}

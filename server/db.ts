@@ -2208,12 +2208,13 @@ export async function createGroupSession(hostId: number, name: string): Promise<
 
     const groupId = result[0].insertId;
 
-    // Add host as first member
+    // Add host as first member (auto-approved)
     await db.insert(groupMembers).values({
       groupId,
       userId: hostId,
       isHost: true,
       isRiding: false,
+      status: "approved",
     });
 
     return { groupId, code };
@@ -2224,7 +2225,7 @@ export async function createGroupSession(hostId: number, name: string): Promise<
 }
 
 // Join a group by code
-export async function joinGroupByCode(userId: number, code: string): Promise<{ groupId: number; groupName: string } | null> {
+export async function joinGroupByCode(userId: number, code: string): Promise<{ groupId: number; groupName: string; status?: string } | null> {
   const db = await getDb();
   if (!db) return null;
 
@@ -2251,15 +2252,16 @@ export async function joinGroupByCode(userId: number, code: string): Promise<{ g
       return { groupId, groupName: group[0].name };
     }
 
-    // Add as member
+    // Add as member with pending status (waiting for host approval)
     await db.insert(groupMembers).values({
       groupId,
       userId,
       isHost: false,
       isRiding: false,
+      status: "pending",
     });
 
-    return { groupId, groupName: group[0].name };
+    return { groupId, groupName: group[0].name, status: "pending" };
   } catch (error) {
     console.error("[Database] Failed to join group:", error);
     return null;
@@ -2731,6 +2733,106 @@ export async function deleteGroupMessages(groupId: number): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("[Database] Failed to delete group messages:", error);
+    return false;
+  }
+}
+
+
+// ============================================
+// Group Member Approval Functions
+// ============================================
+
+// Get pending members for a group (host only)
+export async function getPendingMembers(groupId: number): Promise<{
+  userId: number;
+  name: string | null;
+  profileImageUrl: string | null;
+  joinedAt: Date;
+}[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const members = await db
+      .select({
+        userId: groupMembers.userId,
+        name: users.name,
+        profileImageUrl: users.profileImageUrl,
+        joinedAt: groupMembers.joinedAt,
+      })
+      .from(groupMembers)
+      .leftJoin(users, eq(groupMembers.userId, users.id))
+      .where(and(
+        eq(groupMembers.groupId, groupId),
+        eq(groupMembers.status, "pending")
+      ));
+
+    return members;
+  } catch (error) {
+    console.error("[Database] Failed to get pending members:", error);
+    return [];
+  }
+}
+
+// Approve a pending member (host only)
+export async function approveMember(groupId: number, hostId: number, memberId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    // Verify host
+    const group = await db
+      .select()
+      .from(groupSessions)
+      .where(and(eq(groupSessions.id, groupId), eq(groupSessions.hostId, hostId)))
+      .limit(1);
+
+    if (group.length === 0) return false;
+
+    // Update member status
+    await db
+      .update(groupMembers)
+      .set({ status: "approved" })
+      .where(and(
+        eq(groupMembers.groupId, groupId),
+        eq(groupMembers.userId, memberId),
+        eq(groupMembers.status, "pending")
+      ));
+
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to approve member:", error);
+    return false;
+  }
+}
+
+// Reject a pending member (host only)
+export async function rejectMember(groupId: number, hostId: number, memberId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    // Verify host
+    const group = await db
+      .select()
+      .from(groupSessions)
+      .where(and(eq(groupSessions.id, groupId), eq(groupSessions.hostId, hostId)))
+      .limit(1);
+
+    if (group.length === 0) return false;
+
+    // Delete the pending member
+    await db
+      .delete(groupMembers)
+      .where(and(
+        eq(groupMembers.groupId, groupId),
+        eq(groupMembers.userId, memberId),
+        eq(groupMembers.status, "pending")
+      ));
+
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to reject member:", error);
     return false;
   }
 }

@@ -14,16 +14,24 @@ import {
 import { useRouter } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
-import * as WebBrowser from "expo-web-browser";
-import * as Google from "expo-auth-session/providers/google";
+import {
+  GoogleSignin,
+  statusCodes,
+  isSuccessResponse,
+  isErrorWithCode,
+} from "@react-native-google-signin/google-signin";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
 
-// Ensure WebBrowser completes auth session
-WebBrowser.maybeCompleteAuthSession();
+// Configure Google Sign-In
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "",
+  offlineAccess: true,
+  forceCodeForRefreshToken: true,
+});
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -38,80 +46,91 @@ export default function LoginScreen() {
   const loginMutation = trpc.auth.login.useMutation();
   const googleLoginMutation = trpc.auth.googleLogin.useMutation();
 
-  // Google OAuth configuration
-  // Note: You need to set up Google OAuth credentials in Google Cloud Console
-  // and configure the client IDs for iOS, Android, and Web
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    // Replace these with your actual Google OAuth client IDs
-    // Get them from: https://console.cloud.google.com/apis/credentials
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "",
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || "",
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "",
-  });
-
-  // Handle Google OAuth response
-  useEffect(() => {
-    if (response?.type === "success") {
-      handleGoogleSignIn(response.authentication?.accessToken);
+  const handleGoogleSignIn = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  }, [response]);
 
-  const handleGoogleSignIn = async (accessToken: string | undefined) => {
-    if (!accessToken) {
-      Alert.alert("오류", "Google 인증에 실패했습니다.");
+    // Check if Google OAuth is configured
+    if (!process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID) {
+      Alert.alert(
+        "설정 필요",
+        "Google 로그인을 사용하려면 Google OAuth 클라이언트 ID를 설정해야 합니다.",
+        [{ text: "확인" }]
+      );
       return;
     }
 
     setIsGoogleLoading(true);
 
     try {
-      // Fetch user info from Google
-      const userInfoResponse = await fetch(
-        "https://www.googleapis.com/userinfo/v2/me",
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
-      const userInfo = await userInfoResponse.json();
+      // Check if Google Play Services are available
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-      if (!userInfo.email || !userInfo.id) {
-        Alert.alert("오류", "Google 계정 정보를 가져올 수 없습니다.");
-        return;
-      }
+      // Sign in with Google
+      const response = await GoogleSignin.signIn();
 
-      // Call our backend to handle Google login
-      const result = await googleLoginMutation.mutateAsync({
-        idToken: accessToken,
-        email: userInfo.email,
-        name: userInfo.name || userInfo.email.split("@")[0],
-        googleId: userInfo.id,
-      });
+      if (isSuccessResponse(response)) {
+        const { data } = response;
+        const idToken = data.idToken;
+        const user = data.user;
 
-      if (result.success && result.token && result.user) {
-        // Use AuthContext login to update state immediately
-        await authLogin(
-          {
-            id: result.user.id,
-            openId: result.user.openId,
-            name: result.user.name,
-            email: result.user.email,
-            loginMethod: result.user.loginMethod,
-            lastSignedIn: new Date(result.user.lastSignedIn),
-          },
-          result.token
-        );
-
-        if (Platform.OS !== "web") {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (!user.email || !user.id) {
+          Alert.alert("오류", "Google 계정 정보를 가져올 수 없습니다.");
+          return;
         }
 
-        // AuthGuard will handle navigation automatically
-      } else {
-        Alert.alert("로그인 실패", result.error || "Google 로그인에 실패했습니다.");
+        // Call our backend to handle Google login
+        const result = await googleLoginMutation.mutateAsync({
+          idToken: idToken || "",
+          email: user.email,
+          name: user.name || user.email.split("@")[0],
+          googleId: user.id,
+        });
+
+        if (result.success && result.token && result.user) {
+          // Use AuthContext login to update state immediately
+          await authLogin(
+            {
+              id: result.user.id,
+              openId: result.user.openId,
+              name: result.user.name,
+              email: result.user.email,
+              loginMethod: result.user.loginMethod,
+              lastSignedIn: new Date(result.user.lastSignedIn),
+            },
+            result.token
+          );
+
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+
+          // AuthGuard will handle navigation automatically
+        } else {
+          Alert.alert("로그인 실패", result.error || "Google 로그인에 실패했습니다.");
+        }
       }
     } catch (error) {
-      console.error("Google login error:", error);
-      Alert.alert("오류", "Google 로그인 중 오류가 발생했습니다.");
+      if (isErrorWithCode(error)) {
+        switch (error.code) {
+          case statusCodes.IN_PROGRESS:
+            // Operation is already in progress
+            break;
+          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+            Alert.alert("오류", "Google Play 서비스를 사용할 수 없습니다.");
+            break;
+          case statusCodes.SIGN_IN_CANCELLED:
+            // User cancelled the sign-in flow
+            break;
+          default:
+            console.error("Google sign-in error:", error);
+            Alert.alert("오류", "Google 로그인 중 오류가 발생했습니다.");
+        }
+      } else {
+        console.error("Google login error:", error);
+        Alert.alert("오류", "Google 로그인 중 오류가 발생했습니다.");
+      }
     } finally {
       setIsGoogleLoading(false);
     }
@@ -172,24 +191,6 @@ export default function LoginScreen() {
 
   const goToForgotPassword = () => {
     router.push("/forgot-password");
-  };
-
-  const handleGooglePress = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    
-    // Check if Google OAuth is configured
-    if (!process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID) {
-      Alert.alert(
-        "설정 필요",
-        "Google 로그인을 사용하려면 Google OAuth 클라이언트 ID를 설정해야 합니다.\n\n환경변수에 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID를 추가해주세요.",
-        [{ text: "확인" }]
-      );
-      return;
-    }
-    
-    promptAsync();
   };
 
   return (
@@ -299,7 +300,7 @@ export default function LoginScreen() {
 
               {/* Google Login Button */}
               <Pressable
-                onPress={handleGooglePress}
+                onPress={handleGoogleSignIn}
                 disabled={isGoogleLoading}
                 style={({ pressed }) => [
                   {

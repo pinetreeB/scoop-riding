@@ -30,6 +30,7 @@ interface GroupMember {
   profileImageUrl: string | null;
   isHost: boolean;
   isRiding: boolean;
+  status?: "pending" | "approved" | "rejected";
   distance: number;
   duration: number;
   currentSpeed: number;
@@ -104,7 +105,11 @@ export default function GroupRidingScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
-      Alert.alert("참가 완료", `"${data.groupName}" 그룹에 참가했습니다.`);
+      if (data.status === "pending") {
+        Alert.alert("참가 신청 완료", `"${data.groupName}" 그룹에 참가 신청했습니다.\n\n그룹장의 승인을 기다려주세요.`);
+      } else {
+        Alert.alert("참가 완료", `"${data.groupName}" 그룹에 참가했습니다.`);
+      }
     },
     onError: (error) => {
       Alert.alert("오류", error.message || "그룹 참가에 실패했습니다.");
@@ -121,6 +126,33 @@ export default function GroupRidingScreen() {
     },
     onError: (error) => {
       Alert.alert("오류", error.message || "그룹 나가기에 실패했습니다.");
+    },
+  });
+
+  // 멤버 승인 mutation
+  const approveMemberMutation = trpc.groups.approveMember.useMutation({
+    onSuccess: () => {
+      utils.groups.mine.invalidate();
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      Alert.alert("승인 완료", "멤버가 승인되었습니다.");
+    },
+    onError: (error) => {
+      Alert.alert("오류", error.message || "멤버 승인에 실패했습니다.");
+    },
+  });
+
+  // 멤버 거절 mutation
+  const rejectMemberMutation = trpc.groups.rejectMember.useMutation({
+    onSuccess: () => {
+      utils.groups.mine.invalidate();
+      if (Platform.OS !== "web") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    },
+    onError: (error) => {
+      Alert.alert("오류", error.message || "멤버 거절에 실패했습니다.");
     },
   });
 
@@ -185,6 +217,27 @@ export default function GroupRidingScreen() {
     router.push(`/riding?groupId=${group.id}`);
   };
 
+  // 멤버 승인
+  const handleApproveMember = (groupId: number, memberId: number) => {
+    approveMemberMutation.mutate({ groupId, memberId });
+  };
+
+  // 멤버 거절
+  const handleRejectMember = (groupId: number, memberId: number) => {
+    Alert.alert(
+      "멤버 거절",
+      "이 멤버의 참가 요청을 거절하시겠습니까?",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "거절",
+          style: "destructive",
+          onPress: () => rejectMemberMutation.mutate({ groupId, memberId }),
+        },
+      ]
+    );
+  };
+
   const renderGroupItem = ({ item }: { item: GroupSession }) => (
     <View className="bg-surface rounded-xl p-4 mb-3 border border-border">
       <View className="flex-row items-start justify-between">
@@ -232,10 +285,10 @@ export default function GroupRidingScreen() {
       {/* Members */}
       <View className="mt-3">
         <Text className="text-sm font-medium text-foreground mb-2">
-          멤버 ({item.members.length}명)
+          멤버 ({item.members.filter(m => m.status !== "pending").length}명)
         </Text>
         <View className="flex-row flex-wrap gap-2">
-          {item.members.map((member) => (
+          {item.members.filter(m => m.status !== "pending").map((member) => (
             <View
               key={member.userId}
               className="flex-row items-center bg-background rounded-full px-3 py-1.5"
@@ -266,6 +319,56 @@ export default function GroupRidingScreen() {
           ))}
         </View>
       </View>
+
+      {/* Pending Members (Host Only) */}
+      {item.hostId === user?.id && item.members.filter(m => m.status === "pending").length > 0 && (
+        <View className="mt-3 p-3 bg-warning/10 rounded-lg border border-warning/30">
+          <Text className="text-sm font-medium text-foreground mb-2">
+            승인 대기 ({item.members.filter(m => m.status === "pending").length}명)
+          </Text>
+          {item.members.filter(m => m.status === "pending").map((member) => (
+            <View
+              key={member.userId}
+              className="flex-row items-center justify-between py-2 border-b border-border/50"
+            >
+              <View className="flex-row items-center flex-1">
+                {member.profileImageUrl ? (
+                  <Image
+                    source={{ uri: member.profileImageUrl }}
+                    style={{ width: 28, height: 28, borderRadius: 14 }}
+                  />
+                ) : (
+                  <View
+                    style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.muted }}
+                    className="items-center justify-center"
+                  >
+                    <Text className="text-white text-xs font-bold">
+                      {(member.name || "?").charAt(0)}
+                    </Text>
+                  </View>
+                )}
+                <Text className="text-sm text-foreground ml-2">{member.name || "익명"}</Text>
+              </View>
+              <View className="flex-row gap-2">
+                <Pressable
+                  onPress={() => handleApproveMember(item.id, member.userId)}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                  className="bg-success px-3 py-1.5 rounded-full"
+                >
+                  <Text className="text-white text-xs font-medium">승인</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => handleRejectMember(item.id, member.userId)}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                  className="bg-error px-3 py-1.5 rounded-full"
+                >
+                  <Text className="text-white text-xs font-medium">거절</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Start Button */}
       <Pressable
