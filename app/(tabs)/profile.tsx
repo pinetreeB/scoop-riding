@@ -9,6 +9,8 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  Linking,
+  TextInput,
 } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
@@ -53,6 +55,8 @@ export default function ProfileScreen() {
     unsyncedCount: 0,
   });
   const [showMaxSpeedModal, setShowMaxSpeedModal] = useState(false);
+  const [showBugReportModal, setShowBugReportModal] = useState(false);
+  const [bugReportText, setBugReportText] = useState("");
   const [appUpdateInfo, setAppUpdateInfo] = useState<{
     hasUpdate: boolean;
     latestVersion: string | null;
@@ -248,6 +252,47 @@ export default function ProfileScreen() {
   };
 
   // getLevelTitle is now imported from @/lib/level-system
+
+  // Bug Report Email Handler
+  const handleSendBugReport = async () => {
+    if (!bugReportText.trim()) {
+      Alert.alert("오류", "버그 내용을 입력해주세요.");
+      return;
+    }
+
+    const deviceInfo = [
+      `앱 버전: v${CURRENT_APP_VERSION}`,
+      `플랫폼: ${Platform.OS} ${Platform.Version}`,
+      `사용자 ID: ${user?.id || "비로그인"}`,
+      `사용자 이메일: ${user?.email || "없음"}`,
+      `시간: ${new Date().toISOString()}`,
+    ].join("\n");
+
+    const emailBody = `[버그 리포트]\n\n${bugReportText}\n\n--- 기기 정보 ---\n${deviceInfo}`;
+    const emailSubject = `[SCOOP 버그 리포트] v${CURRENT_APP_VERSION}`;
+    
+    // 임시 이메일 주소 - 사용자가 설정할 예정
+    const supportEmail = "support@scoop-riding.app";
+    
+    const mailtoUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    
+    try {
+      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl);
+        setShowBugReportModal(false);
+        setBugReportText("");
+        if (Platform.OS !== "web") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      } else {
+        Alert.alert("오류", "이메일 앱을 열 수 없습니다. 이메일 앱이 설치되어 있는지 확인해주세요.");
+      }
+    } catch (error) {
+      console.error("Bug report email error:", error);
+      Alert.alert("오류", "이메일을 보내는 중 오류가 발생했습니다.");
+    }
+  };
 
   const getUserDisplayName = () => {
     if (user?.name) return user.name;
@@ -863,6 +908,25 @@ export default function ProfileScreen() {
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
 
+            {/* Bug Report */}
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                setShowBugReportModal(true);
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4 border-b border-border"
+            >
+              <MaterialIcons name="bug-report" size={24} color={colors.primary} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">버그 리포트</Text>
+                <Text className="text-muted text-xs">문제점이나 개선 사항을 알려주세요</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+
             {/* Data Management */}
             <Pressable
               onPress={handleClearData}
@@ -957,6 +1021,82 @@ export default function ProfileScreen() {
               style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
             >
               <Text className="text-muted font-medium">닫기</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Bug Report Modal */}
+      <Modal
+        visible={showBugReportModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBugReportModal(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black/50 justify-center items-center p-6"
+          onPress={() => setShowBugReportModal(false)}
+        >
+          <Pressable
+            className="bg-background rounded-2xl p-6 w-full max-w-sm"
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View className="flex-row items-center mb-4">
+              <MaterialIcons name="bug-report" size={28} color={colors.primary} />
+              <Text className="text-xl font-bold text-foreground ml-2">
+                버그 리포트
+              </Text>
+            </View>
+
+            <Text className="text-muted text-sm mb-4">
+              발견한 문제점이나 개선 사항을 알려주세요.{"\n"}
+              기기 정보와 앱 버전이 자동으로 포함됩니다.
+            </Text>
+
+            <View className="bg-surface rounded-xl border border-border mb-4">
+              <TextInput
+                value={bugReportText}
+                onChangeText={setBugReportText}
+                placeholder="어떤 문제가 있나요? 자세히 설명해주세요..."
+                placeholderTextColor={colors.muted}
+                multiline
+                numberOfLines={5}
+                textAlignVertical="top"
+                style={{
+                  padding: 16,
+                  color: colors.foreground,
+                  minHeight: 120,
+                  fontSize: 14,
+                }}
+              />
+            </View>
+
+            <View className="bg-surface/50 rounded-xl p-3 mb-4 border border-border">
+              <Text className="text-muted text-xs">
+                포함되는 정보: 앱 버전 v{CURRENT_APP_VERSION}, {Platform.OS} {Platform.Version}
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={handleSendBugReport}
+              className="bg-primary rounded-xl py-3 items-center mb-3"
+              style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+            >
+              <View className="flex-row items-center">
+                <MaterialIcons name="email" size={20} color="#FFFFFF" />
+                <Text className="text-background font-semibold ml-2">이메일로 보내기</Text>
+              </View>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                setShowBugReportModal(false);
+                setBugReportText("");
+              }}
+              className="py-3 items-center"
+              style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+            >
+              <Text className="text-muted font-medium">취소</Text>
             </Pressable>
           </Pressable>
         </Pressable>

@@ -92,17 +92,17 @@ describe("Navigation Feature", () => {
   });
 
   describe("Main Screen Integration", () => {
-    it("should have clickable search bar", () => {
+    it("should have start riding button", () => {
       const filePath = path.join(projectRoot, "app/(tabs)/index.tsx");
       const content = fs.readFileSync(filePath, "utf-8");
-      expect(content).toContain("/search-destination");
-      expect(content).toContain("어디로 달릴까요");
+      expect(content).toContain("/select-scooter");
+      expect(content).toContain("라이딩 시작");
     });
 
-    it("should have navigation icon on search bar", () => {
+    it("should have group riding button", () => {
       const filePath = path.join(projectRoot, "app/(tabs)/index.tsx");
       const content = fs.readFileSync(filePath, "utf-8");
-      expect(content).toContain('name="navigation"');
+      expect(content).toContain('/group-riding');
     });
   });
 
