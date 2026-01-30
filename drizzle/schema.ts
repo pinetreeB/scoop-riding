@@ -1,4 +1,4 @@
-import { boolean, int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
+import { boolean, int, mysqlEnum, mysqlTable, text, mediumtext, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -60,8 +60,8 @@ export const ridingRecords = mysqlTable("ridingRecords", {
   startTime: timestamp("startTime"),
   /** End time */
   endTime: timestamp("endTime"),
-  /** GPS points as JSON string */
-  gpsPointsJson: text("gpsPointsJson"),
+  /** GPS points as JSON string (MEDIUMTEXT for large rides up to 16MB) */
+  gpsPointsJson: mediumtext("gpsPointsJson"),
   /** Scooter used for this ride (optional) */
   scooterId: int("scooterId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

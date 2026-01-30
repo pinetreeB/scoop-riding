@@ -1,0 +1,1 @@
+ALTER TABLE `ridingRecords` MODIFY COLUMN `gpsPointsJson` mediumtext;

@@ -71,6 +71,77 @@ async function getGpsStorageKey(recordId: string): Promise<string> {
   return `${GPS_STORAGE_PREFIX}${recordId}`;
 }
 
+// Downsample GPS points to reduce data size for long rides
+// Keeps every Nth point based on total count, always keeping first and last
+function downsampleGpsPoints(points: GpsPoint[], maxPoints: number = 3600): GpsPoint[] {
+  if (points.length <= maxPoints) return points;
+  
+  const step = Math.ceil(points.length / maxPoints);
+  const result: GpsPoint[] = [points[0]]; // Always keep first point
+  
+  for (let i = step; i < points.length - 1; i += step) {
+    result.push(points[i]);
+  }
+  
+  result.push(points[points.length - 1]); // Always keep last point
+  console.log(`[RidingStore] Downsampled GPS points from ${points.length} to ${result.length}`);
+  return result;
+}
+
+// Save GPS points in chunks to handle AsyncStorage limits
+async function saveGpsPointsInChunks(recordId: string, points: GpsPoint[]): Promise<void> {
+  const CHUNK_SIZE = 1000; // Points per chunk
+  const chunks = Math.ceil(points.length / CHUNK_SIZE);
+  
+  console.log(`[RidingStore] Saving ${points.length} GPS points in ${chunks} chunks`);
+  
+  // Save chunk count metadata
+  const metaKey = await getGpsStorageKey(recordId);
+  await AsyncStorage.setItem(`${metaKey}_meta`, JSON.stringify({ chunks, totalPoints: points.length }));
+  
+  // Save each chunk
+  for (let i = 0; i < chunks; i++) {
+    const start = i * CHUNK_SIZE;
+    const end = Math.min(start + CHUNK_SIZE, points.length);
+    const chunk = points.slice(start, end);
+    const chunkKey = `${metaKey}_chunk_${i}`;
+    
+    await AsyncStorage.setItem(chunkKey, JSON.stringify(chunk));
+    console.log(`[RidingStore] Saved chunk ${i + 1}/${chunks} (${chunk.length} points)`);
+  }
+}
+
+// Load GPS points from chunks
+async function loadGpsPointsFromChunks(recordId: string): Promise<GpsPoint[] | null> {
+  try {
+    const metaKey = await getGpsStorageKey(recordId);
+    const metaData = await AsyncStorage.getItem(`${metaKey}_meta`);
+    
+    if (!metaData) {
+      // Try legacy single-key format
+      const legacyData = await AsyncStorage.getItem(metaKey);
+      return legacyData ? JSON.parse(legacyData) : null;
+    }
+    
+    const { chunks } = JSON.parse(metaData);
+    const allPoints: GpsPoint[] = [];
+    
+    for (let i = 0; i < chunks; i++) {
+      const chunkKey = `${metaKey}_chunk_${i}`;
+      const chunkData = await AsyncStorage.getItem(chunkKey);
+      if (chunkData) {
+        allPoints.push(...JSON.parse(chunkData));
+      }
+    }
+    
+    console.log(`[RidingStore] Loaded ${allPoints.length} GPS points from ${chunks} chunks`);
+    return allPoints;
+  } catch (error) {
+    console.error('[RidingStore] Failed to load GPS chunks:', error);
+    return null;
+  }
+}
+
 // Save riding record locally with retry logic
 export async function saveRidingRecord(record: RidingRecord, retryCount = 0): Promise<void> {
   const MAX_RETRIES = 3;
@@ -81,9 +152,17 @@ export async function saveRidingRecord(record: RidingRecord, retryCount = 0): Pr
     
     // Save GPS points separately to avoid storage limits (user-specific)
     if (record.gpsPoints && record.gpsPoints.length > 0) {
-      const gpsKey = await getGpsStorageKey(record.id);
-      console.log(`[RidingStore] Saving ${record.gpsPoints.length} GPS points to key: ${gpsKey}`);
-      await AsyncStorage.setItem(gpsKey, JSON.stringify(record.gpsPoints));
+      // Downsample if too many points (more than 1 hour of 1-second intervals)
+      const optimizedPoints = downsampleGpsPoints(record.gpsPoints, 3600);
+      
+      // Use chunked storage for large datasets
+      if (optimizedPoints.length > 1000) {
+        await saveGpsPointsInChunks(record.id, optimizedPoints);
+      } else {
+        const gpsKey = await getGpsStorageKey(record.id);
+        console.log(`[RidingStore] Saving ${optimizedPoints.length} GPS points to key: ${gpsKey}`);
+        await AsyncStorage.setItem(gpsKey, JSON.stringify(optimizedPoints));
+      }
       console.log(`[RidingStore] GPS points saved successfully`);
     }
 
@@ -148,11 +227,10 @@ export async function getRidingRecordWithGps(id: string): Promise<RidingRecord |
     
     if (!record) return null;
 
-    // Load GPS points (user-specific)
-    const gpsKey = await getGpsStorageKey(id);
-    const gpsData = await AsyncStorage.getItem(gpsKey);
-    if (gpsData) {
-      record.gpsPoints = JSON.parse(gpsData);
+    // Load GPS points - try chunked format first, then legacy
+    const gpsPoints = await loadGpsPointsFromChunks(id);
+    if (gpsPoints && gpsPoints.length > 0) {
+      record.gpsPoints = gpsPoints;
     }
 
     return record;
@@ -334,9 +412,20 @@ export async function syncRecordToCloud(
     
     // Get GPS points for this record
     const recordWithGps = await getRidingRecordWithGps(record.id);
-    const gpsPointsJson = recordWithGps?.gpsPoints 
+    let gpsPointsJson = recordWithGps?.gpsPoints 
       ? JSON.stringify(recordWithGps.gpsPoints)
       : undefined;
+    
+    // Log GPS data size for debugging
+    const gpsDataSize = gpsPointsJson ? gpsPointsJson.length : 0;
+    console.log(`[Sync] GPS data size: ${(gpsDataSize / 1024).toFixed(2)} KB, points: ${recordWithGps?.gpsPoints?.length || 0}`);
+    
+    // If GPS data is too large (> 10MB), skip it to prevent upload failure
+    // The record will still be saved without GPS track
+    if (gpsDataSize > 10 * 1024 * 1024) {
+      console.warn(`[Sync] GPS data too large (${(gpsDataSize / 1024 / 1024).toFixed(2)} MB), uploading without GPS track`);
+      gpsPointsJson = undefined;
+    }
 
     // Validate startTime and endTime are valid ISO strings
     const startTime = record.startTime && record.startTime.length > 0 ? record.startTime : undefined;
