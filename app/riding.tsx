@@ -1163,6 +1163,8 @@ export default function RidingScreen() {
                 gpxRoute={gpxRoute}
                 groupMembers={groupMembers}
                 navigationMode={true} // 주행 중에는 항상 네비게이션 스타일 (진행 방향이 위를 향하도록 지도 회전)
+                currentSpeed={currentSpeed} // 속도 기반 자동 줌 레벨 조절
+                showRecenterButton={true} // 현재 위치 버튼 표시
                 style={{ flex: 1, borderRadius: 0 }}
               />
             ) : (

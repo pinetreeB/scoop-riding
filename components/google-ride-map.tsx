@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from "react";
-import { View, StyleSheet, Text, ActivityIndicator, Platform } from "react-native";
+import { View, StyleSheet, Text, ActivityIndicator, Platform, TouchableOpacity } from "react-native";
 
 // Only import react-native-maps on native platforms
 let MapView: any = null;
@@ -51,6 +51,12 @@ interface GoogleRideMapProps {
   allowInteraction?: boolean;
   /** 자동 추적 모드 복귀 시간 (초, 기본 10초) */
   autoFollowDelay?: number;
+  /** 현재 속도 (km/h) - 속도 기반 자동 줌 레벨 조절에 사용 */
+  currentSpeed?: number;
+  /** 현재 위치 버튼 표시 여부 */
+  showRecenterButton?: boolean;
+  /** 현재 위치 버튼 클릭 콜백 */
+  onRecenterPress?: () => void;
 }
 
 // Arrow marker component for current location
@@ -100,6 +106,9 @@ export function GoogleRideMap({
   navigationMode = false,
   allowInteraction = true,
   autoFollowDelay = 10,
+  currentSpeed = 0,
+  showRecenterButton = true,
+  onRecenterPress,
 }: GoogleRideMapProps) {
   const colors = useColors();
   const mapRef = useRef<any>(null);
@@ -111,6 +120,27 @@ export function GoogleRideMap({
   // 지도 터치 조작 상태 관리
   const [isUserInteracting, setIsUserInteracting] = useState(false);
   const interactionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // 속도 기반 자동 줌 레벨 계산
+  // 저속: 줌 17 (상세), 고속: 줌 14 (넓은 시야)
+  const getZoomForSpeed = useCallback((speed: number): number => {
+    if (speed <= 10) return 17;      // 0-10 km/h: 최대 줌 (상세)
+    if (speed <= 30) return 16.5;    // 10-30 km/h
+    if (speed <= 50) return 16;      // 30-50 km/h
+    if (speed <= 70) return 15.5;    // 50-70 km/h
+    if (speed <= 100) return 15;     // 70-100 km/h
+    return 14;                        // 100+ km/h: 최소 줌 (넓은 시야)
+  }, []);
+  
+  // 현재 위치로 즉시 복귀
+  const handleRecenter = useCallback(() => {
+    if (interactionTimeoutRef.current) {
+      clearTimeout(interactionTimeoutRef.current);
+    }
+    setIsUserInteracting(false);
+    onRecenterPress?.();
+    console.log("[GoogleRideMap] Recenter button pressed");
+  }, [onRecenterPress]);
   
   // 사용자 지도 조작 시 호출
   const handleMapInteraction = useCallback(() => {
@@ -216,6 +246,9 @@ export function GoogleRideMap({
         animatedHeading.current = currentLocation.heading;
       }
 
+      // 속도 기반 자동 줌 레벨 계산
+      const dynamicZoom = getZoomForSpeed(currentSpeed);
+      
       if (navigationMode) {
         // 네비게이션 모드: 카메라를 회전하여 진행 방향이 항상 위를 향하도록
         const heading = currentLocation.heading ?? lastCameraHeading.current;
@@ -228,7 +261,7 @@ export function GoogleRideMap({
           },
           heading: heading, // 카메라가 진행 방향을 향하도록 회전
           pitch: 45, // 약간 기울어진 시점 (네비게이션 스타일)
-          zoom: 17, // 적절한 줌 레벨
+          zoom: dynamicZoom, // 속도 기반 동적 줌 레벨
         }, { duration: 150 }); // 더 빠른 애니메이션 (300ms -> 150ms)
       } else {
         // 일반 라이브 모드: 위치만 업데이트
@@ -240,7 +273,7 @@ export function GoogleRideMap({
         }, 150); // 더 빠른 애니메이션 (300ms -> 150ms)
       }
     }
-  }, [isLive, navigationMode, isUserInteracting, currentLocation?.latitude, currentLocation?.longitude, currentLocation?.heading]);
+  }, [isLive, navigationMode, isUserInteracting, currentLocation?.latitude, currentLocation?.longitude, currentLocation?.heading, currentSpeed, getZoomForSpeed]);
 
   // Fit to bounds when not in live mode
   useEffect(() => {
@@ -392,6 +425,25 @@ export function GoogleRideMap({
           </Marker>
         )}
       </MapView>
+      
+      {/* 현재 위치 버튼 - 사용자가 지도를 조작 중일 때만 표시 */}
+      {isLive && showRecenterButton && isUserInteracting && (
+        <TouchableOpacity
+          style={[
+            styles.recenterButton,
+            { backgroundColor: colors.background, borderColor: colors.border }
+          ]}
+          onPress={handleRecenter}
+          activeOpacity={0.7}
+        >
+          <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"
+              fill={colors.primary}
+            />
+          </Svg>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -516,5 +568,21 @@ const styles = StyleSheet.create({
   memberLabelText: {
     color: "white",
     fontSize: 10,
+  },
+  recenterButton: {
+    position: "absolute",
+    bottom: 120,
+    right: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });
