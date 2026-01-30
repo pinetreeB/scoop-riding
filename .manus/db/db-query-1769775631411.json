@@ -1,0 +1,42 @@
+{
+  "query": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'app_versions';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'app_versions';",
+  "rows": [
+    {
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "version",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "build_number",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "release_notes",
+      "DATA_TYPE": "text"
+    },
+    {
+      "COLUMN_NAME": "download_url",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "is_force_update",
+      "DATA_TYPE": "tinyint"
+    },
+    {
+      "COLUMN_NAME": "is_active",
+      "DATA_TYPE": "tinyint"
+    },
+    {
+      "COLUMN_NAME": "created_at",
+      "DATA_TYPE": "timestamp"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tDATA_TYPE\nid\tint\nversion\tvarchar\nbuild_number\tint\nrelease_notes\ttext\ndownload_url\tvarchar\nis_force_update\ttinyint\nis_active\ttinyint\ncreated_at\ttimestamp\n",
+  "stderr": "",
+  "execution_time_ms": 1540
+}

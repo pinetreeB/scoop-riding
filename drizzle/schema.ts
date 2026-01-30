@@ -123,7 +123,7 @@ export const posts = mysqlTable("posts", {
   title: varchar("title", { length: 200 }).notNull(),
   /** Post content */
   content: text("content").notNull(),
-  /** Post type: general, ride_share, question, tip */
+  /** Post type: general, ride_share, question, tip, group_recruit */
   postType: varchar("postType", { length: 32 }).default("general").notNull(),
   /** Attached riding record ID (optional) */
   ridingRecordId: varchar("ridingRecordId", { length: 64 }),

@@ -481,7 +481,7 @@ export const appRouter = router({
         z.object({
           title: z.string().min(1, "제목을 입력해주세요.").max(200),
           content: z.string().min(1, "내용을 입력해주세요."),
-          postType: z.enum(["general", "ride_share", "question", "tip"]).default("general"),
+          postType: z.enum(["general", "ride_share", "question", "tip", "group_recruit"]).default("general"),
           ridingRecordId: z.string().optional(),
           imageUrls: z.array(z.string()).optional(),
         })
@@ -505,7 +505,7 @@ export const appRouter = router({
           id: z.number(),
           title: z.string().min(1).max(200).optional(),
           content: z.string().min(1).optional(),
-          postType: z.enum(["general", "ride_share", "question", "tip"]).optional(),
+          postType: z.enum(["general", "ride_share", "question", "tip", "group_recruit"]).optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
