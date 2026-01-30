@@ -2581,6 +2581,8 @@ export async function getGroupMembersLocations(groupId: number): Promise<{
   if (!db) return [];
 
   try {
+    console.log(`[Database] Getting group members locations for groupId=${groupId}`);
+    
     const members = await db
       .select({
         userId: groupMembers.userId,
@@ -2597,6 +2599,14 @@ export async function getGroupMembersLocations(groupId: number): Promise<{
       .from(groupMembers)
       .leftJoin(users, eq(groupMembers.userId, users.id))
       .where(eq(groupMembers.groupId, groupId));
+
+    console.log(`[Database] Found ${members.length} members:`, members.map(m => ({
+      userId: m.userId,
+      name: m.name,
+      lat: m.latitude,
+      lng: m.longitude,
+      isRiding: m.isRiding,
+    })));
 
     return members.map(m => ({
       ...m,

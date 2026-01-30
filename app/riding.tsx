@@ -560,6 +560,27 @@ export default function RidingScreen() {
     const displaySpeed = smoothSpeed(rawSpeedKmh);
     setCurrentSpeed(displaySpeed);
 
+    // 그룹 라이딩 위치 업데이트 - validation 전에 항상 실행 (정지 상태에서도 위치 공유)
+    if (groupId) {
+      console.log(`[Riding] Updating group location (always): groupId=${groupId}, lat=${latitude}, lng=${longitude}, speed=${displaySpeed}`);
+      updateGroupLocation.mutate({
+        groupId,
+        latitude,
+        longitude,
+        distance: distance,
+        duration: duration,
+        currentSpeed: displaySpeed,
+        isRiding: true,
+      }, {
+        onSuccess: () => {
+          console.log(`[Riding] Group location updated successfully`);
+        },
+        onError: (error) => {
+          console.error("[Riding] Failed to update group location:", error);
+        },
+      });
+    }
+
     // 자동 일시정지 로직: 속도가 임계값 이하면 정지 카운터 증가
     // isAutoPausedRef.current를 사용하여 클로저 문제 해결
     if (displaySpeed < AUTO_PAUSE_SPEED_THRESHOLD) {
@@ -604,23 +625,7 @@ export default function RidingScreen() {
         isStarting,
       });
 
-      // Update group location if in group riding
-      if (groupId) {
-        console.log(`[Riding] Updating group location: groupId=${groupId}, lat=${latitude}, lng=${longitude}`);
-        updateGroupLocation.mutate({
-          groupId,
-          latitude,
-          longitude,
-          distance: distance,
-          duration: duration,
-          currentSpeed: displaySpeed,
-          isRiding: true,
-        }, {
-          onError: (error) => {
-            console.error("[Riding] Failed to update group location:", error);
-          },
-        });
-      }
+      // Group location update moved to before validation (line 564)
 
       if (rawSpeedKmh >= GPS_CONSTANTS.MIN_SPEED_THRESHOLD) {
         setMaxSpeed((prev) => Math.max(prev, rawSpeedKmh));
