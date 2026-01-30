@@ -192,6 +192,9 @@ export function GoogleRideMap({
   const startPoint = gpsPoints.length > 0 ? gpsPoints[0] : null;
   const endPoint = gpsPoints.length > 1 ? gpsPoints[gpsPoints.length - 1] : null;
 
+  // Track last update time for debugging
+  const lastUpdateTimeRef = useRef<number>(Date.now());
+  
   // Animate to current location in live mode with optional navigation rotation
   useEffect(() => {
     // 사용자가 지도를 조작 중이면 자동 추적 안함
@@ -200,6 +203,14 @@ export function GoogleRideMap({
     }
     
     if (isLive && currentLocation && mapRef.current) {
+      // Log update frequency for debugging
+      const now = Date.now();
+      const timeSinceLastUpdate = now - lastUpdateTimeRef.current;
+      if (timeSinceLastUpdate > 2000) {
+        console.log(`[GoogleRideMap] Camera update after ${timeSinceLastUpdate}ms`);
+      }
+      lastUpdateTimeRef.current = now;
+      
       // Smooth heading animation
       if (currentLocation.heading !== undefined) {
         animatedHeading.current = currentLocation.heading;
@@ -218,7 +229,7 @@ export function GoogleRideMap({
           heading: heading, // 카메라가 진행 방향을 향하도록 회전
           pitch: 45, // 약간 기울어진 시점 (네비게이션 스타일)
           zoom: 17, // 적절한 줌 레벨
-        }, { duration: 300 });
+        }, { duration: 150 }); // 더 빠른 애니메이션 (300ms -> 150ms)
       } else {
         // 일반 라이브 모드: 위치만 업데이트
         mapRef.current.animateToRegion({
@@ -226,7 +237,7 @@ export function GoogleRideMap({
           longitude: currentLocation.longitude,
           latitudeDelta: 0.005,
           longitudeDelta: 0.005,
-        }, 300);
+        }, 150); // 더 빠른 애니메이션 (300ms -> 150ms)
       }
     }
   }, [isLive, navigationMode, isUserInteracting, currentLocation?.latitude, currentLocation?.longitude, currentLocation?.heading]);
@@ -284,7 +295,7 @@ export function GoogleRideMap({
         mapType="standard"
         customMapStyle={mapStyle}
         onPanDrag={handleMapInteraction}
-        onRegionChange={isLive && allowInteraction ? handleMapInteraction : undefined}
+        onTouchStart={handleMapInteraction}
       >
         {/* GPX Guide Route (dashed blue line) */}
         {gpxCoordinates.length > 1 && (
