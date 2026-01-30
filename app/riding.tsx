@@ -1272,6 +1272,36 @@ export default function RidingScreen() {
                 <Text style={{ fontSize: 10, color: '#CCCCCC', marginLeft: 4 }}>최고</Text>
               </View>
             </View>
+            {/* 그룹 라이딩 디버그 정보 */}
+            {groupId && (
+              <View style={{
+                position: 'absolute',
+                top: 60,
+                left: 8,
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                borderRadius: 8,
+                padding: 8,
+                maxWidth: 200,
+              }}>
+                <Text style={{ fontSize: 10, color: '#00FF00', fontWeight: 'bold' }}>
+                  그룹 ID: {groupId}
+                </Text>
+                <Text style={{ fontSize: 10, color: '#FFFFFF' }}>
+                  멤버 수: {groupMembers.length}
+                </Text>
+                <Text style={{ fontSize: 10, color: '#FFFFFF' }}>
+                  주행중: {groupMembers.filter(m => m.isRiding).length}
+                </Text>
+                <Text style={{ fontSize: 10, color: '#FFFFFF' }}>
+                  위치있음: {groupMembers.filter(m => m.latitude && m.longitude).length}
+                </Text>
+                {groupMembers.slice(0, 3).map((m, i) => (
+                  <Text key={i} style={{ fontSize: 9, color: '#AAAAAA' }}>
+                    {m.name}: {m.isRiding ? '주행중' : '대기'} ({m.latitude?.toFixed(4) || 'null'})
+                  </Text>
+                ))}
+              </View>
+            )}
             {/* 휴식 중 표시 */}
             {isAutoPaused && (
               <View style={{

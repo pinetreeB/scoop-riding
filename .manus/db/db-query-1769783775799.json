@@ -1,0 +1,49 @@
+{
+  "query": "SELECT gm.id, gm.groupId, gm.userId, gm.isHost, gm.isRiding, gm.latitude, gm.longitude, gm.currentSpeed, gm.status, gm.lastLocationUpdate, u.name as userName FROM groupMembers gm LEFT JOIN users u ON gm.userId = u.id ORDER BY gm.id DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT gm.id, gm.groupId, gm.userId, gm.isHost, gm.isRiding, gm.latitude, gm.longitude, gm.currentSpeed, gm.status, gm.lastLocationUpdate, u.name as userName FROM groupMembers gm LEFT JOIN users u ON gm.userId = u.id ORDER BY gm.id DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "90002",
+      "groupId": "90001",
+      "userId": "30030",
+      "isHost": "0",
+      "isRiding": "0",
+      "latitude": "NULL",
+      "longitude": "NULL",
+      "currentSpeed": "0",
+      "status": "pending",
+      "lastLocationUpdate": "NULL",
+      "userName": "스쿱 모빌리티"
+    },
+    {
+      "id": "90001",
+      "groupId": "90001",
+      "userId": "1920694",
+      "isHost": "1",
+      "isRiding": "0",
+      "latitude": "NULL",
+      "longitude": "NULL",
+      "currentSpeed": "0",
+      "status": "approved",
+      "lastLocationUpdate": "NULL",
+      "userName": "소나무군"
+    },
+    {
+      "id": "30001",
+      "groupId": "30001",
+      "userId": "1",
+      "isHost": "1",
+      "isRiding": "0",
+      "latitude": "NULL",
+      "longitude": "NULL",
+      "currentSpeed": "0",
+      "status": "pending",
+      "lastLocationUpdate": "NULL",
+      "userName": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tgroupId\tuserId\tisHost\tisRiding\tlatitude\tlongitude\tcurrentSpeed\tstatus\tlastLocationUpdate\tuserName\n90002\t90001\t30030\t0\t0\tNULL\tNULL\t0\tpending\tNULL\t스쿱 모빌리티\n90001\t90001\t1920694\t1\t0\tNULL\tNULL\t0\tapproved\tNULL\t소나무군\n30001\t30001\t1\t1\t0\tNULL\tNULL\t0\tpending\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1523
+}
