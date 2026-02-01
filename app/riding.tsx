@@ -55,12 +55,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GpxRoute, GpxPoint as GpxRoutePoint } from "@/lib/gpx-parser";
 import { GroupChat } from "@/components/group-chat";
 import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
+import { useAuth } from "@/hooks/use-auth";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function RidingScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { user } = useAuth();
   const params = useLocalSearchParams<{ 
     withRoute?: string; 
     groupId?: string;
@@ -273,12 +275,16 @@ export default function RidingScreen() {
   // Update group members when data changes and detect ride end
   useEffect(() => {
     if (groupMembersData) {
-      console.log("[Riding] Group members data received:", groupMembersData.length, "members");
-      groupMembersData.forEach(m => {
+      // 자기 자신을 제외한 그룹원 목록
+      const currentUserId = user?.id;
+      const otherMembers = groupMembersData.filter(m => m.userId !== currentUserId);
+      
+      console.log("[Riding] Group members data received:", groupMembersData.length, "members, excluding self:", otherMembers.length);
+      otherMembers.forEach(m => {
         console.log(`[Riding] Member ${m.userId}: lat=${m.latitude}, lng=${m.longitude}, isRiding=${m.isRiding}`);
       });
-      // 그룹원 주행 종료 감지
-      groupMembersData.forEach(member => {
+      // 그룹원 주행 종료 감지 (자기 자신 제외)
+      otherMembers.forEach(member => {
         const wasRiding = previousMembersRef.current.get(member.userId);
         const isNowRiding = member.isRiding;
         
@@ -304,16 +310,24 @@ export default function RidingScreen() {
         previousMembersRef.current.set(member.userId, isNowRiding);
       });
       
-      setGroupMembers(groupMembersData);
+      // 자기 자신을 제외한 그룹원만 지도에 표시
+      setGroupMembers(otherMembers);
     }
-  }, [groupMembersData]);
+  }, [groupMembersData, user?.id]);
 
   // Check for distant group members and alert
+  // 자기 자신은 이미 groupMembers에서 제외되어 있음
   const distantMemberAlertedRef = useRef<Set<number>>(new Set());
+  const lastDistantAlertTimeRef = useRef<Map<number, number>>(new Map()); // 알림 쿨다운 추적
+  const consecutiveDistantCountRef = useRef<Map<number, number>>(new Map()); // 연속 멀어짐 횟수
+  
   useEffect(() => {
     if (!groupId || !currentLocation || groupMembers.length === 0) return;
 
     const DISTANCE_THRESHOLD_METERS = 3000; // 3km 이상 떨어지면 경고
+    const ALERT_COOLDOWN_MS = 60000; // 1분 쿨다운 (같은 멤버에 대해 알림 반복 방지)
+    const CONSECUTIVE_THRESHOLD = 3; // 3회 연속 멀어져야 알림 (바로 떨어졌다고 알림 안함)
+    const now = Date.now();
     
     groupMembers.forEach(member => {
       if (!member.latitude || !member.longitude) return;
@@ -326,20 +340,30 @@ export default function RidingScreen() {
       ) * 1000; // km to m
       
       if (distanceToMember > DISTANCE_THRESHOLD_METERS) {
-        // 아직 알림을 보내지 않은 멤버만 알림
-        if (!distantMemberAlertedRef.current.has(member.userId)) {
-          distantMemberAlertedRef.current.add(member.userId);
-          Alert.alert(
-            "팀원이 멀어졌습니다",
-            `${member.name || '그룹원'}님이 ${(distanceToMember / 1000).toFixed(1)}km 떨어져 있습니다.`,
-            [{ text: "확인" }]
-          );
-          if (Platform.OS !== "web") {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        // 연속 멀어짐 횟수 증가
+        const count = (consecutiveDistantCountRef.current.get(member.userId) || 0) + 1;
+        consecutiveDistantCountRef.current.set(member.userId, count);
+        
+        // 3회 연속 멀어졌을 때만 알림 (바로 떨어졌다고 알림 안함)
+        if (count >= CONSECUTIVE_THRESHOLD) {
+          const lastAlertTime = lastDistantAlertTimeRef.current.get(member.userId) || 0;
+          
+          // 쿨다운 확인 (1분 내 같은 멤버에 대해 알림 반복 방지)
+          if (now - lastAlertTime > ALERT_COOLDOWN_MS) {
+            lastDistantAlertTimeRef.current.set(member.userId, now);
+            Alert.alert(
+              "팀원이 멀어졌습니다",
+              `${member.name || '그룹원'}님이 ${(distanceToMember / 1000).toFixed(1)}km 떨어져 있습니다.`,
+              [{ text: "확인" }]
+            );
+            if (Platform.OS !== "web") {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            }
           }
         }
       } else {
-        // 다시 가까워지면 알림 상태 리셋
+        // 다시 가까워지면 연속 횟수 리셋
+        consecutiveDistantCountRef.current.set(member.userId, 0);
         distantMemberAlertedRef.current.delete(member.userId);
       }
     });
@@ -615,8 +639,40 @@ export default function RidingScreen() {
     const validation = validateGpsPoint(gpsPoint, lastValidPointRef.current, lastBearingRef.current);
 
     if (validation.isValid) {
+      // 메모리 최적화: GPS 포인트가 너무 많으면 다운샘플링
+      const MAX_GPS_POINTS = 3600; // 최대 3600개 (약 1시간 분량)
+      const DOWNSAMPLE_THRESHOLD = 3000; // 3000개 이상이면 다운샘플링 시작
+      
       gpsPointsRef.current.push(gpsPoint);
-      setGpsPoints([...gpsPointsRef.current]);
+      
+      // 실시간 다운샘플링: 포인트가 많아지면 중간 포인트 제거
+      if (gpsPointsRef.current.length > DOWNSAMPLE_THRESHOLD) {
+        // 매 2번째 포인트만 유지 (처음과 끝은 항상 유지)
+        const downsampled = gpsPointsRef.current.filter((_, index) => 
+          index === 0 || 
+          index === gpsPointsRef.current.length - 1 || 
+          index % 2 === 0
+        );
+        gpsPointsRef.current = downsampled;
+        console.log(`[Riding] Downsampled GPS points: ${gpsPointsRef.current.length}`);
+      }
+      
+      // 최대 포인트 수 제한
+      if (gpsPointsRef.current.length > MAX_GPS_POINTS) {
+        // 처음 100개와 마지막 100개는 유지, 중간은 다운샘플링
+        const first100 = gpsPointsRef.current.slice(0, 100);
+        const last100 = gpsPointsRef.current.slice(-100);
+        const middle = gpsPointsRef.current.slice(100, -100);
+        const middleDownsampled = middle.filter((_, index) => index % 3 === 0);
+        gpsPointsRef.current = [...first100, ...middleDownsampled, ...last100];
+        console.log(`[Riding] Limited GPS points to: ${gpsPointsRef.current.length}`);
+      }
+      
+      // 상태 업데이트 빈도 줄이기 (메모리 절약)
+      // 매번 새 배열 생성 대신 10번에 1번만 업데이트
+      if (gpsPointsRef.current.length % 10 === 0 || gpsPointsRef.current.length < 10) {
+        setGpsPoints([...gpsPointsRef.current]);
+      }
       setGpsPointCount(gpsPointsRef.current.length);
 
       // Update live location for friends to see

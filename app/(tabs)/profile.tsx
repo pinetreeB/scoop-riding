@@ -861,6 +861,20 @@ export default function ProfileScreen() {
               </View>
             </View>
 
+            {/* Announcements */}
+            <Pressable
+              onPress={() => router.push("/announcements" as any)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4 border-b border-border"
+            >
+              <MaterialIcons name="campaign" size={24} color={colors.warning} />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">공지사항</Text>
+                <Text className="text-muted text-xs">업데이트 및 공지 확인</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+            </Pressable>
+
             {/* Location Sharing */}
             <Pressable
               onPress={() => {
@@ -966,6 +980,22 @@ export default function ProfileScreen() {
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
+
+            {/* Admin Dashboard - only for admins */}
+            {(user as any)?.role === "admin" && (
+              <Pressable
+                onPress={() => router.push("/admin")}
+                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                className="flex-row items-center p-4 border-b border-border"
+              >
+                <MaterialIcons name="admin-panel-settings" size={24} color={colors.primary} />
+                <View className="flex-1 ml-3">
+                  <Text className="text-foreground font-medium">관리자 대시보드</Text>
+                  <Text className="text-muted text-xs">공지사항, 사용자 관리</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+              </Pressable>
+            )}
 
             {/* App Version */}
             <Pressable

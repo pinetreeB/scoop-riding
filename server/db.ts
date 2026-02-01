@@ -1,6 +1,6 @@
 import { eq, and, desc, sql, gt, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage, announcements, InsertAnnouncement, Announcement, userAnnouncementReads, InsertUserAnnouncementRead, UserAnnouncementRead, userBans, InsertUserBan, UserBan } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -2846,6 +2846,440 @@ export async function rejectMember(groupId: number, hostId: number, memberId: nu
     return true;
   } catch (error) {
     console.error("[Database] Failed to reject member:", error);
+    return false;
+  }
+}
+
+
+// ============================================
+// Announcement Functions
+// ============================================
+
+// Get active announcements
+export async function getActiveAnnouncements(): Promise<Announcement[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const now = new Date();
+    const result = await db
+      .select()
+      .from(announcements)
+      .where(
+        and(
+          eq(announcements.isActive, true),
+          sql`(${announcements.startDate} IS NULL OR ${announcements.startDate} <= ${now})`,
+          sql`(${announcements.endDate} IS NULL OR ${announcements.endDate} >= ${now})`
+        )
+      )
+      .orderBy(desc(announcements.priority), desc(announcements.createdAt));
+
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get active announcements:", error);
+    return [];
+  }
+}
+
+// Get announcement by ID
+export async function getAnnouncementById(id: number): Promise<Announcement | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db
+      .select()
+      .from(announcements)
+      .where(eq(announcements.id, id))
+      .limit(1);
+
+    return result[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get announcement by id:", error);
+    return null;
+  }
+}
+
+// Get all announcements (admin)
+export async function getAllAnnouncements(): Promise<Announcement[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const result = await db
+      .select()
+      .from(announcements)
+      .orderBy(desc(announcements.createdAt));
+
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get all announcements:", error);
+    return [];
+  }
+}
+
+// Create announcement (admin)
+export async function createAnnouncement(data: InsertAnnouncement): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(announcements).values(data);
+    return result[0].insertId;
+  } catch (error) {
+    console.error("[Database] Failed to create announcement:", error);
+    return null;
+  }
+}
+
+// Update announcement (admin)
+export async function updateAnnouncement(id: number, data: Partial<InsertAnnouncement>): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.update(announcements).set(data).where(eq(announcements.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to update announcement:", error);
+    return false;
+  }
+}
+
+// Delete announcement (admin)
+export async function deleteAnnouncement(id: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.delete(announcements).where(eq(announcements.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to delete announcement:", error);
+    return false;
+  }
+}
+
+// Get user's dismissed announcements
+export async function getUserDismissedAnnouncements(userId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const result = await db
+      .select({ announcementId: userAnnouncementReads.announcementId })
+      .from(userAnnouncementReads)
+      .where(and(
+        eq(userAnnouncementReads.userId, userId),
+        eq(userAnnouncementReads.dismissed, true)
+      ));
+
+    return result.map(r => r.announcementId);
+  } catch (error) {
+    console.error("[Database] Failed to get dismissed announcements:", error);
+    return [];
+  }
+}
+
+// Dismiss announcement for user
+export async function dismissAnnouncement(userId: number, announcementId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.insert(userAnnouncementReads).values({
+      userId,
+      announcementId,
+      dismissed: true,
+    }).onDuplicateKeyUpdate({
+      set: { dismissed: true },
+    });
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to dismiss announcement:", error);
+    return false;
+  }
+}
+
+// ============================================
+// User Ban Functions (Admin)
+// ============================================
+
+// Check if user is banned
+export async function isUserBanned(userId: number): Promise<{ banned: boolean; reason?: string; expiresAt?: Date }> {
+  const db = await getDb();
+  if (!db) return { banned: false };
+
+  try {
+    const now = new Date();
+    const result = await db
+      .select()
+      .from(userBans)
+      .where(and(
+        eq(userBans.userId, userId),
+        eq(userBans.isActive, true),
+        sql`(${userBans.expiresAt} IS NULL OR ${userBans.expiresAt} > ${now})`
+      ))
+      .limit(1);
+
+    if (result.length > 0) {
+      return {
+        banned: true,
+        reason: result[0].reason ?? undefined,
+        expiresAt: result[0].expiresAt ?? undefined,
+      };
+    }
+    return { banned: false };
+  } catch (error) {
+    console.error("[Database] Failed to check user ban:", error);
+    return { banned: false };
+  }
+}
+
+// Ban user (admin)
+export async function banUser(data: InsertUserBan): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.insert(userBans).values(data);
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to ban user:", error);
+    return false;
+  }
+}
+
+// Unban user (admin)
+export async function unbanUser(userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db
+      .update(userBans)
+      .set({ isActive: false })
+      .where(and(eq(userBans.userId, userId), eq(userBans.isActive, true)));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to unban user:", error);
+    return false;
+  }
+}
+
+// Get all banned users (admin)
+export async function getBannedUsers(): Promise<{
+  id: number;
+  userId: number;
+  userName: string | null;
+  reason: string | null;
+  banType: string;
+  expiresAt: Date | null;
+  createdAt: Date;
+}[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const result = await db
+      .select({
+        id: userBans.id,
+        userId: userBans.userId,
+        userName: users.name,
+        reason: userBans.reason,
+        banType: userBans.banType,
+        expiresAt: userBans.expiresAt,
+        createdAt: userBans.createdAt,
+      })
+      .from(userBans)
+      .leftJoin(users, eq(userBans.userId, users.id))
+      .where(eq(userBans.isActive, true))
+      .orderBy(desc(userBans.createdAt));
+
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get banned users:", error);
+    return [];
+  }
+}
+
+// ============================================
+// Admin User Management Functions
+// ============================================
+
+// Get all users with details (admin)
+export async function getAllUsersAdmin(page: number = 1, limit: number = 50): Promise<{
+  users: {
+    id: number;
+    name: string | null;
+    email: string | null;
+    role: string;
+    createdAt: Date;
+    lastSignedIn: Date;
+    profileImageUrl: string | null;
+    totalRides: number;
+    totalDistance: number;
+    isBanned: boolean;
+  }[];
+  total: number;
+}> {
+  const db = await getDb();
+  if (!db) return { users: [], total: 0 };
+
+  try {
+    const offset = (page - 1) * limit;
+
+    // Get total count
+    const countResult = await db.select({ count: sql<number>`count(*)` }).from(users);
+    const total = countResult[0]?.count ?? 0;
+
+    // Get users with ride stats
+    const result = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        createdAt: users.createdAt,
+        lastSignedIn: users.lastSignedIn,
+        profileImageUrl: users.profileImageUrl,
+      })
+      .from(users)
+      .orderBy(desc(users.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    // Get ride stats and ban status for each user
+    const usersWithStats = await Promise.all(
+      result.map(async (user) => {
+        const rideStats = await db
+          .select({
+            totalRides: sql<number>`count(*)`,
+            totalDistance: sql<number>`COALESCE(sum(${ridingRecords.distance}), 0)`,
+          })
+          .from(ridingRecords)
+          .where(eq(ridingRecords.userId, user.id));
+
+        const banStatus = await isUserBanned(user.id);
+
+        return {
+          ...user,
+          totalRides: rideStats[0]?.totalRides ?? 0,
+          totalDistance: rideStats[0]?.totalDistance ?? 0,
+          isBanned: banStatus.banned,
+        };
+      })
+    );
+
+    return { users: usersWithStats, total };
+  } catch (error) {
+    console.error("[Database] Failed to get all users:", error);
+    return { users: [], total: 0 };
+  }
+}
+
+// Get user details (admin)
+export async function getUserDetailsAdmin(userId: number): Promise<{
+  user: {
+    id: number;
+    name: string | null;
+    email: string | null;
+    role: string;
+    createdAt: Date;
+    lastSignedIn: Date;
+    profileImageUrl: string | null;
+  } | null;
+  stats: {
+    totalRides: number;
+    totalDistance: number;
+    totalDuration: number;
+    avgSpeed: number;
+    maxSpeed: number;
+  };
+  recentRides: RidingRecord[];
+  banStatus: { banned: boolean; reason?: string; expiresAt?: Date };
+}> {
+  const db = await getDb();
+  if (!db) return { user: null, stats: { totalRides: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, maxSpeed: 0 }, recentRides: [], banStatus: { banned: false } };
+
+  try {
+    // Get user
+    const userResult = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        createdAt: users.createdAt,
+        lastSignedIn: users.lastSignedIn,
+        profileImageUrl: users.profileImageUrl,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (userResult.length === 0) {
+      return { user: null, stats: { totalRides: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, maxSpeed: 0 }, recentRides: [], banStatus: { banned: false } };
+    }
+
+    // Get ride stats
+    const statsResult = await db
+      .select({
+        totalRides: sql<number>`count(*)`,
+        totalDistance: sql<number>`COALESCE(sum(${ridingRecords.distance}), 0)`,
+        totalDuration: sql<number>`COALESCE(sum(${ridingRecords.duration}), 0)`,
+        avgSpeed: sql<number>`COALESCE(avg(${ridingRecords.avgSpeed}), 0)`,
+        maxSpeed: sql<number>`COALESCE(max(${ridingRecords.maxSpeed}), 0)`,
+      })
+      .from(ridingRecords)
+      .where(eq(ridingRecords.userId, userId));
+
+    // Get recent rides
+    const recentRides = await db
+      .select()
+      .from(ridingRecords)
+      .where(eq(ridingRecords.userId, userId))
+      .orderBy(desc(ridingRecords.createdAt))
+      .limit(10);
+
+    // Get ban status
+    const banStatus = await isUserBanned(userId);
+
+    return {
+      user: userResult[0],
+      stats: {
+        totalRides: statsResult[0]?.totalRides ?? 0,
+        totalDistance: statsResult[0]?.totalDistance ?? 0,
+        totalDuration: statsResult[0]?.totalDuration ?? 0,
+        avgSpeed: statsResult[0]?.avgSpeed ?? 0,
+        maxSpeed: statsResult[0]?.maxSpeed ?? 0,
+      },
+      recentRides,
+      banStatus,
+    };
+  } catch (error) {
+    console.error("[Database] Failed to get user details:", error);
+    return { user: null, stats: { totalRides: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, maxSpeed: 0 }, recentRides: [], banStatus: { banned: false } };
+  }
+}
+
+// Delete post (admin)
+export async function deletePostAdmin(postId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    // Delete related data first
+    await db.delete(postLikes).where(eq(postLikes.postId, postId));
+    await db.delete(postViews).where(eq(postViews.postId, postId));
+    await db.delete(comments).where(eq(comments.postId, postId));
+    await db.delete(postImages).where(eq(postImages.postId, postId));
+    
+    // Delete the post
+    await db.delete(posts).where(eq(posts.id, postId));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to delete post:", error);
     return false;
   }
 }

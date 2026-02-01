@@ -33,6 +33,7 @@ import {
   type SyncStatus,
 } from "@/lib/sync-manager";
 import { LEVEL_DEFINITIONS, calculateLevel, getLevelTitle, formatLevelDistance } from "@/lib/level-system";
+import { AnnouncementPopup } from "@/components/announcement-popup";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -58,7 +59,15 @@ export default function HomeScreen() {
   const [hasSynced, setHasSynced] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const trpcUtils = trpc.useUtils();
+
+  // Fetch announcements
+  const announcementsQuery = trpc.announcements.getActive.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
+  const dismissAnnouncementMutation = trpc.announcements.dismiss.useMutation();
 
   // Fetch ranking data
   const weeklyRankingQuery = trpc.ranking.getWeekly.useQuery(
@@ -186,6 +195,23 @@ export default function HomeScreen() {
     };
     autoSync();
   }, [isAuthenticated, hasSynced, trpcUtils, loadStats]);
+
+  // Show announcement popup when data is loaded
+  useEffect(() => {
+    if (announcementsQuery.data?.popup && announcementsQuery.data.popup.length > 0) {
+      setShowAnnouncementPopup(true);
+    }
+  }, [announcementsQuery.data?.popup]);
+
+  // Handle announcement dismiss
+  const handleDismissAnnouncement = async (announcementId: number) => {
+    try {
+      await dismissAnnouncementMutation.mutateAsync({ announcementId });
+      announcementsQuery.refetch();
+    } catch (error) {
+      console.error("Failed to dismiss announcement:", error);
+    }
+  };
 
   // 수동 동기화 함수
   const handleManualSync = async () => {
@@ -782,6 +808,14 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Announcement Popup */}
+      <AnnouncementPopup
+        visible={showAnnouncementPopup}
+        announcements={announcementsQuery.data?.popup || []}
+        onClose={() => setShowAnnouncementPopup(false)}
+        onDismiss={handleDismissAnnouncement}
+      />
 
       {/* Level Info Modal */}
       <Modal

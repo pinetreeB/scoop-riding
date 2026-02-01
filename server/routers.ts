@@ -1213,6 +1213,176 @@ export const appRouter = router({
       }),
   }),
 
+  // Announcements router
+  announcements: router({
+    // Get active announcements (for users)
+    getActive: protectedProcedure.query(async ({ ctx }) => {
+      const announcements = await db.getActiveAnnouncements();
+      const dismissed = await db.getUserDismissedAnnouncements(ctx.user.id);
+      
+      // Filter out dismissed announcements for popup
+      const popupAnnouncements = announcements.filter(
+        a => a.showPopup && !dismissed.includes(a.id)
+      );
+      
+      return {
+        all: announcements,
+        popup: popupAnnouncements,
+      };
+    }),
+
+    // Get all announcements (for settings page)
+    getAll: protectedProcedure.query(async () => {
+      return db.getActiveAnnouncements();
+    }),
+
+    // Get single announcement by ID
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return db.getAnnouncementById(input.id);
+      }),
+
+    // Dismiss announcement (don't show again)
+    dismiss: protectedProcedure
+      .input(z.object({ announcementId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.dismissAnnouncement(ctx.user.id, input.announcementId);
+        return { success };
+      }),
+  }),
+
+  // Admin router
+  admin: router({
+    // Get all announcements (admin)
+    getAnnouncements: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+      return db.getAllAnnouncements();
+    }),
+
+    // Create announcement (admin)
+    createAnnouncement: protectedProcedure
+      .input(z.object({
+        title: z.string().min(1).max(200),
+        content: z.string().min(1),
+        type: z.enum(["notice", "update", "event", "maintenance"]).default("notice"),
+        showPopup: z.boolean().default(true),
+        priority: z.number().default(0),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+        const id = await db.createAnnouncement({
+          title: input.title,
+          content: input.content,
+          type: input.type,
+          showPopup: input.showPopup,
+          priority: input.priority,
+          startDate: input.startDate ? new Date(input.startDate) : undefined,
+          endDate: input.endDate ? new Date(input.endDate) : undefined,
+          createdBy: ctx.user.id,
+        });
+        return { success: !!id, id };
+      }),
+
+    // Update announcement (admin)
+    updateAnnouncement: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().min(1).max(200).optional(),
+        content: z.string().min(1).optional(),
+        type: z.enum(["notice", "update", "event", "maintenance"]).optional(),
+        showPopup: z.boolean().optional(),
+        priority: z.number().optional(),
+        isActive: z.boolean().optional(),
+        startDate: z.string().nullable().optional(),
+        endDate: z.string().nullable().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+        const { id, startDate, endDate, ...rest } = input;
+        const success = await db.updateAnnouncement(id, {
+          ...rest,
+          startDate: startDate ? new Date(startDate) : startDate === null ? undefined : undefined,
+          endDate: endDate ? new Date(endDate) : endDate === null ? undefined : undefined,
+        });
+        return { success };
+      }),
+
+    // Delete announcement (admin)
+    deleteAnnouncement: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+        const success = await db.deleteAnnouncement(input.id);
+        return { success };
+      }),
+
+    // Get all users (admin)
+    getUsers: protectedProcedure
+      .input(z.object({
+        page: z.number().default(1),
+        limit: z.number().default(50),
+      }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+        return db.getAllUsersAdmin(input.page, input.limit);
+      }),
+
+    // Get user details (admin)
+    getUserDetails: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+        return db.getUserDetailsAdmin(input.userId);
+      }),
+
+    // Ban user (admin)
+    banUser: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        reason: z.string().optional(),
+        banType: z.enum(["temporary", "permanent"]).default("temporary"),
+        expiresAt: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+        const success = await db.banUser({
+          userId: input.userId,
+          bannedBy: ctx.user.id,
+          reason: input.reason,
+          banType: input.banType,
+          expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
+        });
+        return { success };
+      }),
+
+    // Unban user (admin)
+    unbanUser: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+        const success = await db.unbanUser(input.userId);
+        return { success };
+      }),
+
+    // Get banned users (admin)
+    getBannedUsers: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+      return db.getBannedUsers();
+    }),
+
+    // Delete post (admin)
+    deletePost: protectedProcedure
+      .input(z.object({ postId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+        const success = await db.deletePostAdmin(input.postId);
+        return { success };
+      }),
+  }),
+
   // Badges router
   badges: router({
     // Get all badges

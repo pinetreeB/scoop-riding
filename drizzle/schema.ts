@@ -513,3 +513,74 @@ export const groupMessages = mysqlTable("groupMessages", {
 
 export type GroupMessage = typeof groupMessages.$inferSelect;
 export type InsertGroupMessage = typeof groupMessages.$inferInsert;
+
+
+/**
+ * Announcements/Notices table for app-wide announcements
+ */
+export const announcements = mysqlTable("announcements", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Announcement title */
+  title: varchar("title", { length: 200 }).notNull(),
+  /** Announcement content (supports markdown) */
+  content: text("content").notNull(),
+  /** Announcement type: notice, update, event, maintenance */
+  type: mysqlEnum("type", ["notice", "update", "event", "maintenance"]).default("notice").notNull(),
+  /** Whether this announcement is active/visible */
+  isActive: boolean("isActive").default(true).notNull(),
+  /** Whether to show as popup on home screen */
+  showPopup: boolean("showPopup").default(true).notNull(),
+  /** Priority for ordering (higher = more important) */
+  priority: int("priority").default(0).notNull(),
+  /** Start date for displaying (null = immediately) */
+  startDate: timestamp("startDate"),
+  /** End date for displaying (null = forever) */
+  endDate: timestamp("endDate"),
+  /** Admin user ID who created this */
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Announcement = typeof announcements.$inferSelect;
+export type InsertAnnouncement = typeof announcements.$inferInsert;
+
+/**
+ * User announcement read status (for "don't show again" feature)
+ */
+export const userAnnouncementReads = mysqlTable("userAnnouncementReads", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User ID */
+  userId: int("userId").notNull(),
+  /** Announcement ID */
+  announcementId: int("announcementId").notNull(),
+  /** Whether user dismissed this announcement (don't show again) */
+  dismissed: boolean("dismissed").default(false).notNull(),
+  readAt: timestamp("readAt").defaultNow().notNull(),
+});
+
+export type UserAnnouncementRead = typeof userAnnouncementReads.$inferSelect;
+export type InsertUserAnnouncementRead = typeof userAnnouncementReads.$inferInsert;
+
+/**
+ * User bans table for admin moderation
+ */
+export const userBans = mysqlTable("userBans", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Banned user ID */
+  userId: int("userId").notNull(),
+  /** Admin who issued the ban */
+  bannedBy: int("bannedBy").notNull(),
+  /** Ban reason */
+  reason: text("reason"),
+  /** Ban type: temporary, permanent */
+  banType: mysqlEnum("banType", ["temporary", "permanent"]).default("temporary").notNull(),
+  /** Ban end date (null for permanent bans) */
+  expiresAt: timestamp("expiresAt"),
+  /** Whether the ban is currently active */
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type UserBan = typeof userBans.$inferSelect;
+export type InsertUserBan = typeof userBans.$inferInsert;
