@@ -1,0 +1,35 @@
+{
+  "query": "SELECT version, isActive, downloadUrl FROM appVersions WHERE platform = 'android' ORDER BY id DESC LIMIT 3; SELECT id, title, isActive FROM announcements ORDER BY id DESC LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT version, isActive, downloadUrl FROM appVersions WHERE platform = 'android' ORDER BY id DESC LIMIT 3; SELECT id, title, isActive FROM announcements ORDER BY id DESC LIMIT 3;",
+  "rows": [
+    {
+      "version": "0.0.18",
+      "isActive": "1",
+      "downloadUrl": "https://expo.dev/artifacts/eas/vzbyU9moyVrsmkHVvwf8JS.apk"
+    },
+    {
+      "version": "0.0.13",
+      "isActive": "0",
+      "downloadUrl": "https://expo.dev/artifacts/eas/iZYCpftVkBfwWDa8KYYz4L.apk"
+    },
+    {
+      "version": "0.0.11",
+      "isActive": "0",
+      "downloadUrl": "https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/a062835d-f1d5-489f-9d00-189434bc867b"
+    },
+    {
+      "version": "id",
+      "isActive": "title",
+      "downloadUrl": "isActive"
+    },
+    {
+      "version": "1",
+      "isActive": "v0.0.18 업데이트 안내",
+      "downloadUrl": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "version\tisActive\tdownloadUrl\n0.0.18\t1\thttps://expo.dev/artifacts/eas/vzbyU9moyVrsmkHVvwf8JS.apk\n0.0.13\t0\thttps://expo.dev/artifacts/eas/iZYCpftVkBfwWDa8KYYz4L.apk\n0.0.11\t0\thttps://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/a062835d-f1d5-489f-9d00-189434bc867b\nid\ttitle\tisActive\n1\tv0.0.18 업데이트 안내\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1822
+}

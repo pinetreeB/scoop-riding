@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE appVersions SET isActive = 0 WHERE version != '0.0.18' AND platform = 'android';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute UPDATE appVersions SET isActive = 0 WHERE version != '0.0.18' AND platform = 'android';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1520
+}

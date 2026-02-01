@@ -325,6 +325,7 @@ export default function RidingScreen() {
     if (!groupId || !currentLocation || groupMembers.length === 0) return;
 
     const DISTANCE_THRESHOLD_METERS = 3000; // 3km 이상 떨어지면 경고
+    const MAX_REASONABLE_DISTANCE_METERS = 50000; // 50km 이상은 GPS 오류로 간주하고 무시
     const ALERT_COOLDOWN_MS = 60000; // 1분 쿨다운 (같은 멤버에 대해 알림 반복 방지)
     const CONSECUTIVE_THRESHOLD = 3; // 3회 연속 멀어져야 알림 (바로 떨어졌다고 알림 안함)
     const now = Date.now();
@@ -338,6 +339,12 @@ export default function RidingScreen() {
         member.latitude,
         member.longitude
       ) * 1000; // km to m
+      
+      // 50km 이상은 GPS 오류로 간주하고 무시
+      if (distanceToMember > MAX_REASONABLE_DISTANCE_METERS) {
+        console.log(`[GroupRiding] Ignoring unreasonable distance: ${(distanceToMember / 1000).toFixed(1)}km for ${member.name}`);
+        return;
+      }
       
       if (distanceToMember > DISTANCE_THRESHOLD_METERS) {
         // 연속 멀어짐 횟수 증가
@@ -1364,7 +1371,7 @@ export default function RidingScreen() {
                 </Text>
                 {groupMembers.slice(0, 3).map((m, i) => (
                   <Text key={i} style={{ fontSize: 9, color: '#AAAAAA' }}>
-                    {m.name}: {m.isRiding ? '주행중' : '대기'} ({m.latitude?.toFixed(4) || 'null'})
+                    {m.name}: {m.isRiding ? '주행중' : '대기'} ({m.latitude?.toFixed(4) || 'null'}, {m.longitude?.toFixed(4) || 'null'})
                   </Text>
                 ))}
               </View>

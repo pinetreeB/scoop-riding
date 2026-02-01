@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO announcements (title, content, isActive, createdBy, createdAt, updatedAt) VALUES ('v0.0.18 업데이트 안내', '안녕하세요, SCOOP Riders입니다.\\n\\nv0.0.18 업데이트가 출시되었습니다!\\n\\n[버그 수정]\\n• 그룹 라이딩 팀원 위치 표시 개선\\n• 팀원 멀어짐 알림 정확도 향상\\n• 주행 중 앱 안정성 개선\\n\\n[신규 기능]\\n• 공지사항 기능 추가\\n\\n더 나은 서비스를 위해 노력하겠습니다.\\n감사합니다.', 1, 1920694, NOW(), NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO announcements (title, content, isActive, createdBy, createdAt, updatedAt) VALUES ('v0.0.18 업데이트 안내', '안녕하세요, SCOOP Riders입니다.\\n\\nv0.0.18 업데이트가 출시되었습니다!\\n\\n[버그 수정]\\n• 그룹 라이딩 팀원 위치 표시 개선\\n• 팀원 멀어짐 알림 정확도 향상\\n• 주행 중 앱 안정성 개선\\n\\n[신규 기능]\\n• 공지사항 기능 추가\\n\\n더 나은 서비스를 위해 노력하겠습니다.\\n감사합니다.', 1, 1920694, NOW(), NOW());",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1507
+}

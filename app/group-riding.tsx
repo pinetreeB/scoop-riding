@@ -30,7 +30,7 @@ interface GroupMember {
   profileImageUrl: string | null;
   isHost: boolean;
   isRiding: boolean;
-  status?: "pending" | "approved" | "rejected";
+  status?: "pending" | "approved" | "rejected" | null;
   distance: number;
   duration: number;
   currentSpeed: number;
@@ -370,17 +370,35 @@ export default function GroupRidingScreen() {
         </View>
       )}
 
-      {/* Start Button */}
-      <Pressable
-        onPress={() => handleStartGroupRiding(item)}
-        style={({ pressed }) => [
-          { opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
-        ]}
-        className="bg-primary mt-4 py-3 rounded-lg flex-row items-center justify-center"
-      >
-        <MaterialIcons name="play-arrow" size={20} color="#FFFFFF" />
-        <Text className="text-white font-semibold ml-2">그룹 라이딩 시작</Text>
-      </Pressable>
+      {/* Start Button - 현재 사용자가 pending 상태면 비활성화 */}
+      {(() => {
+        const currentUserMember = item.members.find(m => m.userId === user?.id);
+        const isPending = currentUserMember?.status === "pending";
+        return (
+          <>
+            {isPending && (
+              <View className="mt-4 p-3 bg-warning/10 rounded-lg border border-warning/30">
+                <Text className="text-sm text-warning text-center">
+                  그룹장의 승인을 기다리고 있습니다...
+                </Text>
+              </View>
+            )}
+            <Pressable
+              onPress={() => !isPending && handleStartGroupRiding(item)}
+              disabled={isPending}
+              style={({ pressed }) => [
+                { opacity: isPending ? 0.5 : (pressed ? 0.8 : 1), transform: [{ scale: pressed && !isPending ? 0.98 : 1 }] },
+              ]}
+              className={`mt-4 py-3 rounded-lg flex-row items-center justify-center ${isPending ? 'bg-muted' : 'bg-primary'}`}
+            >
+              <MaterialIcons name="play-arrow" size={20} color="#FFFFFF" />
+              <Text className="text-white font-semibold ml-2">
+                {isPending ? '승인 대기중' : '그룹 라이딩 시작'}
+              </Text>
+            </Pressable>
+          </>
+        );
+      })()}
     </View>
   );
 

@@ -2314,6 +2314,7 @@ export async function getUserGroups(userId: number): Promise<{
     profileImageUrl: string | null;
     isHost: boolean;
     isRiding: boolean;
+    status: "pending" | "approved" | "rejected" | null;
     distance: number;
     duration: number;
     currentSpeed: number;
@@ -2358,6 +2359,7 @@ export async function getUserGroups(userId: number): Promise<{
             userId: groupMembers.userId,
             isHost: groupMembers.isHost,
             isRiding: groupMembers.isRiding,
+            status: groupMembers.status,
             distance: groupMembers.distance,
             duration: groupMembers.duration,
             currentSpeed: groupMembers.currentSpeed,
@@ -2403,6 +2405,7 @@ export async function getGroupById(groupId: number): Promise<{
     profileImageUrl: string | null;
     isHost: boolean;
     isRiding: boolean;
+    status: "pending" | "approved" | "rejected" | null;
     distance: number;
     duration: number;
     currentSpeed: number;
@@ -2436,6 +2439,7 @@ export async function getGroupById(groupId: number): Promise<{
         userId: groupMembers.userId,
         isHost: groupMembers.isHost,
         isRiding: groupMembers.isRiding,
+        status: groupMembers.status,
         distance: groupMembers.distance,
         duration: groupMembers.duration,
         currentSpeed: groupMembers.currentSpeed,
