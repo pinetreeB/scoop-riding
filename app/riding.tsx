@@ -317,17 +317,20 @@ export default function RidingScreen() {
 
   // Check for distant group members and alert
   // 자기 자신은 이미 groupMembers에서 제외되어 있음
+  // TODO: 경도(longitude) 데이터 문제 해결 후 다시 활성화 필요
+  // 현재 비활성화: 경도 데이터가 제대로 저장/조회되지 않아 거리 계산 오류 발생
+  /*
   const distantMemberAlertedRef = useRef<Set<number>>(new Set());
-  const lastDistantAlertTimeRef = useRef<Map<number, number>>(new Map()); // 알림 쿨다운 추적
-  const consecutiveDistantCountRef = useRef<Map<number, number>>(new Map()); // 연속 멀어짐 횟수
+  const lastDistantAlertTimeRef = useRef<Map<number, number>>(new Map());
+  const consecutiveDistantCountRef = useRef<Map<number, number>>(new Map());
   
   useEffect(() => {
     if (!groupId || !currentLocation || groupMembers.length === 0) return;
 
-    const DISTANCE_THRESHOLD_METERS = 3000; // 3km 이상 떨어지면 경고
-    const MAX_REASONABLE_DISTANCE_METERS = 50000; // 50km 이상은 GPS 오류로 간주하고 무시
-    const ALERT_COOLDOWN_MS = 60000; // 1분 쿨다운 (같은 멤버에 대해 알림 반복 방지)
-    const CONSECUTIVE_THRESHOLD = 3; // 3회 연속 멀어져야 알림 (바로 떨어졌다고 알림 안함)
+    const DISTANCE_THRESHOLD_METERS = 3000;
+    const MAX_REASONABLE_DISTANCE_METERS = 50000;
+    const ALERT_COOLDOWN_MS = 60000;
+    const CONSECUTIVE_THRESHOLD = 3;
     const now = Date.now();
     
     groupMembers.forEach(member => {
@@ -338,24 +341,20 @@ export default function RidingScreen() {
         currentLocation.longitude,
         member.latitude,
         member.longitude
-      ) * 1000; // km to m
+      ) * 1000;
       
-      // 50km 이상은 GPS 오류로 간주하고 무시
       if (distanceToMember > MAX_REASONABLE_DISTANCE_METERS) {
         console.log(`[GroupRiding] Ignoring unreasonable distance: ${(distanceToMember / 1000).toFixed(1)}km for ${member.name}`);
         return;
       }
       
       if (distanceToMember > DISTANCE_THRESHOLD_METERS) {
-        // 연속 멀어짐 횟수 증가
         const count = (consecutiveDistantCountRef.current.get(member.userId) || 0) + 1;
         consecutiveDistantCountRef.current.set(member.userId, count);
         
-        // 3회 연속 멀어졌을 때만 알림 (바로 떨어졌다고 알림 안함)
         if (count >= CONSECUTIVE_THRESHOLD) {
           const lastAlertTime = lastDistantAlertTimeRef.current.get(member.userId) || 0;
           
-          // 쿨다운 확인 (1분 내 같은 멤버에 대해 알림 반복 방지)
           if (now - lastAlertTime > ALERT_COOLDOWN_MS) {
             lastDistantAlertTimeRef.current.set(member.userId, now);
             Alert.alert(
@@ -369,12 +368,12 @@ export default function RidingScreen() {
           }
         }
       } else {
-        // 다시 가까워지면 연속 횟수 리셋
         consecutiveDistantCountRef.current.set(member.userId, 0);
         distantMemberAlertedRef.current.delete(member.userId);
       }
     });
   }, [groupId, currentLocation, groupMembers]);
+  */
   
   // Load GPX route if withRoute param is set
   useEffect(() => {
@@ -1346,7 +1345,8 @@ export default function RidingScreen() {
                 <Text style={{ fontSize: 10, color: '#CCCCCC', marginLeft: 4 }}>최고</Text>
               </View>
             </View>
-            {/* 그룹 라이딩 디버그 정보 */}
+            {/* 그룹 라이딩 디버그 정보 - 비활성화 */}
+            {/* TODO: 개발 시 필요한 경우 다시 활성화
             {groupId && (
               <View style={{
                 position: 'absolute',
@@ -1376,6 +1376,7 @@ export default function RidingScreen() {
                 ))}
               </View>
             )}
+            */}
             {/* 휴식 중 표시 */}
             {isAutoPaused && (
               <View style={{
