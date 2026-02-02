@@ -3545,6 +3545,10 @@ export async function updateBugReportStatus(
   if (!db) return false;
 
   try {
+    // Get bug report to find user ID
+    const bugReport = await getBugReportById(id);
+    if (!bugReport) return false;
+
     const updateData: any = {
       status,
       adminNotes,
@@ -3556,6 +3560,26 @@ export async function updateBugReportStatus(
     }
 
     await db.update(bugReports).set(updateData).where(eq(bugReports.id, id));
+
+    // Send notification to user about status change
+    const statusLabels: Record<string, string> = {
+      open: "열림",
+      in_progress: "진행 중",
+      resolved: "해결됨",
+      closed: "종료",
+      wont_fix: "수정 안함",
+    };
+
+    await createNotification({
+      userId: bugReport.userId,
+      type: "bug_report_update",
+      title: "버그 리포트 상태 변경",
+      body: `"${bugReport.title}" 리포트가 "${statusLabels[status] || status}" 상태로 변경되었습니다.`,
+      entityType: "bug_report",
+      entityId: id,
+      actorId: adminId,
+    });
+
     return true;
   } catch (error) {
     console.error("[Database] Failed to update bug report status:", error);
@@ -3577,6 +3601,25 @@ export async function getBugReportById(id: number): Promise<BugReport | null> {
     return result[0] || null;
   } catch (error) {
     console.error("[Database] Failed to get bug report:", error);
+    return null;
+  }
+}
+
+
+// Get badge by name
+export async function getBadgeByName(name: string): Promise<Badge | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db
+      .select()
+      .from(badges)
+      .where(eq(badges.name, name))
+      .limit(1);
+    return result[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get badge by name:", error);
     return null;
   }
 }

@@ -983,16 +983,16 @@ export default function ProfileScreen() {
             </Pressable>
 
             {/* Admin Dashboard - only for admins */}
-            {(user as any)?.role === "admin" && (
+            {user?.role === "admin" && (
               <Pressable
-                onPress={() => router.push("/admin")}
+                onPress={() => router.push("/admin/dashboard")}
                 style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
                 className="flex-row items-center p-4 border-b border-border"
               >
                 <MaterialIcons name="admin-panel-settings" size={24} color={colors.primary} />
                 <View className="flex-1 ml-3">
                   <Text className="text-foreground font-medium">관리자 대시보드</Text>
-                  <Text className="text-muted text-xs">공지사항, 사용자 관리</Text>
+                  <Text className="text-muted text-xs">설문 통계, 버그 리포트 관리</Text>
                 </View>
                 <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
               </Pressable>

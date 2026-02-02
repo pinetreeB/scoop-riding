@@ -1442,6 +1442,15 @@ export const appRouter = router({
           userId: ctx.user.id,
           ...input,
         });
+
+        // Award "Alpha Tester" badge for completing survey
+        if (id) {
+          const alphaTesterBadge = await db.getBadgeByName("알파 테스터");
+          if (alphaTesterBadge) {
+            await db.awardBadge(ctx.user.id, alphaTesterBadge.id);
+          }
+        }
+
         return { success: !!id, id };
       }),
 

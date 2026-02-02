@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO badges (name, description, icon, color, category, requirement) VALUES \n('알파 테스터', '오픈 알파 테스트에 참여하고 설문에 응답해주신 분께 드리는 특별 배지입니다.', 'flask', '#F97316', 'special', 1);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO badges (name, description, icon, color, category, requirement) VALUES \n('알파 테스터', '오픈 알파 테스트에 참여하고 설문에 응답해주신 분께 드리는 특별 배지입니다.', 'flask', '#F97316', 'special', 1);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1678
+}
