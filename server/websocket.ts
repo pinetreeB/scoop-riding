@@ -32,6 +32,28 @@ interface LeaveGroup {
   groupId: number;
 }
 
+// Chat message types
+interface ChatMessage {
+  type: "chat_message";
+  groupId: number;
+  message: string;
+  messageType: "text" | "location" | "alert";
+}
+
+interface ChatBroadcast {
+  type: "chat_broadcast";
+  groupId: number;
+  chatMessage: {
+    id: number;
+    userId: number;
+    userName: string | null;
+    userProfileImage: string | null;
+    message: string;
+    messageType: "text" | "location" | "alert";
+    createdAt: Date;
+  };
+}
+
 interface GroupMemberUpdate {
   type: "group_member_update";
   groupId: number;
@@ -53,8 +75,8 @@ interface ErrorMessage {
   message: string;
 }
 
-type IncomingMessage = LocationUpdate | JoinGroup | LeaveGroup;
-type OutgoingMessage = GroupMemberUpdate | ErrorMessage | { type: "joined"; groupId: number; userId: number };
+type IncomingMessage = LocationUpdate | JoinGroup | LeaveGroup | ChatMessage;
+type OutgoingMessage = GroupMemberUpdate | ErrorMessage | ChatBroadcast | { type: "joined"; groupId: number; userId: number };
 
 // Store connected clients by group
 interface ClientInfo {
@@ -130,6 +152,9 @@ async function handleMessage(ws: WebSocket, message: IncomingMessage): Promise<v
       break;
     case "location_update":
       handleLocationUpdate(ws, client, message);
+      break;
+    case "chat_message":
+      await handleChatMessage(ws, client, message);
       break;
   }
 }
@@ -228,6 +253,62 @@ function handleLocationUpdate(
 
   // Broadcast to all group members
   broadcastGroupLocations(message.groupId);
+}
+
+async function handleChatMessage(
+  ws: WebSocket,
+  client: ClientInfo,
+  message: ChatMessage
+): Promise<void> {
+  if (client.groupId === null || client.groupId !== message.groupId) {
+    sendMessage(ws, { type: "error", message: "Not in this group" });
+    return;
+  }
+
+  try {
+    // Save message to database
+    const savedMessage = await db.sendGroupMessage(
+      message.groupId,
+      client.userId,
+      message.message,
+      message.messageType
+    );
+
+    if (!savedMessage) {
+      sendMessage(ws, { type: "error", message: "Failed to save message" });
+      return;
+    }
+
+    // Get user info for broadcast
+    const user = await db.getUserById(client.userId);
+
+    // Broadcast to all group members
+    const chatBroadcast: ChatBroadcast = {
+      type: "chat_broadcast",
+      groupId: message.groupId,
+      chatMessage: {
+        id: savedMessage.id,
+        userId: client.userId,
+        userName: user?.name || client.userName,
+        userProfileImage: user?.profileImageUrl || null,
+        message: message.message,
+        messageType: message.messageType,
+        createdAt: savedMessage.createdAt,
+      },
+    };
+
+    const groupSet = groupClients.get(message.groupId);
+    if (groupSet) {
+      groupSet.forEach((clientWs) => {
+        sendMessage(clientWs, chatBroadcast);
+      });
+    }
+
+    console.log(`[WebSocket] Chat message from ${client.userName} in group ${message.groupId}`);
+  } catch (error) {
+    console.error("[WebSocket] Error sending chat message:", error);
+    sendMessage(ws, { type: "error", message: "Failed to send message" });
+  }
 }
 
 function broadcastGroupLocations(groupId: number): void {

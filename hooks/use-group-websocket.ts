@@ -36,12 +36,30 @@ interface ErrorMessage {
   message: string;
 }
 
-type ServerMessage = GroupMemberUpdate | JoinedMessage | ErrorMessage;
+// Chat message types
+interface ChatMessage {
+  id: number;
+  userId: number;
+  userName: string | null;
+  userProfileImage: string | null;
+  message: string;
+  messageType: "text" | "location" | "alert";
+  createdAt: Date;
+}
+
+interface ChatBroadcast {
+  type: "chat_broadcast";
+  groupId: number;
+  chatMessage: ChatMessage;
+}
+
+type ServerMessage = GroupMemberUpdate | JoinedMessage | ErrorMessage | ChatBroadcast;
 
 interface UseGroupWebSocketOptions {
   groupId: number | null;
   enabled?: boolean;
   onMembersUpdate?: (members: GroupMember[]) => void;
+  onChatMessage?: (message: ChatMessage) => void;
   onError?: (error: string) => void;
 }
 
@@ -56,6 +74,7 @@ interface UseGroupWebSocketReturn {
     duration: number;
     isRiding: boolean;
   }) => void;
+  sendChatMessage: (message: string, messageType?: "text" | "location" | "alert") => void;
   reconnect: () => void;
 }
 
@@ -88,6 +107,7 @@ export function useGroupWebSocket({
   groupId,
   enabled = true,
   onMembersUpdate,
+  onChatMessage,
   onError,
 }: UseGroupWebSocketOptions): UseGroupWebSocketReturn {
   const wsRef = useRef<WebSocket | null>(null);
@@ -153,6 +173,11 @@ export function useGroupWebSocket({
             case "error":
               console.error("[WebSocket] Server error:", message.message);
               onError?.(message.message);
+              break;
+              
+            case "chat_broadcast":
+              console.log(`[WebSocket] Received chat message from ${message.chatMessage.userName}`);
+              onChatMessage?.(message.chatMessage);
               break;
           }
         } catch (error) {
@@ -231,6 +256,20 @@ export function useGroupWebSocket({
     }));
   }, []);
 
+  const sendChatMessage = useCallback((message: string, messageType: "text" | "location" | "alert" = "text") => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || !currentGroupIdRef.current) {
+      console.warn("[WebSocket] Cannot send chat message: not connected");
+      return;
+    }
+
+    wsRef.current.send(JSON.stringify({
+      type: "chat_message",
+      groupId: currentGroupIdRef.current,
+      message,
+      messageType,
+    }));
+  }, []);
+
   const reconnect = useCallback(() => {
     disconnect();
     reconnectAttemptsRef.current = 0;
@@ -254,6 +293,7 @@ export function useGroupWebSocket({
     isConnected,
     members,
     sendLocationUpdate,
+    sendChatMessage,
     reconnect,
   };
 }

@@ -53,7 +53,7 @@ import {
 import { useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GpxRoute, GpxPoint as GpxRoutePoint } from "@/lib/gpx-parser";
-import { GroupChat } from "@/components/group-chat";
+import { GroupChatWS, type ChatMessage as WsChatMessage } from "@/components/group-chat-ws";
 import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
 import { useAuth } from "@/hooks/use-auth";
 import { useGroupWebSocket } from "@/hooks/use-group-websocket";
@@ -91,11 +91,23 @@ export default function RidingScreen() {
   // Group riding mutations (HTTP fallback - disabled when WebSocket is connected)
   const updateGroupLocation = trpc.groups.updateLocation.useMutation();
   
-  // WebSocket for real-time group location sharing
+  // Chat messages state for WebSocket
+  const [wsChatMessages, setWsChatMessages] = useState<Array<{
+    id: number;
+    userId: number;
+    userName: string | null;
+    userProfileImage: string | null;
+    message: string;
+    messageType: "text" | "location" | "alert";
+    createdAt: Date;
+  }>>([]);
+
+  // WebSocket for real-time group location sharing and chat
   const { 
     isConnected: wsConnected, 
     members: wsMembers, 
-    sendLocationUpdate: wsSendLocation 
+    sendLocationUpdate: wsSendLocation,
+    sendChatMessage: wsSendChatMessage,
   } = useGroupWebSocket({
     groupId,
     enabled: !!groupId,
@@ -110,6 +122,14 @@ export default function RidingScreen() {
         currentSpeed: m.speed,
         isRiding: m.isRiding,
       })));
+    },
+    onChatMessage: (message) => {
+      // Add new chat message from WebSocket
+      setWsChatMessages(prev => {
+        // 중복 체크
+        if (prev.some(m => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
     },
     onError: (error) => {
       console.error("[WebSocket] Error:", error);
@@ -343,34 +363,36 @@ export default function RidingScreen() {
     }
   }, [groupMembersData, user?.id]);
 
-  // Check for distant group members and alert
+  // Check for distant group members and alert (WebSocket 기반 실시간 위치로 정확도 향상)
   // 자기 자신은 이미 groupMembers에서 제외되어 있음
-  // TODO: 경도(longitude) 데이터 문제 해결 후 다시 활성화 필요
-  // 현재 비활성화: 경도 데이터가 제대로 저장/조회되지 않아 거리 계산 오류 발생
-  /*
   const distantMemberAlertedRef = useRef<Set<number>>(new Set());
   const lastDistantAlertTimeRef = useRef<Map<number, number>>(new Map());
   const consecutiveDistantCountRef = useRef<Map<number, number>>(new Map());
   
   useEffect(() => {
-    if (!groupId || !currentLocation || groupMembers.length === 0) return;
+    // WebSocket 연결 시에만 알림 활성화 (실시간 데이터로 정확도 보장)
+    if (!groupId || !currentLocation || groupMembers.length === 0 || !wsConnected) return;
 
-    const DISTANCE_THRESHOLD_METERS = 3000;
-    const MAX_REASONABLE_DISTANCE_METERS = 50000;
-    const ALERT_COOLDOWN_MS = 60000;
-    const CONSECUTIVE_THRESHOLD = 3;
+    const DISTANCE_THRESHOLD_METERS = 3000; // 3km 이상 멀어지면 알림
+    const MAX_REASONABLE_DISTANCE_METERS = 50000; // 50km 이상은 GPS 오류로 간주
+    const ALERT_COOLDOWN_MS = 60000; // 1분 쿨다운
+    const CONSECUTIVE_THRESHOLD = 3; // 3회 연속 감지 시 알림
     const now = Date.now();
     
     groupMembers.forEach(member => {
-      if (!member.latitude || !member.longitude) return;
+      if (!member.latitude || !member.longitude) {
+        console.log(`[GroupRiding] Skipping member ${member.name}: missing location data`);
+        return;
+      }
       
       const distanceToMember = calculateDistance(
         currentLocation.latitude,
         currentLocation.longitude,
         member.latitude,
         member.longitude
-      ) * 1000;
+      ) * 1000; // km to meters
       
+      // GPS 오류로 인한 비정상 거리 필터링
       if (distanceToMember > MAX_REASONABLE_DISTANCE_METERS) {
         console.log(`[GroupRiding] Ignoring unreasonable distance: ${(distanceToMember / 1000).toFixed(1)}km for ${member.name}`);
         return;
@@ -380,11 +402,13 @@ export default function RidingScreen() {
         const count = (consecutiveDistantCountRef.current.get(member.userId) || 0) + 1;
         consecutiveDistantCountRef.current.set(member.userId, count);
         
+        // 3회 연속 감지 시에만 알림 (일시적 GPS 튜는 현상 방지)
         if (count >= CONSECUTIVE_THRESHOLD) {
           const lastAlertTime = lastDistantAlertTimeRef.current.get(member.userId) || 0;
           
           if (now - lastAlertTime > ALERT_COOLDOWN_MS) {
             lastDistantAlertTimeRef.current.set(member.userId, now);
+            console.log(`[GroupRiding] Alert: ${member.name} is ${(distanceToMember / 1000).toFixed(1)}km away`);
             Alert.alert(
               "팀원이 멀어졌습니다",
               `${member.name || '그룹원'}님이 ${(distanceToMember / 1000).toFixed(1)}km 떨어져 있습니다.`,
@@ -396,12 +420,12 @@ export default function RidingScreen() {
           }
         }
       } else {
+        // 거리가 임계값 이하면 카운터 리셋
         consecutiveDistantCountRef.current.set(member.userId, 0);
         distantMemberAlertedRef.current.delete(member.userId);
       }
     });
-  }, [groupId, currentLocation, groupMembers]);
-  */
+  }, [groupId, currentLocation, groupMembers, wsConnected]);
   
   // Load GPX route if withRoute param is set
   useEffect(() => {
@@ -1575,13 +1599,15 @@ export default function RidingScreen() {
         onClose={batteryGuide.hideGuide}
       />
 
-      {/* Group Chat Modal */}
+      {/* Group Chat Modal (WebSocket-based) */}
       {groupId && showChat && (
         <View className="absolute inset-0 bg-background">
-          <GroupChat
+          <GroupChatWS
             groupId={groupId}
             isVisible={showChat}
             onClose={() => setShowChat(false)}
+            wsConnected={wsConnected}
+            sendChatMessage={wsSendChatMessage}
           />
         </View>
       )}
