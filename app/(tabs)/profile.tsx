@@ -11,6 +11,7 @@ import {
   Modal,
   Linking,
   TextInput,
+  KeyboardAvoidingView,
 } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
@@ -1187,14 +1188,18 @@ export default function ProfileScreen() {
         animationType="fade"
         onRequestClose={() => setShowBugReportModal(false)}
       >
-        <Pressable
-          className="flex-1 bg-black/50 justify-center items-center p-6"
-          onPress={() => setShowBugReportModal(false)}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1"
         >
           <Pressable
-            className="bg-background rounded-2xl p-6 w-full max-w-sm"
-            onPress={(e) => e.stopPropagation()}
+            className="flex-1 bg-black/50 justify-center items-center p-6"
+            onPress={() => setShowBugReportModal(false)}
           >
+            <Pressable
+              className="bg-background rounded-2xl p-6 w-full max-w-sm"
+              onPress={(e) => e.stopPropagation()}
+            >
             <View className="flex-row items-center mb-4">
               <MaterialIcons name="bug-report" size={28} color={colors.primary} />
               <Text className="text-xl font-bold text-foreground ml-2">
@@ -1295,9 +1300,10 @@ export default function ProfileScreen() {
               style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
             >
               <Text className="text-muted font-medium">취소</Text>
+              </Pressable>
             </Pressable>
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Feature Request Modal */}
@@ -1307,14 +1313,18 @@ export default function ProfileScreen() {
         animationType="fade"
         onRequestClose={() => setShowFeatureRequestModal(false)}
       >
-        <Pressable
-          className="flex-1 bg-black/50 justify-center items-center p-6"
-          onPress={() => setShowFeatureRequestModal(false)}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1"
         >
           <Pressable
-            className="bg-background rounded-2xl p-6 w-full max-w-sm"
-            onPress={(e) => e.stopPropagation()}
+            className="flex-1 bg-black/50 justify-center items-center p-6"
+            onPress={() => setShowFeatureRequestModal(false)}
           >
+            <Pressable
+              className="bg-background rounded-2xl p-6 w-full max-w-sm"
+              onPress={(e) => e.stopPropagation()}
+            >
             <View className="flex-row items-center mb-4">
               <MaterialIcons name="lightbulb" size={28} color={colors.warning} />
               <Text className="text-xl font-bold text-foreground ml-2">
@@ -1365,9 +1375,10 @@ export default function ProfileScreen() {
               style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
             >
               <Text className="text-muted font-medium">취소</Text>
+              </Pressable>
             </Pressable>
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </ScreenContainer>
   );

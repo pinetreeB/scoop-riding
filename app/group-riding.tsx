@@ -10,6 +10,7 @@ import {
   Modal,
   Share,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
@@ -472,9 +473,13 @@ export default function GroupRidingScreen() {
         transparent
         onRequestClose={() => setShowCreateModal(false)}
       >
-        <View className="flex-1 justify-end bg-black/50">
-          <SafeAreaView edges={["bottom"]} style={{ backgroundColor: colors.background }}>
-            <View className="bg-background rounded-t-3xl p-6">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1 justify-end"
+        >
+          <View className="flex-1 justify-end bg-black/50">
+            <SafeAreaView edges={["bottom"]} style={{ backgroundColor: colors.background }}>
+              <View className="bg-background rounded-t-3xl p-6">
               <View className="flex-row items-center justify-between mb-6">
                 <Text className="text-xl font-bold text-foreground">새 그룹 만들기</Text>
                 <Pressable onPress={() => setShowCreateModal(false)}>
@@ -507,9 +512,10 @@ export default function GroupRidingScreen() {
                   <Text className="text-white font-bold text-base">그룹 만들기</Text>
                 )}
               </Pressable>
-            </View>
-          </SafeAreaView>
-        </View>
+              </View>
+            </SafeAreaView>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Join Group Modal */}
@@ -519,9 +525,13 @@ export default function GroupRidingScreen() {
         transparent
         onRequestClose={() => setShowJoinModal(false)}
       >
-        <View className="flex-1 justify-end bg-black/50">
-          <SafeAreaView edges={["bottom"]} style={{ backgroundColor: colors.background }}>
-            <View className="bg-background rounded-t-3xl p-6">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1 justify-end"
+        >
+          <View className="flex-1 justify-end bg-black/50">
+            <SafeAreaView edges={["bottom"]} style={{ backgroundColor: colors.background }}>
+              <View className="bg-background rounded-t-3xl p-6">
               <View className="flex-row items-center justify-between mb-6">
                 <Text className="text-xl font-bold text-foreground">그룹 참가하기</Text>
                 <Pressable onPress={() => setShowJoinModal(false)}>
@@ -555,9 +565,10 @@ export default function GroupRidingScreen() {
                   <Text className="text-white font-bold text-base">참가하기</Text>
                 )}
               </Pressable>
-            </View>
-          </SafeAreaView>
-        </View>
+              </View>
+            </SafeAreaView>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScreenContainer>
   );

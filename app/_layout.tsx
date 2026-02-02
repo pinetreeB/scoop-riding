@@ -30,6 +30,7 @@ import { AuthProvider, useAuthContext } from "@/lib/auth-context";
 import { NetworkSyncManager } from "@/components/network-sync-manager";
 import { UpdateBanner } from "@/components/update-banner";
 import { NotificationProvider } from "@/lib/notification-provider";
+import { PermissionRequest } from "@/components/permission-request";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -148,6 +149,7 @@ export default function RootLayout() {
           <AuthProvider>
             <NotificationProvider>
               <AuthGuard>
+                <PermissionRequest />
                 <NetworkSyncManager />
                 <UpdateBanner />
                 <RootLayoutContent />

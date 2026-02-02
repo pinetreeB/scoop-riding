@@ -291,14 +291,13 @@ export default function LoginScreen() {
                 )}
               </Pressable>
 
-              {/* Divider */}
+              {/* Google Login Button - 임시 비활성화 */}
+              {/* TODO: Google OAuth 설정 완료 후 다시 활성화
               <View className="flex-row items-center my-4">
                 <View className="flex-1 h-px bg-border" />
                 <Text className="mx-4 text-muted text-sm">또는</Text>
                 <View className="flex-1 h-px bg-border" />
               </View>
-
-              {/* Google Login Button */}
               <Pressable
                 onPress={handleGoogleSignIn}
                 disabled={isGoogleLoading}
@@ -322,6 +321,7 @@ export default function LoginScreen() {
                   </>
                 )}
               </Pressable>
+              */}
 
               {/* Register Link */}
               <View className="flex-row items-center justify-center mt-6">

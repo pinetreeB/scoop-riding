@@ -82,14 +82,19 @@ function ArrowMarker({ heading, color }: { heading: number; color: string }) {
 // Group member marker component
 function GroupMemberMarker({ name, speed }: { name: string | null; speed: number }) {
   const initial = (name || "?").charAt(0).toUpperCase();
+  const displayName = name ? (name.length > 6 ? name.substring(0, 6) + ".." : name) : "익명";
+  const speedKmh = Math.round(speed / 10);
   return (
     <View style={styles.memberMarkerContainer}>
       <View style={styles.memberMarker}>
         <Text style={styles.memberInitial}>{initial}</Text>
       </View>
       <View style={styles.memberLabel}>
-        <Text style={styles.memberLabelText}>
-          {name || "익명"} {(speed / 10).toFixed(0)}km/h
+        <Text style={styles.memberLabelText} numberOfLines={1}>
+          {displayName}
+        </Text>
+        <Text style={styles.memberSpeedText}>
+          {speedKmh}km/h
         </Text>
       </View>
     </View>
@@ -636,14 +641,22 @@ const styles = StyleSheet.create({
   },
   memberLabel: {
     marginTop: 4,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    minWidth: 60,
+    alignItems: "center",
   },
   memberLabelText: {
     color: "white",
     fontSize: 10,
+    fontWeight: "600",
+  },
+  memberSpeedText: {
+    color: "#AAAAAA",
+    fontSize: 9,
+    textAlign: "center",
   },
   recenterButton: {
     position: "absolute",

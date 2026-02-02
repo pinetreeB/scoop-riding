@@ -1,0 +1,40 @@
+{
+  "query": "SELECT id, version, versionCode, isActive FROM appVersions ORDER BY versionCode DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, version, versionCode, isActive FROM appVersions ORDER BY versionCode DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "270001",
+      "version": "0.0.20",
+      "versionCode": "20",
+      "isActive": "1"
+    },
+    {
+      "id": "240001",
+      "version": "0.0.18",
+      "versionCode": "18",
+      "isActive": "1"
+    },
+    {
+      "id": "210001",
+      "version": "0.0.13",
+      "versionCode": "13",
+      "isActive": "0"
+    },
+    {
+      "id": "180001",
+      "version": "0.0.11",
+      "versionCode": "11",
+      "isActive": "0"
+    },
+    {
+      "id": "150002",
+      "version": "0.0.10",
+      "versionCode": "10",
+      "isActive": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tversion\tversionCode\tisActive\n270001\t0.0.20\t20\t1\n240001\t0.0.18\t18\t1\n210001\t0.0.13\t13\t0\n180001\t0.0.11\t11\t0\n150002\t0.0.10\t10\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1543
+}

@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO app_versions (version, version_code, release_notes, download_url, is_force_update, is_active) VALUES ('0.0.20', 20, '버그 수정:\\n- 그룹 라이딩 팀원 멀어짐 알림 비활성화 (경도 데이터 문제 해결 예정)\\n- 그룹 라이딩 디버그 오버레이 제거\\n- 그룹 참가 승인 시스템 개선', 'https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/98f398a8-62c9-4f7c-aeb5-d618d3bc6273', 0, 1);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO app_versions (version, version_code, release_notes, download_url, is_force_update, is_active) VALUES ('0.0.20', 20, '버그 수정:\\n- 그룹 라이딩 팀원 멀어짐 알림 비활성화 (경도 데이터 문제 해결 예정)\\n- 그룹 라이딩 디버그 오버레이 제거\\n- 그룹 참가 승인 시스템 개선', 'https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/98f398a8-62c9-4f7c-aeb5-d618d3bc6273', 0, 1);",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'version_code' in 'field list'"
+  ]
+}
