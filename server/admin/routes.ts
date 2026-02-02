@@ -1345,7 +1345,7 @@ function getAdminDashboardHTML(): string {
         <div class="bg-white rounded-xl p-4 shadow mb-4">
           <div class="flex flex-wrap gap-4 items-center">
             <input type="text" id="searchInput" placeholder="이름 또는 이메일로 검색..." class="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg" onkeyup="debounceSearch()">
-            <select id="filterRole" onchange="loadUsers()" class="px-4 py-2 border border-gray-300 rounded-lg">
+            <select id="filterRole" onchange="currentUsersPage=1;loadUsers()" class="px-4 py-2 border border-gray-300 rounded-lg">
               <option value="">전체 역할</option>
               <option value="user">일반 사용자</option>
               <option value="admin">관리자</option>
@@ -1369,6 +1369,28 @@ function getAdminDashboardHTML(): string {
               <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">로딩 중...</td></tr>
             </tbody>
           </table>
+          <!-- Pagination -->
+          <div id="usersPagination" class="flex items-center justify-between px-4 py-3 bg-gray-50 border-t">
+            <div class="flex items-center text-sm text-gray-600">
+              <span>전체 <span id="usersTotalCount">0</span>명</span>
+              <span class="mx-2">|</span>
+              <span>페이지당</span>
+              <select id="usersPerPage" onchange="changeUsersPerPage()" class="mx-2 border rounded px-2 py-1">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+              <span>명</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="goToUsersPage(1)" class="px-3 py-1 rounded border hover:bg-gray-100 disabled:opacity-50" id="usersFirstBtn">&laquo;</button>
+              <button onclick="goToUsersPage(currentUsersPage-1)" class="px-3 py-1 rounded border hover:bg-gray-100 disabled:opacity-50" id="usersPrevBtn">&lt;</button>
+              <div id="usersPageNumbers" class="flex gap-1"></div>
+              <button onclick="goToUsersPage(currentUsersPage+1)" class="px-3 py-1 rounded border hover:bg-gray-100 disabled:opacity-50" id="usersNextBtn">&gt;</button>
+              <button onclick="goToUsersPage(totalUsersPages)" class="px-3 py-1 rounded border hover:bg-gray-100 disabled:opacity-50" id="usersLastBtn">&raquo;</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1790,7 +1812,12 @@ function getAdminDashboardHTML(): string {
       } catch (e) { console.error('Chart load error:', e); }
     }
 
-    function debounceSearch() { clearTimeout(searchTimeout); searchTimeout = setTimeout(loadUsers, 300); }
+    function debounceSearch() { clearTimeout(searchTimeout); searchTimeout = setTimeout(function() { currentUsersPage = 1; loadUsers(); }, 300); }
+
+    // Pagination state
+    var currentUsersPage = 1;
+    var totalUsersPages = 1;
+    var usersPerPage = 20;
 
     async function loadUsers() {
       const search = document.getElementById('searchInput').value;
@@ -1799,10 +1826,63 @@ function getAdminDashboardHTML(): string {
         const params = new URLSearchParams();
         if (search) params.append('search', search);
         if (role) params.append('role', role);
+        params.append('page', currentUsersPage.toString());
+        params.append('limit', usersPerPage.toString());
         const res = await fetch(API_BASE+'/api/admin/users?'+params.toString(), { headers: { 'Authorization': 'Bearer '+adminToken } });
         const data = await res.json();
         renderUsers(data.users || []);
+        updateUsersPagination(data.total || 0, data.totalPages || 1, data.page || 1);
       } catch (e) { console.error(e); }
+    }
+
+    function updateUsersPagination(total, totalPages, page) {
+      totalUsersPages = totalPages;
+      currentUsersPage = page;
+      document.getElementById('usersTotalCount').textContent = total;
+      
+      // Update buttons state
+      document.getElementById('usersFirstBtn').disabled = page <= 1;
+      document.getElementById('usersPrevBtn').disabled = page <= 1;
+      document.getElementById('usersNextBtn').disabled = page >= totalPages;
+      document.getElementById('usersLastBtn').disabled = page >= totalPages;
+      
+      // Generate page numbers
+      var pageNumbers = document.getElementById('usersPageNumbers');
+      var html = '';
+      var startPage = Math.max(1, page - 2);
+      var endPage = Math.min(totalPages, page + 2);
+      
+      if (startPage > 1) {
+        html += '<button onclick="goToUsersPage(1)" class="px-3 py-1 rounded border hover:bg-gray-100">1</button>';
+        if (startPage > 2) html += '<span class="px-2">…</span>';
+      }
+      
+      for (var i = startPage; i <= endPage; i++) {
+        if (i === page) {
+          html += '<button class="px-3 py-1 rounded bg-orange-500 text-white">' + i + '</button>';
+        } else {
+          html += '<button onclick="goToUsersPage(' + i + ')" class="px-3 py-1 rounded border hover:bg-gray-100">' + i + '</button>';
+        }
+      }
+      
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) html += '<span class="px-2">…</span>';
+        html += '<button onclick="goToUsersPage(' + totalPages + ')" class="px-3 py-1 rounded border hover:bg-gray-100">' + totalPages + '</button>';
+      }
+      
+      pageNumbers.innerHTML = html;
+    }
+
+    function goToUsersPage(page) {
+      if (page < 1 || page > totalUsersPages) return;
+      currentUsersPage = page;
+      loadUsers();
+    }
+
+    function changeUsersPerPage() {
+      usersPerPage = parseInt(document.getElementById('usersPerPage').value);
+      currentUsersPage = 1;
+      loadUsers();
     }
 
     function renderUsers(users) {
