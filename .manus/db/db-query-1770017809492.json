@@ -1,0 +1,115 @@
+{
+  "query": "SELECT u.id, u.name, u.email, COUNT(r.id) as ride_count, COALESCE(SUM(r.distance), 0) as total_distance FROM users u LEFT JOIN ridingRecords r ON u.id = r.userId GROUP BY u.id ORDER BY total_distance DESC LIMIT 15;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT u.id, u.name, u.email, COUNT(r.id) as ride_count, COALESCE(SUM(r.distance), 0) as total_distance FROM users u LEFT JOIN ridingRecords r ON u.id = r.userId GROUP BY u.id ORDER BY total_distance DESC LIMIT 15;",
+  "rows": [
+    {
+      "id": "30030",
+      "name": "스쿱 모빌리티",
+      "email": "scoop@scoopmotor.com",
+      "ride_count": "10",
+      "total_distance": "154238"
+    },
+    {
+      "id": "120051",
+      "name": "음사",
+      "email": "jjg920228@naver.com",
+      "ride_count": "9",
+      "total_distance": "26208"
+    },
+    {
+      "id": "420001",
+      "name": "김정훈",
+      "email": "goxoaos646@naver.com",
+      "ride_count": "4",
+      "total_distance": "16813"
+    },
+    {
+      "id": "150001",
+      "name": "감자",
+      "email": "gustjrfjf369@gmail.com",
+      "ride_count": "5",
+      "total_distance": "13475"
+    },
+    {
+      "id": "120152",
+      "name": "이용구",
+      "email": "1226lyg@naver.com",
+      "ride_count": "6",
+      "total_distance": "10794"
+    },
+    {
+      "id": "3547701",
+      "name": "미친 드러머",
+      "email": "cjaookcy@gmail.com",
+      "ride_count": "1",
+      "total_distance": "8549"
+    },
+    {
+      "id": "120503",
+      "name": "shark",
+      "email": "design__j@naver.com",
+      "ride_count": "6",
+      "total_distance": "6612"
+    },
+    {
+      "id": "3546319",
+      "name": "간헐적 정상인",
+      "email": "en966@naver.com",
+      "ride_count": "1",
+      "total_distance": "5851"
+    },
+    {
+      "id": "210009",
+      "name": "양승균",
+      "email": "ojjksj1234@naver.com",
+      "ride_count": "1",
+      "total_distance": "3570"
+    },
+    {
+      "id": "3546629",
+      "name": "강희건",
+      "email": "gnlrjsx11@naver.com",
+      "ride_count": "0",
+      "total_distance": "0"
+    },
+    {
+      "id": "3546359",
+      "name": "유프리",
+      "email": "twiny76@naver.com",
+      "ride_count": "0",
+      "total_distance": "0"
+    },
+    {
+      "id": "3570423",
+      "name": "만두",
+      "email": "jeaseung1999@gmail.com",
+      "ride_count": "0",
+      "total_distance": "0"
+    },
+    {
+      "id": "3546138",
+      "name": "명월",
+      "email": "cardj0989@gmail.com",
+      "ride_count": "0",
+      "total_distance": "0"
+    },
+    {
+      "id": "3546747",
+      "name": "강희건",
+      "email": "gmlrjsc11@naver.com",
+      "ride_count": "0",
+      "total_distance": "0"
+    },
+    {
+      "id": "1920694",
+      "name": "소나무군",
+      "email": "tmd7221@gmail.com",
+      "ride_count": "0",
+      "total_distance": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\tride_count\ttotal_distance\n30030\t스쿱 모빌리티\tscoop@scoopmotor.com\t10\t154238\n120051\t음사\tjjg920228@naver.com\t9\t26208\n420001\t김정훈\tgoxoaos646@naver.com\t4\t16813\n150001\t감자\tgustjrfjf369@gmail.com\t5\t13475\n120152\t이용구\t1226lyg@naver.com\t6\t10794\n3547701\t미친 드러머\tcjaookcy@gmail.com\t1\t8549\n120503\tshark\tdesign__j@naver.com\t6\t6612\n3546319\t간헐적 정상인\ten966@naver.com\t1\t5851\n210009\t양승균\tojjksj1234@naver.com\t1\t3570\n3546629\t강희건\tgnlrjsx11@naver.com\t0\t0\n3546359\t유프리\ttwiny76@naver.com\t0\t0\n3570423\t만두\tjeaseung1999@gmail.com\t0\t0\n3546138\t명월\tcardj0989@gmail.com\t0\t0\n3546747\t강희건\tgmlrjsc11@naver.com\t0\t0\n1920694\t소나무군\ttmd7221@gmail.com\t0\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1504
+}

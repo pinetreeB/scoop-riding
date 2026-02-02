@@ -1,0 +1,14 @@
+{
+  "query": "SELECT SUM(distance) as total_distance, COUNT(*) as total_records FROM ridingRecords;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT SUM(distance) as total_distance, COUNT(*) as total_records FROM ridingRecords;",
+  "rows": [
+    {
+      "total_distance": "246110",
+      "total_records": "45"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_distance\ttotal_records\n246110\t45\n",
+  "stderr": "",
+  "execution_time_ms": 1534
+}

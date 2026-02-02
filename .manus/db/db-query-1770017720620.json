@@ -1,0 +1,280 @@
+{
+  "query": "SELECT id, userId, distance, maxSpeed, avgSpeed, duration, DATE_FORMAT(createdAt, '%Y-%m-%d %H:%i:%s') as created FROM ridingRecords ORDER BY createdAt DESC LIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, userId, distance, maxSpeed, avgSpeed, duration, DATE_FORMAT(createdAt, '%Y-%m-%d %H:%i:%s') as created FROM ridingRecords ORDER BY createdAt DESC LIMIT 30;",
+  "rows": [
+    {
+      "id": "2130008",
+      "userId": "3546319",
+      "distance": "5851",
+      "maxSpeed": "792",
+      "avgSpeed": "391",
+      "duration": "585",
+      "created": "2026-02-02 06:18:43"
+    },
+    {
+      "id": "2130005",
+      "userId": "3547701",
+      "distance": "8549",
+      "maxSpeed": "585",
+      "avgSpeed": "209",
+      "duration": "134",
+      "created": "2026-02-02 05:59:13"
+    },
+    {
+      "id": "2130004",
+      "userId": "3545973",
+      "distance": "0",
+      "maxSpeed": "0",
+      "avgSpeed": "0",
+      "duration": "6",
+      "created": "2026-02-02 04:17:09"
+    },
+    {
+      "id": "2130003",
+      "userId": "120152",
+      "distance": "2986",
+      "maxSpeed": "832",
+      "avgSpeed": "332",
+      "duration": "337",
+      "created": "2026-02-02 04:08:55"
+    },
+    {
+      "id": "2130001",
+      "userId": "30030",
+      "distance": "2977",
+      "maxSpeed": "829",
+      "avgSpeed": "344",
+      "duration": "323",
+      "created": "2026-02-02 04:08:41"
+    },
+    {
+      "id": "2100004",
+      "userId": "30030",
+      "distance": "0",
+      "maxSpeed": "0",
+      "avgSpeed": "0",
+      "duration": "5",
+      "created": "2026-02-02 01:15:43"
+    },
+    {
+      "id": "2100003",
+      "userId": "30030",
+      "distance": "41336",
+      "maxSpeed": "1086",
+      "avgSpeed": "478",
+      "duration": "1044",
+      "created": "2026-02-02 00:41:16"
+    },
+    {
+      "id": "2100002",
+      "userId": "30030",
+      "distance": "41336",
+      "maxSpeed": "1086",
+      "avgSpeed": "478",
+      "duration": "1044",
+      "created": "2026-02-02 00:41:14"
+    },
+    {
+      "id": "2040003",
+      "userId": "30030",
+      "distance": "0",
+      "maxSpeed": "48",
+      "avgSpeed": "48",
+      "duration": "7",
+      "created": "2026-02-01 15:28:16"
+    },
+    {
+      "id": "2040001",
+      "userId": "30030",
+      "distance": "0",
+      "maxSpeed": "0",
+      "avgSpeed": "0",
+      "duration": "18",
+      "created": "2026-02-01 15:04:45"
+    },
+    {
+      "id": "1980001",
+      "userId": "120051",
+      "distance": "3401",
+      "maxSpeed": "547",
+      "avgSpeed": "281",
+      "duration": "474",
+      "created": "2026-01-31 08:33:44"
+    },
+    {
+      "id": "1920001",
+      "userId": "120051",
+      "distance": "1340",
+      "maxSpeed": "645",
+      "avgSpeed": "285",
+      "duration": "195",
+      "created": "2026-01-31 05:21:18"
+    },
+    {
+      "id": "1890003",
+      "userId": "30030",
+      "distance": "52782",
+      "maxSpeed": "1194",
+      "avgSpeed": "818",
+      "duration": "2320",
+      "created": "2026-01-31 00:30:00"
+    },
+    {
+      "id": "1860002",
+      "userId": "30030",
+      "distance": "2258",
+      "maxSpeed": "803",
+      "avgSpeed": "510",
+      "duration": "162",
+      "created": "2026-01-30 23:47:25"
+    },
+    {
+      "id": "1800001",
+      "userId": "120051",
+      "distance": "2295",
+      "maxSpeed": "792",
+      "avgSpeed": "425",
+      "duration": "202",
+      "created": "2026-01-30 21:51:12"
+    },
+    {
+      "id": "1770004",
+      "userId": "420001",
+      "distance": "4183",
+      "maxSpeed": "675",
+      "avgSpeed": "330",
+      "duration": "149",
+      "created": "2026-01-30 16:10:45"
+    },
+    {
+      "id": "1770003",
+      "userId": "420001",
+      "distance": "4196",
+      "maxSpeed": "629",
+      "avgSpeed": "316",
+      "duration": "205",
+      "created": "2026-01-30 16:10:44"
+    },
+    {
+      "id": "1770002",
+      "userId": "420001",
+      "distance": "4181",
+      "maxSpeed": "637",
+      "avgSpeed": "321",
+      "duration": "117",
+      "created": "2026-01-30 16:10:43"
+    },
+    {
+      "id": "1710005",
+      "userId": "120051",
+      "distance": "7649",
+      "maxSpeed": "914",
+      "avgSpeed": "511",
+      "duration": "12",
+      "created": "2026-01-30 14:34:26"
+    },
+    {
+      "id": "1710003",
+      "userId": "120051",
+      "distance": "7956",
+      "maxSpeed": "831",
+      "avgSpeed": "463",
+      "duration": "585",
+      "created": "2026-01-30 14:34:25"
+    },
+    {
+      "id": "1710002",
+      "userId": "120152",
+      "distance": "0",
+      "maxSpeed": "0",
+      "avgSpeed": "0",
+      "duration": "16",
+      "created": "2026-01-30 14:33:10"
+    },
+    {
+      "id": "1680005",
+      "userId": "30030",
+      "distance": "8421",
+      "maxSpeed": "729",
+      "avgSpeed": "215",
+      "duration": "1594",
+      "created": "2026-01-30 13:55:14"
+    },
+    {
+      "id": "1620002",
+      "userId": "120503",
+      "distance": "1",
+      "maxSpeed": "18",
+      "avgSpeed": "15",
+      "duration": "6",
+      "created": "2026-01-29 14:17:08"
+    },
+    {
+      "id": "1620001",
+      "userId": "120503",
+      "distance": "1",
+      "maxSpeed": "41",
+      "avgSpeed": "37",
+      "duration": "12",
+      "created": "2026-01-29 14:16:58"
+    },
+    {
+      "id": "1530011",
+      "userId": "120051",
+      "distance": "754",
+      "maxSpeed": "448",
+      "avgSpeed": "262",
+      "duration": "6",
+      "created": "2026-01-28 11:42:58"
+    },
+    {
+      "id": "1410002",
+      "userId": "210009",
+      "distance": "3570",
+      "maxSpeed": "1421",
+      "avgSpeed": "632",
+      "duration": "244",
+      "created": "2026-01-27 16:26:30"
+    },
+    {
+      "id": "1410001",
+      "userId": "120152",
+      "distance": "3600",
+      "maxSpeed": "1422",
+      "avgSpeed": "586",
+      "duration": "228",
+      "created": "2026-01-27 16:26:29"
+    },
+    {
+      "id": "1380002",
+      "userId": "120503",
+      "distance": "3420",
+      "maxSpeed": "1528",
+      "avgSpeed": "529",
+      "duration": "9",
+      "created": "2026-01-27 14:25:12"
+    },
+    {
+      "id": "1320004",
+      "userId": "120152",
+      "distance": "0",
+      "maxSpeed": "0",
+      "avgSpeed": "0",
+      "duration": "5",
+      "created": "2026-01-27 11:44:55"
+    },
+    {
+      "id": "1320003",
+      "userId": "120152",
+      "distance": "0",
+      "maxSpeed": "0",
+      "avgSpeed": "0",
+      "duration": "7",
+      "created": "2026-01-27 11:44:35"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tdistance\tmaxSpeed\tavgSpeed\tduration\tcreated\n2130008\t3546319\t5851\t792\t391\t585\t2026-02-02 06:18:43\n2130005\t3547701\t8549\t585\t209\t134\t2026-02-02 05:59:13\n2130004\t3545973\t0\t0\t0\t6\t2026-02-02 04:17:09\n2130003\t120152\t2986\t832\t332\t337\t2026-02-02 04:08:55\n2130001\t30030\t2977\t829\t344\t323\t2026-02-02 04:08:41\n2100004\t30030\t0\t0\t0\t5\t2026-02-02 01:15:43\n2100003\t30030\t41336\t1086\t478\t1044\t2026-02-02 00:41:16\n2100002\t30030\t41336\t1086\t478\t1044\t2026-02-02 00:41:14\n2040003\t30030\t0\t48\t48\t7\t2026-02-01 15:28:16\n2040001\t30030\t0\t0\t0\t18\t2026-02-01 15:04:45\n1980001\t120051\t3401\t547\t281\t474\t2026-01-31 08:33:44\n1920001\t120051\t1340\t645\t285\t195\t2026-01-31 05:21:18\n1890003\t30030\t52782\t1194\t818\t2320\t2026-01-31 00:30:00\n1860002\t30030\t2258\t803\t510\t162\t2026-01-30 23:47:25\n1800001\t120051\t2295\t792\t425\t202\t2026-01-30 21:51:12\n1770004\t420001\t4183\t675\t330\t149\t2026-01-30 16:10:45\n1770003\t420001\t4196\t629\t316\t205\t2026-01-30 16:10:44\n1770002\t420001\t4181\t637\t321\t117\t2026-01-30 16:10:43\n1710005\t120051\t7649\t914\t511\t12\t2026-01-30 14:34:26\n1710003\t120051\t7956\t831\t463\t585\t2026-01-30 14:34:25\n1710002\t120152\t0\t0\t0\t16\t2026-01-30 14:33:10\n1680005\t30030\t8421\t729\t215\t1594\t2026-01-30 13:55:14\n1620002\t120503\t1\t18\t15\t6\t2026-01-29 14:17:08\n1620001\t120503\t1\t41\t37\t12\t2026-01-29 14:16:58\n1530011\t120051\t754\t448\t262\t6\t2026-01-28 11:42:58\n1410002\t210009\t3570\t1421\t632\t244\t2026-01-27 16:26:30\n1410001\t120152\t3600\t1422\t586\t228\t2026-01-27 16:26:29\n1380002\t120503\t3420\t1528\t529\t9\t2026-01-27 14:25:12\n1320004\t120152\t0\t0\t0\t5\t2026-01-27 11:44:55\n1320003\t120152\t0\t0\t0\t7\t2026-01-27 11:44:35\n",
+  "stderr": "",
+  "execution_time_ms": 1506
+}

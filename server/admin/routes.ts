@@ -129,7 +129,9 @@ router.get("/stats", verifyAdminToken, async (req: Request, res: Response) => {
     const totalDistanceResult = await dbInstance
       .select({ total: sql`COALESCE(SUM(distance), 0)` })
       .from(ridingRecords);
-    const totalDistance = Number(totalDistanceResult[0]?.total) || 0;
+    // Convert meters to km (distance is stored in meters)
+    const totalDistanceMeters = Number(totalDistanceResult[0]?.total) || 0;
+    const totalDistance = Math.round(totalDistanceMeters / 1000 * 10) / 10; // Round to 1 decimal
 
     res.json({ totalUsers, todayUsers, totalRides, totalDistance });
   } catch (e) {
@@ -263,9 +265,11 @@ router.get("/users/:id", verifyAdminToken, async (req: Request, res: Response) =
       .from(ridingRecords)
       .where(eq(ridingRecords.userId, userId));
 
+    // Convert meters to km (distance is stored in meters)
+    const totalDistanceMeters = Number(statsResult[0]?.totalDistance) || 0;
     const stats = {
       totalRides: Number(statsResult[0]?.totalRides) || 0,
-      totalDistance: Number(statsResult[0]?.totalDistance) || 0,
+      totalDistance: Math.round(totalDistanceMeters / 1000 * 10) / 10, // Convert to km
       totalDuration: Number(statsResult[0]?.totalDuration) || 0
     };
 

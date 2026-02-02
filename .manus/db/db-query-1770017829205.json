@@ -1,0 +1,65 @@
+{
+  "query": "SELECT userId, COUNT(*) as cnt, SUM(distance) as total_dist FROM ridingRecords GROUP BY userId ORDER BY total_dist DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT userId, COUNT(*) as cnt, SUM(distance) as total_dist FROM ridingRecords GROUP BY userId ORDER BY total_dist DESC;",
+  "rows": [
+    {
+      "userId": "30030",
+      "cnt": "10",
+      "total_dist": "154238"
+    },
+    {
+      "userId": "120051",
+      "cnt": "9",
+      "total_dist": "26208"
+    },
+    {
+      "userId": "420001",
+      "cnt": "4",
+      "total_dist": "16813"
+    },
+    {
+      "userId": "150001",
+      "cnt": "5",
+      "total_dist": "13475"
+    },
+    {
+      "userId": "120152",
+      "cnt": "6",
+      "total_dist": "10794"
+    },
+    {
+      "userId": "3547701",
+      "cnt": "1",
+      "total_dist": "8549"
+    },
+    {
+      "userId": "120503",
+      "cnt": "6",
+      "total_dist": "6612"
+    },
+    {
+      "userId": "3546319",
+      "cnt": "1",
+      "total_dist": "5851"
+    },
+    {
+      "userId": "210009",
+      "cnt": "1",
+      "total_dist": "3570"
+    },
+    {
+      "userId": "3545973",
+      "cnt": "1",
+      "total_dist": "0"
+    },
+    {
+      "userId": "330874",
+      "cnt": "1",
+      "total_dist": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "userId\tcnt\ttotal_dist\n30030\t10\t154238\n120051\t9\t26208\n420001\t4\t16813\n150001\t5\t13475\n120152\t6\t10794\n3547701\t1\t8549\n120503\t6\t6612\n3546319\t1\t5851\n210009\t1\t3570\n3545973\t1\t0\n330874\t1\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1501
+}
