@@ -57,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               loginMethod: apiUser.loginMethod,
               lastSignedIn: new Date(apiUser.lastSignedIn),
               profileImageUrl: apiUser.profileImageUrl,
+              role: (apiUser as any).role || "user",
             };
             setUser(userInfo);
             await Auth.setUserInfo(userInfo);
@@ -88,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const apiUser = await Api.getMe();
         console.log("[AuthContext] Native API user response:", apiUser);
 
-        if (apiUser) {
+          if (apiUser) {
           const userInfo: Auth.User = {
             id: apiUser.id,
             openId: apiUser.openId,
@@ -97,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             loginMethod: apiUser.loginMethod,
             lastSignedIn: new Date(apiUser.lastSignedIn),
             profileImageUrl: apiUser.profileImageUrl,
+            role: (apiUser as any).role || "user",
           };
           setUser(userInfo);
           await Auth.setUserInfo(userInfo);

@@ -60,6 +60,7 @@ function buildUserResponse(
     loginMethod: user?.loginMethod ?? null,
     lastSignedIn: (user?.lastSignedIn ?? new Date()).toISOString(),
     profileImageUrl: (user as any)?.profileImageUrl ?? null,
+    role: (user as any)?.role ?? "user",
   };
 }
 
