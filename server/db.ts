@@ -3623,3 +3623,44 @@ export async function getBadgeByName(name: string): Promise<Badge | null> {
     return null;
   }
 }
+
+
+// Get all admin users
+export async function getAdminUsers(): Promise<{ id: number; name: string | null; email: string | null }[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const result = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      })
+      .from(users)
+      .where(eq(users.role, "admin"));
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get admin users:", error);
+    return [];
+  }
+}
+
+// Send notification to all admins
+export async function notifyAdmins(notification: {
+  type: string;
+  title: string;
+  body?: string;
+  entityType?: string;
+  entityId?: number;
+  actorId?: number;
+}): Promise<void> {
+  const admins = await getAdminUsers();
+  
+  for (const admin of admins) {
+    await createNotification({
+      userId: admin.id,
+      ...notification,
+    });
+  }
+}

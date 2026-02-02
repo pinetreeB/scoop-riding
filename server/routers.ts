@@ -1492,6 +1492,26 @@ export const appRouter = router({
           userId: ctx.user.id,
           ...input,
         });
+
+        // Notify admins about new bug report
+        if (id) {
+          const userName = ctx.user.name || "사용자";
+          const severityLabels: Record<string, string> = {
+            low: "낮음",
+            medium: "보통",
+            high: "높음",
+            critical: "심각",
+          };
+          await db.notifyAdmins({
+            type: "new_bug_report",
+            title: "🐛 새 버그 리포트",
+            body: `${userName}님이 버그를 신고했습니다: "${input.title}" (심각도: ${severityLabels[input.severity] || input.severity})`,
+            entityType: "bug_report",
+            entityId: id,
+            actorId: ctx.user.id,
+          });
+        }
+
         return { success: !!id, id };
       }),
 
