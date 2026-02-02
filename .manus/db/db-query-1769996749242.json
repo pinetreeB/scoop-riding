@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO appVersions (version, versionCode, releaseNotes, downloadUrl, forceUpdate, createdAt) VALUES ('0.0.22', 22, '• 그룹 주행 접속자 오버레이 UI 추가 (왼쪽 화면)\\n• 주행 중인 멤버는 컬러로 활성화, 대기 중인 멤버는 회색 표시\\n• WebSocket 기반 실시간 위치 공유 및 채팅 구현\\n• 팀원 멀어짐 알림 재활성화 (WebSocket 기반 정확도 향상)', 'https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/d9b93035-a35f-4744-8906-937c75950b77', false, NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO appVersions (version, versionCode, releaseNotes, downloadUrl, forceUpdate, createdAt) VALUES ('0.0.22', 22, '• 그룹 주행 접속자 오버레이 UI 추가 (왼쪽 화면)\\n• 주행 중인 멤버는 컬러로 활성화, 대기 중인 멤버는 회색 표시\\n• WebSocket 기반 실시간 위치 공유 및 채팅 구현\\n• 팀원 멀어짐 알림 재활성화 (WebSocket 기반 정확도 향상)', 'https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/d9b93035-a35f-4744-8906-937c75950b77', false, NOW());",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1591
+}

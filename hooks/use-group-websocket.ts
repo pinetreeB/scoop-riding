@@ -115,6 +115,16 @@ export function useGroupWebSocket({
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const currentGroupIdRef = useRef<number | null>(null);
+  const lastLocationSentRef = useRef<number>(0);
+  const pendingLocationRef = useRef<{
+    latitude: number;
+    longitude: number;
+    speed: number;
+    distance: number;
+    duration: number;
+    isRiding: boolean;
+  } | null>(null);
+  const locationThrottleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const [isConnected, setIsConnected] = useState(false);
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -218,6 +228,14 @@ export function useGroupWebSocket({
       reconnectTimeoutRef.current = null;
     }
     
+    // Clear location throttle timeout
+    if (locationThrottleTimeoutRef.current) {
+      clearTimeout(locationThrottleTimeoutRef.current);
+      locationThrottleTimeoutRef.current = null;
+    }
+    pendingLocationRef.current = null;
+    lastLocationSentRef.current = 0;
+    
     if (wsRef.current) {
       // Send leave message before closing
       if (currentGroupIdRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -235,6 +253,9 @@ export function useGroupWebSocket({
     setMembers([]);
   }, []);
 
+  // Throttled location update - sends at most once every 2 seconds
+  const LOCATION_THROTTLE_MS = 2000;
+  
   const sendLocationUpdate = useCallback((location: {
     latitude: number;
     longitude: number;
@@ -247,14 +268,50 @@ export function useGroupWebSocket({
       return;
     }
 
-    wsRef.current.send(JSON.stringify({
-      type: "location_update",
-      groupId: currentGroupIdRef.current,
-      userId: 0, // Server will fill this from auth
-      userName: "", // Server will fill this from auth
-      ...location,
-      timestamp: Date.now(),
-    }));
+    const now = Date.now();
+    const timeSinceLastSent = now - lastLocationSentRef.current;
+    
+    // Store the latest location
+    pendingLocationRef.current = location;
+    
+    // If enough time has passed, send immediately
+    if (timeSinceLastSent >= LOCATION_THROTTLE_MS) {
+      lastLocationSentRef.current = now;
+      wsRef.current.send(JSON.stringify({
+        type: "location_update",
+        groupId: currentGroupIdRef.current,
+        userId: 0,
+        userName: "",
+        ...location,
+        timestamp: now,
+      }));
+      pendingLocationRef.current = null;
+      
+      // Clear any pending timeout
+      if (locationThrottleTimeoutRef.current) {
+        clearTimeout(locationThrottleTimeoutRef.current);
+        locationThrottleTimeoutRef.current = null;
+      }
+    } else if (!locationThrottleTimeoutRef.current) {
+      // Schedule a delayed send for the remaining time
+      const delay = LOCATION_THROTTLE_MS - timeSinceLastSent;
+      locationThrottleTimeoutRef.current = setTimeout(() => {
+        if (pendingLocationRef.current && wsRef.current && wsRef.current.readyState === WebSocket.OPEN && currentGroupIdRef.current) {
+          lastLocationSentRef.current = Date.now();
+          wsRef.current.send(JSON.stringify({
+            type: "location_update",
+            groupId: currentGroupIdRef.current,
+            userId: 0,
+            userName: "",
+            ...pendingLocationRef.current,
+            timestamp: Date.now(),
+          }));
+          pendingLocationRef.current = null;
+        }
+        locationThrottleTimeoutRef.current = null;
+      }, delay);
+    }
+    // If a timeout is already scheduled, just update pendingLocationRef (already done above)
   }, []);
 
   const sendChatMessage = useCallback((message: string, messageType: "text" | "location" | "alert" = "text") => {

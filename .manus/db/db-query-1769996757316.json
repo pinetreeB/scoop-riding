@@ -1,0 +1,25 @@
+{
+  "query": "SELECT version, versionCode, releaseNotes, downloadUrl FROM appVersions ORDER BY versionCode DESC LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT version, versionCode, releaseNotes, downloadUrl FROM appVersions ORDER BY versionCode DESC LIMIT 3;",
+  "rows": [],
+  "messages": [
+    "0.0.22\t22\t• 그룹 주행 접속자 오버레이 UI 추가 (왼쪽 화면)",
+    "• 주행 중인 멤버는 컬러로 활성화, 대기 중인 멤버는 회색 표시",
+    "• WebSocket 기반 실시간 위치 공유 및 채팅 구현",
+    "• 팀원 멀어짐 알림 재활성화 (WebSocket 기반 정확도 향상)\thttps://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/d9b93035-a35f-4744-8906-937c75950b77",
+    "0.0.20\t20\t버그 수정:",
+    "- 그룹 라이딩 팀원 멀어짐 알림 비활성화 (경도 데이터 문제 해결 예정)",
+    "- 그룹 라이딩 디버그 오버레이 제거",
+    "- 그룹 참가 승인 시스템 개선\thttps://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/98f398a8-62c9-4f7c-aeb5-d618d3bc6273",
+    "0.0.18\t18\tv0.0.18 업데이트:",
+    "[버그 수정]",
+    "- 그룹 라이딩 팀원 위치 표시 개선",
+    "- 팀원 멀어짐 알림 정확도 향상 (GPS 튐 방지)",
+    "- 주행 중 앱 안정성 개선 (메모리 최적화)",
+    "[신규 기능]",
+    "- 공지사항 기능 추가 (홈 화면 팝업, 설정에서 열람)\thttps://expo.dev/artifacts/eas/vzbyU9moyVrsmkHVvwf8JS.apk"
+  ],
+  "stdout": "version\tversionCode\treleaseNotes\tdownloadUrl\n0.0.22\t22\t• 그룹 주행 접속자 오버레이 UI 추가 (왼쪽 화면)\n• 주행 중인 멤버는 컬러로 활성화, 대기 중인 멤버는 회색 표시\n• WebSocket 기반 실시간 위치 공유 및 채팅 구현\n• 팀원 멀어짐 알림 재활성화 (WebSocket 기반 정확도 향상)\thttps://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/d9b93035-a35f-4744-8906-937c75950b77\n0.0.20\t20\t버그 수정:\n- 그룹 라이딩 팀원 멀어짐 알림 비활성화 (경도 데이터 문제 해결 예정)\n- 그룹 라이딩 디버그 오버레이 제거\n- 그룹 참가 승인 시스템 개선\thttps://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/98f398a8-62c9-4f7c-aeb5-d618d3bc6273\n0.0.18\t18\tv0.0.18 업데이트:\n[버그 수정]\n- 그룹 라이딩 팀원 위치 표시 개선\n- 팀원 멀어짐 알림 정확도 향상 (GPS 튐 방지)\n- 주행 중 앱 안정성 개선 (메모리 최적화)\n\n[신규 기능]\n- 공지사항 기능 추가 (홈 화면 팝업, 설정에서 열람)\thttps://expo.dev/artifacts/eas/vzbyU9moyVrsmkHVvwf8JS.apk\n",
+  "stderr": "",
+  "execution_time_ms": 1561
+}

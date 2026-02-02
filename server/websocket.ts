@@ -100,6 +100,10 @@ interface ClientInfo {
 const clients = new Map<WebSocket, ClientInfo>();
 const groupClients = new Map<number, Set<WebSocket>>(); // groupId -> Set of WebSocket clients
 
+// Debounce timers for broadcast to prevent message flooding
+const broadcastTimers = new Map<number, ReturnType<typeof setTimeout>>();
+const BROADCAST_DEBOUNCE_MS = 500; // Debounce broadcasts within 500ms
+
 export function setupWebSocket(server: Server): void {
   const wss = new WebSocketServer({ 
     server,
@@ -316,6 +320,22 @@ async function handleChatMessage(
 }
 
 function broadcastGroupLocations(groupId: number): void {
+  // Debounce: cancel any pending broadcast for this group
+  const existingTimer = broadcastTimers.get(groupId);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+  
+  // Schedule a new broadcast after debounce delay
+  const timer = setTimeout(() => {
+    broadcastTimers.delete(groupId);
+    doBroadcastGroupLocations(groupId);
+  }, BROADCAST_DEBOUNCE_MS);
+  
+  broadcastTimers.set(groupId, timer);
+}
+
+function doBroadcastGroupLocations(groupId: number): void {
   const groupSet = groupClients.get(groupId);
   if (!groupSet || groupSet.size === 0) return;
 
