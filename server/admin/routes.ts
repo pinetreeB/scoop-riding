@@ -1464,7 +1464,7 @@ function getAdminDashboardHTML(): string {
       try {
         const urls = JSON.parse(screenshots);
         if (!urls || urls.length === 0) return '';
-        return '<div class="flex gap-2 mt-2">' + urls.map(url => '<img src="'+url+'" class="w-20 h-20 object-cover rounded cursor-pointer" onclick="window.open(\''+url+'\')">' ).join('') + '</div>';
+        return '<div class="flex gap-2 mt-2">' + urls.map(function(url) { return '<img src="'+url+'" class="w-20 h-20 object-cover rounded cursor-pointer" onclick="window.open(this.src)">'; }).join('') + '</div>';
       } catch (e) { return ''; }
     }
 
