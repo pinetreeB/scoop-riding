@@ -20,6 +20,15 @@ const ADMIN_CREDENTIALS = {
   password: process.env.ADMIN_PASSWORD || "scoop2024!admin"
 };
 
+// Sub-admin credentials (limited permissions - cannot view activity logs)
+const SUB_ADMIN_CREDENTIALS = {
+  email: "subadmin@scoop.app",
+  password: "scoop2024!sub"
+};
+
+// Admin roles: "admin" = full access, "sub-admin" = limited (no activity logs)
+type AdminRole = "admin" | "sub-admin";
+
 // Middleware to verify admin token
 async function verifyAdminToken(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
@@ -30,14 +39,23 @@ async function verifyAdminToken(req: Request, res: Response, next: NextFunction)
   const token = authHeader.substring(7);
   try {
     const { payload } = await jose.jwtVerify(token, ADMIN_JWT_SECRET);
-    if (payload.role !== "admin") {
+    if (payload.role !== "admin" && payload.role !== "sub-admin") {
       return res.status(403).json({ error: "관리자 권한이 필요합니다." });
     }
     (req as any).adminEmail = payload.email;
+    (req as any).adminRole = payload.role as AdminRole;
     next();
   } catch (e) {
     return res.status(401).json({ error: "유효하지 않은 토큰입니다." });
   }
+}
+
+// Middleware to verify full admin (not sub-admin) for sensitive operations
+async function verifyFullAdmin(req: Request, res: Response, next: NextFunction) {
+  if ((req as any).adminRole !== "admin") {
+    return res.status(403).json({ error: "주 관리자 권한이 필요합니다." });
+  }
+  next();
 }
 
 // Admin login
@@ -55,7 +73,18 @@ router.post("/login", async (req: Request, res: Response) => {
       .setExpirationTime("24h")
       .sign(ADMIN_JWT_SECRET);
     
-    return res.json({ token, email });
+    return res.json({ token, email, role: "admin" });
+  }
+
+  // Check hardcoded sub-admin
+  if (email === SUB_ADMIN_CREDENTIALS.email && password === SUB_ADMIN_CREDENTIALS.password) {
+    const token = await new jose.SignJWT({ email, role: "sub-admin" })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setExpirationTime("24h")
+      .sign(ADMIN_JWT_SECRET);
+    
+    return res.json({ token, email, role: "sub-admin" });
   }
 
   // Check database admin users
@@ -93,7 +122,7 @@ router.post("/login", async (req: Request, res: Response) => {
 
 // Get current admin info
 router.get("/me", verifyAdminToken, (req: Request, res: Response) => {
-  res.json({ email: (req as any).adminEmail });
+  res.json({ email: (req as any).adminEmail, role: (req as any).adminRole });
 });
 
 // Get dashboard stats
@@ -1071,7 +1100,8 @@ router.get("/bans/check/:userId", verifyAdminToken, async (req: Request, res: Re
 });
 
 // ============ Admin Logs API ============
-router.get("/logs", verifyAdminToken, async (req: Request, res: Response) => {
+// Only full admin can view activity logs (sub-admin cannot)
+router.get("/logs", verifyAdminToken, verifyFullAdmin, async (req: Request, res: Response) => {
   try {
     const dbInstance = await db.getDb();
     if (!dbInstance) return res.json({ logs: [] });
@@ -1187,7 +1217,7 @@ function getAdminDashboardHTML(): string {
         <button onclick="switchTab('surveys')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="surveys">설문 응답</button>
         <button onclick="switchTab('bugs')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="bugs">버그 리포트</button>
         <button onclick="switchTab('posts')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="posts">게시글 관리</button>
-        <button onclick="switchTab('logs')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="logs">활동 로그</button>
+        <button id="logsTabBtn" onclick="switchTab('logs')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="logs">활동 로그</button>
       </div>
 
       <div id="tab-stats" class="tab-content active">
@@ -1577,15 +1607,35 @@ function getAdminDashboardHTML(): string {
   <script>
     const API_BASE = window.location.origin;
     let adminToken = localStorage.getItem('adminToken');
+    let adminRole = localStorage.getItem('adminRole') || 'admin';
     let searchTimeout;
+
+    // Apply role-based permissions (hide logs tab for sub-admin)
+    function applyRolePermissions() {
+      const logsTabBtn = document.getElementById('logsTabBtn');
+      const logsTab = document.getElementById('tab-logs');
+      if (adminRole === 'sub-admin') {
+        if (logsTabBtn) logsTabBtn.style.display = 'none';
+        if (logsTab) logsTab.style.display = 'none';
+      } else {
+        if (logsTabBtn) logsTabBtn.style.display = '';
+        if (logsTab) logsTab.style.display = '';
+      }
+    }
 
     if (adminToken) { checkAuth(); } else { showLogin(); }
 
     async function checkAuth() {
       try {
-        const res = await fetch(API_BASE+'/api/admin/stats', { headers: { 'Authorization': 'Bearer '+adminToken } });
-        if (res.ok) { showDashboard(); loadAllData(); }
-        else { showLogin(); }
+        const res = await fetch(API_BASE+'/api/admin/me', { headers: { 'Authorization': 'Bearer '+adminToken } });
+        if (res.ok) {
+          const data = await res.json();
+          adminRole = data.role || 'admin';
+          localStorage.setItem('adminRole', adminRole);
+          applyRolePermissions();
+          showDashboard();
+          loadAllData();
+        } else { showLogin(); }
       } catch (e) { showLogin(); }
     }
 
@@ -1599,7 +1649,8 @@ function getAdminDashboardHTML(): string {
       document.getElementById('dashboardSection').classList.remove('hidden');
       try {
         const payload = JSON.parse(atob(adminToken.split('.')[1]));
-        document.getElementById('adminEmail').textContent = payload.email || '';
+        const roleText = adminRole === 'sub-admin' ? ' (부관리자)' : ' (주 관리자)';
+        document.getElementById('adminEmail').textContent = (payload.email || '') + roleText;
       } catch (e) {}
     }
 
@@ -1616,7 +1667,10 @@ function getAdminDashboardHTML(): string {
         const data = await res.json();
         if (res.ok && data.token) {
           adminToken = data.token;
+          adminRole = data.role || 'admin';
           localStorage.setItem('adminToken', adminToken);
+          localStorage.setItem('adminRole', adminRole);
+          applyRolePermissions();
           showDashboard();
           loadAllData();
         } else {
@@ -1631,13 +1685,20 @@ function getAdminDashboardHTML(): string {
 
     function logout() {
       localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminRole');
       adminToken = null;
+      adminRole = 'admin';
       showLogin();
     }
 
     function loadAllData() { loadStats(); loadUsers(); loadAnnouncements(); loadSurveys(); loadBugs(); loadPosts(); loadRegistrationChart(); loadSuspiciousUsers(); loadSuspiciousReports(); loadBans(); }
 
     function switchTab(tab) {
+      // Block sub-admin from accessing logs tab
+      if (tab === 'logs' && adminRole === 'sub-admin') {
+        alert('활동 로그는 주 관리자만 열람할 수 있습니다.');
+        return;
+      }
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       document.querySelector('[data-tab="'+tab+'"]').classList.add('active');
