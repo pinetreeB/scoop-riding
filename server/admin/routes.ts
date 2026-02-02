@@ -133,7 +133,40 @@ router.get("/stats", verifyAdminToken, async (req: Request, res: Response) => {
     const totalDistanceMeters = Number(totalDistanceResult[0]?.total) || 0;
     const totalDistance = Math.round(totalDistanceMeters / 1000 * 10) / 10; // Round to 1 decimal
 
-    res.json({ totalUsers, todayUsers, totalRides, totalDistance });
+    // Weekly stats (this week starting from Monday)
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    weekStart.setHours(0, 0, 0, 0);
+
+    // Weekly new users
+    const weeklyUsersResult = await dbInstance
+      .select({ count: sql`COUNT(*)` })
+      .from(users)
+      .where(gte(users.createdAt, weekStart));
+    const weeklyNewUsers = Number(weeklyUsersResult[0]?.count) || 0;
+
+    // Weekly rides
+    const weeklyRidesResult = await dbInstance
+      .select({ count: sql`COUNT(*)`, total: sql`COALESCE(SUM(distance), 0)` })
+      .from(ridingRecords)
+      .where(gte(ridingRecords.createdAt, weekStart));
+    const weeklyRides = Number(weeklyRidesResult[0]?.count) || 0;
+    const weeklyDistanceMeters = Number(weeklyRidesResult[0]?.total) || 0;
+    const weeklyDistance = Math.round(weeklyDistanceMeters / 1000 * 10) / 10;
+
+    // Weekly posts
+    const weeklyPostsResult = await dbInstance
+      .select({ count: sql`COUNT(*)` })
+      .from(posts)
+      .where(gte(posts.createdAt, weekStart));
+    const weeklyPosts = Number(weeklyPostsResult[0]?.count) || 0;
+
+    res.json({ 
+      totalUsers, todayUsers, totalRides, totalDistance,
+      weeklyNewUsers, weeklyRides, weeklyDistance, weeklyPosts
+    });
   } catch (e) {
     console.error("Admin stats error:", e);
     res.status(500).json({ error: "통계를 불러오는데 실패했습니다." });
@@ -619,6 +652,29 @@ router.get("/stats/user/:userId", verifyAdminToken, async (req: Request, res: Re
   }
 });
 
+// Get user ride history
+router.get("/rides/user/:userId", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const dbInstance = await db.getDb();
+    if (!dbInstance) {
+      return res.json({ rides: [] });
+    }
+    
+    const rides = await dbInstance
+      .select()
+      .from(ridingRecords)
+      .where(eq(ridingRecords.userId, userId))
+      .orderBy(desc(ridingRecords.createdAt))
+      .limit(50);
+    
+    res.json({ rides });
+  } catch (e) {
+    console.error("Admin user rides error:", e);
+    res.status(500).json({ error: "주행 기록을 불러오는데 실패했습니다." });
+  }
+});
+
 // ============ Suspicious User Monitoring API ============
 // Get suspicious users list
 router.get("/monitoring/suspicious", verifyAdminToken, async (req: Request, res: Response) => {
@@ -843,8 +899,13 @@ function getAdminDashboardHTML(): string {
             <div class="mb-4">
               <input type="number" id="userStatsId" placeholder="사용자 ID 입력" class="px-4 py-2 border border-gray-300 rounded-lg mr-2">
               <button onclick="loadUserStats()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg">조회</button>
+              <button onclick="loadUserRideHistory()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg ml-2">주행 기록</button>
             </div>
             <div id="userStatsResult" class="text-sm text-gray-600">사용자 ID를 입력하고 조회하세요.</div>
+            <div id="userRideHistory" class="mt-4 hidden">
+              <h4 class="font-semibold mb-2">주행 기록 목록</h4>
+              <div id="rideHistoryList" class="max-h-64 overflow-y-auto"></div>
+            </div>
           </div>
         </div>
         <div class="bg-white rounded-xl p-6 shadow">
@@ -1199,6 +1260,11 @@ function getAdminDashboardHTML(): string {
         document.getElementById('statTodayUsers').textContent = data.todayUsers || '0';
         document.getElementById('statTotalRides').textContent = data.totalRides || '0';
         document.getElementById('statTotalDistance').textContent = (data.totalDistance || 0).toLocaleString() + ' km';
+        // Weekly stats
+        document.getElementById('weeklyNewUsers').textContent = data.weeklyNewUsers || '0';
+        document.getElementById('weeklyRides').textContent = data.weeklyRides || '0';
+        document.getElementById('weeklyDistance').textContent = (data.weeklyDistance || 0).toLocaleString();
+        document.getElementById('weeklyPosts').textContent = data.weeklyPosts || '0';
       } catch (e) { console.error(e); }
     }
 
@@ -1212,8 +1278,8 @@ function getAdminDashboardHTML(): string {
         if (search) params.append('search', search);
         if (role) params.append('role', role);
         const res = await fetch(API_BASE+'/api/admin/users?'+params.toString(), { headers: { 'Authorization': 'Bearer '+adminToken } });
-        const users = await res.json();
-        renderUsers(users);
+        const data = await res.json();
+        renderUsers(data.users || []);
       } catch (e) { console.error(e); }
     }
 
@@ -1240,9 +1306,8 @@ function getAdminDashboardHTML(): string {
 
     async function editUser(id) {
       try {
-        const res = await fetch(API_BASE+'/api/admin/users?search='+id, { headers: { 'Authorization': 'Bearer '+adminToken } });
-        const users = await res.json();
-        const user = users.find(u => u.id === id);
+        const res = await fetch(API_BASE+'/api/admin/users/'+id, { headers: { 'Authorization': 'Bearer '+adminToken } });
+        const user = await res.json();
         if (user) {
           document.getElementById('editUserId').value = user.id;
           document.getElementById('editName').value = user.name || '';
@@ -1673,6 +1738,46 @@ function getAdminDashboardHTML(): string {
           '</div>';
       } catch (e) { 
         document.getElementById('userStatsResult').innerHTML = '<span class="text-red-500">오류가 발생했습니다</span>';
+      }
+    }
+
+    async function loadUserRideHistory() {
+      const userId = document.getElementById('userStatsId').value;
+      if (!userId) { alert('사용자 ID를 입력하세요'); return; }
+      
+      try {
+        const res = await fetch(API_BASE+'/api/admin/rides/user/'+userId, { headers: { 'Authorization': 'Bearer '+adminToken } });
+        const data = await res.json();
+        
+        const container = document.getElementById('userRideHistory');
+        const listContainer = document.getElementById('rideHistoryList');
+        
+        if (data.error) {
+          listContainer.innerHTML = '<span class="text-red-500">'+data.error+'</span>';
+          container.classList.remove('hidden');
+          return;
+        }
+        
+        if (!data.rides || data.rides.length === 0) {
+          listContainer.innerHTML = '<div class="text-gray-500 text-center py-4">주행 기록이 없습니다.</div>';
+          container.classList.remove('hidden');
+          return;
+        }
+        
+        listContainer.innerHTML = '<table class="w-full text-sm"><thead><tr class="bg-gray-100"><th class="px-2 py-1 text-left">날짜</th><th class="px-2 py-1 text-right">거리</th><th class="px-2 py-1 text-right">시간</th><th class="px-2 py-1 text-right">평균속도</th><th class="px-2 py-1 text-right">최고속도</th></tr></thead><tbody>' +
+          data.rides.map(function(r) {
+            return '<tr class="border-b hover:bg-gray-50">' +
+              '<td class="px-2 py-2">' + formatDate(r.createdAt) + '</td>' +
+              '<td class="px-2 py-2 text-right">' + (r.distance / 1000).toFixed(2) + ' km</td>' +
+              '<td class="px-2 py-2 text-right">' + Math.floor(r.duration / 60) + '분 ' + (r.duration % 60) + '초</td>' +
+              '<td class="px-2 py-2 text-right">' + (r.avgSpeed || 0).toFixed(1) + ' km/h</td>' +
+              '<td class="px-2 py-2 text-right">' + (r.maxSpeed || 0).toFixed(1) + ' km/h</td>' +
+            '</tr>';
+          }).join('') + '</tbody></table>';
+        container.classList.remove('hidden');
+      } catch (e) { 
+        document.getElementById('rideHistoryList').innerHTML = '<span class="text-red-500">오류가 발생했습니다</span>';
+        document.getElementById('userRideHistory').classList.remove('hidden');
       }
     }
 
