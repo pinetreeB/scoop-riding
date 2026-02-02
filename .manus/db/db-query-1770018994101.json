@@ -1,0 +1,88 @@
+{
+  "query": "SELECT id, name, email, createdAt FROM users WHERE createdAt >= '2026-02-02 00:00:00' ORDER BY createdAt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, name, email, createdAt FROM users WHERE createdAt >= '2026-02-02 00:00:00' ORDER BY createdAt DESC;",
+  "rows": [
+    {
+      "id": "3570423",
+      "name": "만두",
+      "email": "jeaseung1999@gmail.com",
+      "createdAt": "2026-02-02 07:31:09"
+    },
+    {
+      "id": "3548336",
+      "name": "릴로",
+      "email": "gusdbgusdb@naver.com",
+      "createdAt": "2026-02-02 06:01:33"
+    },
+    {
+      "id": "3548194",
+      "name": "yuki11",
+      "email": "lehoss@naver.com",
+      "createdAt": "2026-02-02 05:39:09"
+    },
+    {
+      "id": "3547919",
+      "name": "블루",
+      "email": "whdqls1020@naver.com",
+      "createdAt": "2026-02-02 05:19:40"
+    },
+    {
+      "id": "3547822",
+      "name": "하마119",
+      "email": "ehxogud0@naver.com",
+      "createdAt": "2026-02-02 05:18:27"
+    },
+    {
+      "id": "3547701",
+      "name": "미친 드러머",
+      "email": "cjaookcy@gmail.com",
+      "createdAt": "2026-02-02 05:15:06"
+    },
+    {
+      "id": "3547106",
+      "name": "임연수",
+      "email": "hiasins35@naver.com",
+      "createdAt": "2026-02-02 05:01:28"
+    },
+    {
+      "id": "3546747",
+      "name": "강희건",
+      "email": "gmlrjsc11@naver.com",
+      "createdAt": "2026-02-02 04:53:47"
+    },
+    {
+      "id": "3546629",
+      "name": "강희건",
+      "email": "gnlrjsx11@naver.com",
+      "createdAt": "2026-02-02 04:52:18"
+    },
+    {
+      "id": "3546359",
+      "name": "유프리",
+      "email": "twiny76@naver.com",
+      "createdAt": "2026-02-02 04:47:02"
+    },
+    {
+      "id": "3546319",
+      "name": "간헐적 정상인",
+      "email": "en966@naver.com",
+      "createdAt": "2026-02-02 04:42:34"
+    },
+    {
+      "id": "3546138",
+      "name": "명월",
+      "email": "cardj0989@gmail.com",
+      "createdAt": "2026-02-02 04:30:27"
+    },
+    {
+      "id": "3545973",
+      "name": "김승현",
+      "email": "zc3513@naver.com",
+      "createdAt": "2026-02-02 04:15:42"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\tcreatedAt\n3570423\t만두\tjeaseung1999@gmail.com\t2026-02-02 07:31:09\n3548336\t릴로\tgusdbgusdb@naver.com\t2026-02-02 06:01:33\n3548194\tyuki11\tlehoss@naver.com\t2026-02-02 05:39:09\n3547919\t블루\twhdqls1020@naver.com\t2026-02-02 05:19:40\n3547822\t하마119\tehxogud0@naver.com\t2026-02-02 05:18:27\n3547701\t미친 드러머\tcjaookcy@gmail.com\t2026-02-02 05:15:06\n3547106\t임연수\thiasins35@naver.com\t2026-02-02 05:01:28\n3546747\t강희건\tgmlrjsc11@naver.com\t2026-02-02 04:53:47\n3546629\t강희건\tgnlrjsx11@naver.com\t2026-02-02 04:52:18\n3546359\t유프리\ttwiny76@naver.com\t2026-02-02 04:47:02\n3546319\t간헐적 정상인\ten966@naver.com\t2026-02-02 04:42:34\n3546138\t명월\tcardj0989@gmail.com\t2026-02-02 04:30:27\n3545973\t김승현\tzc3513@naver.com\t2026-02-02 04:15:42\n",
+  "stderr": "",
+  "execution_time_ms": 1555
+}

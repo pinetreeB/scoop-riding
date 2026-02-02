@@ -5,7 +5,7 @@ import * as fs from "fs";
 import { ENV } from "../_core/env";
 import * as db from "../db";
 import { eq, desc, asc, like, or, sql, and, gte } from "drizzle-orm";
-import { users, ridingRecords, announcements, posts, surveyResponses, bugReports } from "../../drizzle/schema";
+import { users, ridingRecords, announcements, posts, surveyResponses, bugReports, adminLogs, scooters, friends } from "../../drizzle/schema";
 
 const router = Router();
 
@@ -110,13 +110,18 @@ router.get("/stats", verifyAdminToken, async (req: Request, res: Response) => {
       .from(users);
     const totalUsers = Number(totalUsersResult[0]?.count) || 0;
 
-    // Today's new users
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Today's new users (KST timezone = UTC+9)
+    // KST 00:00 = UTC 15:00 (previous day)
+    const now = new Date();
+    const kstOffset = 9 * 60 * 60 * 1000; // UTC+9 in milliseconds
+    const nowKST = new Date(now.getTime() + kstOffset);
+    // Get today's date in KST, then convert back to UTC for DB comparison
+    const todayKSTDate = new Date(Date.UTC(nowKST.getUTCFullYear(), nowKST.getUTCMonth(), nowKST.getUTCDate()));
+    const todayStartUTC = new Date(todayKSTDate.getTime() - kstOffset); // KST 00:00 in UTC
     const todayUsersResult = await dbInstance
       .select({ count: sql`COUNT(*)` })
       .from(users)
-      .where(gte(users.createdAt, today));
+      .where(gte(users.createdAt, todayStartUTC));
     const todayUsers = Number(todayUsersResult[0]?.count) || 0;
 
     // Total rides
@@ -133,25 +138,24 @@ router.get("/stats", verifyAdminToken, async (req: Request, res: Response) => {
     const totalDistanceMeters = Number(totalDistanceResult[0]?.total) || 0;
     const totalDistance = Math.round(totalDistanceMeters / 1000 * 10) / 10; // Round to 1 decimal
 
-    // Weekly stats (this week starting from Monday)
-    const now = new Date();
-    const dayOfWeek = now.getDay();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-    weekStart.setHours(0, 0, 0, 0);
+    // Weekly stats (this week starting from Monday, KST timezone)
+    const dayOfWeekKST = nowKST.getUTCDay();
+    const daysFromMonday = dayOfWeekKST === 0 ? 6 : dayOfWeekKST - 1;
+    const weekStartKSTDate = new Date(Date.UTC(nowKST.getUTCFullYear(), nowKST.getUTCMonth(), nowKST.getUTCDate() - daysFromMonday));
+    const weekStartUTC = new Date(weekStartKSTDate.getTime() - kstOffset); // Monday KST 00:00 in UTC
 
     // Weekly new users
     const weeklyUsersResult = await dbInstance
       .select({ count: sql`COUNT(*)` })
       .from(users)
-      .where(gte(users.createdAt, weekStart));
+      .where(gte(users.createdAt, weekStartUTC));
     const weeklyNewUsers = Number(weeklyUsersResult[0]?.count) || 0;
 
     // Weekly rides
     const weeklyRidesResult = await dbInstance
       .select({ count: sql`COUNT(*)`, total: sql`COALESCE(SUM(distance), 0)` })
       .from(ridingRecords)
-      .where(gte(ridingRecords.createdAt, weekStart));
+      .where(gte(ridingRecords.createdAt, weekStartUTC));
     const weeklyRides = Number(weeklyRidesResult[0]?.count) || 0;
     const weeklyDistanceMeters = Number(weeklyRidesResult[0]?.total) || 0;
     const weeklyDistance = Math.round(weeklyDistanceMeters / 1000 * 10) / 10;
@@ -160,7 +164,7 @@ router.get("/stats", verifyAdminToken, async (req: Request, res: Response) => {
     const weeklyPostsResult = await dbInstance
       .select({ count: sql`COUNT(*)` })
       .from(posts)
-      .where(gte(posts.createdAt, weekStart));
+      .where(gte(posts.createdAt, weekStartUTC));
     const weeklyPosts = Number(weeklyPostsResult[0]?.count) || 0;
 
     res.json({ 
@@ -317,6 +321,101 @@ router.get("/users/:id", verifyAdminToken, async (req: Request, res: Response) =
   }
 });
 
+// Get user full profile (with scooters, posts, friends)
+router.get("/users/:id/profile", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const dbInstance = await db.getDb();
+    if (!dbInstance) {
+      return res.status(404).json({ error: "사용자를 찾을 수 없습니다." });
+    }
+
+    const userId = parseInt(req.params.id);
+    
+    // Get user basic info
+    const userResult = await dbInstance
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (userResult.length === 0) {
+      return res.status(404).json({ error: "사용자를 찾을 수 없습니다." });
+    }
+
+    const user = userResult[0];
+
+    // Get riding stats
+    const statsResult = await dbInstance
+      .select({
+        totalRides: sql`COUNT(*)`,
+        totalDistance: sql`COALESCE(SUM(distance), 0)`,
+        totalDuration: sql`COALESCE(SUM(duration), 0)`
+      })
+      .from(ridingRecords)
+      .where(eq(ridingRecords.userId, userId));
+
+    const totalDistanceMeters = Number(statsResult[0]?.totalDistance) || 0;
+    const ridingStats = {
+      totalRides: Number(statsResult[0]?.totalRides) || 0,
+      totalDistance: Math.round(totalDistanceMeters / 1000 * 10) / 10,
+      totalDuration: Number(statsResult[0]?.totalDuration) || 0
+    };
+
+    // Get user's scooters
+    const userScooters = await dbInstance
+      .select()
+      .from(scooters)
+      .where(eq(scooters.userId, userId));
+
+    // Get user's posts
+    const userPosts = await dbInstance
+      .select()
+      .from(posts)
+      .where(eq(posts.userId, userId))
+      .orderBy(desc(posts.createdAt))
+      .limit(10);
+
+    // Get user's friends
+    const friendsResult1 = await dbInstance
+      .select({ friendId: friends.userId2 })
+      .from(friends)
+      .where(eq(friends.userId1, userId));
+    
+    const friendsResult2 = await dbInstance
+      .select({ friendId: friends.userId1 })
+      .from(friends)
+      .where(eq(friends.userId2, userId));
+
+    const friendIds = [
+      ...friendsResult1.map(f => f.friendId),
+      ...friendsResult2.map(f => f.friendId)
+    ];
+
+    let userFriends: any[] = [];
+    if (friendIds.length > 0) {
+      userFriends = await dbInstance
+        .select({ id: users.id, name: users.name, email: users.email })
+        .from(users)
+        .where(sql`${users.id} IN (${sql.raw(friendIds.join(','))})`);
+    }
+
+    res.json({
+      user: {
+        ...user,
+        passwordHash: undefined,
+        lastLoginAt: user.lastSignedIn
+      },
+      ridingStats,
+      scooters: userScooters,
+      posts: userPosts,
+      friends: userFriends
+    });
+  } catch (e) {
+    console.error("Admin user profile error:", e);
+    res.status(500).json({ error: "사용자 정보를 불러오는데 실패했습니다." });
+  }
+});
+
 // Update user
 router.put("/users/:id", verifyAdminToken, async (req: Request, res: Response) => {
   try {
@@ -328,6 +427,12 @@ router.put("/users/:id", verifyAdminToken, async (req: Request, res: Response) =
     const userId = parseInt(req.params.id);
     const { name, email, role } = req.body;
 
+    // Get old user data for logging
+    const oldUserData = await dbInstance
+      .select({ name: users.name, email: users.email, role: users.role })
+      .from(users)
+      .where(eq(users.id, userId));
+
     await dbInstance
       .update(users)
       .set({
@@ -337,6 +442,20 @@ router.put("/users/:id", verifyAdminToken, async (req: Request, res: Response) =
         updatedAt: new Date()
       })
       .where(eq(users.id, userId));
+
+    // Log admin action
+    const adminEmail = (req as any).adminEmail || "unknown";
+    await dbInstance.insert(adminLogs).values({
+      adminEmail,
+      actionType: "user_edit",
+      targetType: "user",
+      targetId: userId,
+      details: JSON.stringify({
+        before: oldUserData[0] || {},
+        after: { name, email, role }
+      }),
+      ipAddress: req.ip || req.headers["x-forwarded-for"]?.toString() || null
+    });
 
     res.json({ success: true });
   } catch (e) {
@@ -355,6 +474,12 @@ router.delete("/users/:id", verifyAdminToken, async (req: Request, res: Response
 
     const userId = parseInt(req.params.id);
 
+    // Get user data for logging before deletion
+    const userData = await dbInstance
+      .select({ name: users.name, email: users.email })
+      .from(users)
+      .where(eq(users.id, userId));
+
     // Delete user's riding records first
     await dbInstance
       .delete(ridingRecords)
@@ -364,6 +489,19 @@ router.delete("/users/:id", verifyAdminToken, async (req: Request, res: Response
     await dbInstance
       .delete(users)
       .where(eq(users.id, userId));
+
+    // Log admin action
+    const adminEmail = (req as any).adminEmail || "unknown";
+    await dbInstance.insert(adminLogs).values({
+      adminEmail,
+      actionType: "user_delete",
+      targetType: "user",
+      targetId: userId,
+      details: JSON.stringify({
+        deletedUser: userData[0] || { id: userId }
+      }),
+      ipAddress: req.ip || req.headers["x-forwarded-for"]?.toString() || null
+    });
 
     res.json({ success: true });
   } catch (e) {
@@ -768,6 +906,20 @@ router.post("/bans", verifyAdminToken, async (req: Request, res: Response) => {
       banType: banType || "temporary",
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
     });
+
+    // Log admin action
+    const dbInstance = await db.getDb();
+    if (dbInstance && success) {
+      const adminEmail = (req as any).adminEmail || "unknown";
+      await dbInstance.insert(adminLogs).values({
+        adminEmail,
+        actionType: "user_ban",
+        targetType: "user",
+        targetId: userId,
+        details: JSON.stringify({ reason, banType, expiresAt }),
+        ipAddress: req.ip || req.headers["x-forwarded-for"]?.toString() || null
+      });
+    }
     
     res.json({ success });
   } catch (e) {
@@ -781,6 +933,21 @@ router.delete("/bans/:userId", verifyAdminToken, async (req: Request, res: Respo
   try {
     const userId = parseInt(req.params.userId);
     const success = await db.unbanUser(userId);
+
+    // Log admin action
+    const dbInstance = await db.getDb();
+    if (dbInstance && success) {
+      const adminEmail = (req as any).adminEmail || "unknown";
+      await dbInstance.insert(adminLogs).values({
+        adminEmail,
+        actionType: "user_unban",
+        targetType: "user",
+        targetId: userId,
+        details: null,
+        ipAddress: req.ip || req.headers["x-forwarded-for"]?.toString() || null
+      });
+    }
+
     res.json({ success });
   } catch (e) {
     console.error("Admin unban user error:", e);
@@ -797,6 +964,36 @@ router.get("/bans/check/:userId", verifyAdminToken, async (req: Request, res: Re
   } catch (e) {
     console.error("Admin check ban error:", e);
     res.status(500).json({ error: "차단 상태 확인에 실패했습니다." });
+  }
+});
+
+// ============ Admin Logs API ============
+router.get("/logs", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const dbInstance = await db.getDb();
+    if (!dbInstance) return res.json({ logs: [] });
+    
+    const actionType = req.query.actionType as string | undefined;
+    
+    let logs;
+    if (actionType) {
+      logs = await dbInstance
+        .select()
+        .from(adminLogs)
+        .where(eq(adminLogs.actionType, actionType))
+        .orderBy(desc(adminLogs.createdAt))
+        .limit(100);
+    } else {
+      logs = await dbInstance
+        .select()
+        .from(adminLogs)
+        .orderBy(desc(adminLogs.createdAt))
+        .limit(100);
+    }
+    res.json({ logs });
+  } catch (e) {
+    console.error("Admin logs error:", e);
+    res.status(500).json({ error: "활동 로그를 불러오는데 실패했습니다." });
   }
 });
 
@@ -886,6 +1083,7 @@ function getAdminDashboardHTML(): string {
         <button onclick="switchTab('surveys')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="surveys">설문 응답</button>
         <button onclick="switchTab('bugs')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="bugs">버그 리포트</button>
         <button onclick="switchTab('posts')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="posts">게시글 관리</button>
+        <button onclick="switchTab('logs')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="logs">활동 로그</button>
       </div>
 
       <div id="tab-stats" class="tab-content active">
@@ -1107,6 +1305,52 @@ function getAdminDashboardHTML(): string {
         </div>
         <div id="postsList" class="space-y-4"></div>
       </div>
+
+      <div id="tab-logs" class="tab-content">
+        <div class="bg-white rounded-xl p-4 shadow mb-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold">관리자 활동 로그</h3>
+            <div class="flex gap-2">
+              <select id="logActionFilter" onchange="loadLogs()" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                <option value="">전체 작업</option>
+                <option value="user_edit">사용자 수정</option>
+                <option value="user_delete">사용자 삭제</option>
+                <option value="user_ban">사용자 차단</option>
+                <option value="user_unban">차단 해제</option>
+                <option value="post_delete">게시글 삭제</option>
+              </select>
+              <button onclick="loadLogs()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1 rounded-lg text-sm">새로고침</button>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">시간</th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">관리자</th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">작업</th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">대상</th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">상세</th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">IP</th>
+              </tr>
+            </thead>
+            <tbody id="logsTableBody" class="divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="userProfileModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 overflow-y-auto">
+    <div class="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 my-8">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold">사용자 상세 정보</h3>
+        <button onclick="closeUserProfileModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+      </div>
+      <div id="userProfileContent" class="space-y-6">
+        <div class="text-center text-gray-500">로딩 중...</div>
+      </div>
     </div>
   </div>
 
@@ -1250,6 +1494,7 @@ function getAdminDashboardHTML(): string {
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       document.querySelector('[data-tab="'+tab+'"]').classList.add('active');
       document.getElementById('tab-'+tab).classList.add('active');
+      if (tab === 'logs') loadLogs();
     }
 
     async function loadStats() {
@@ -1284,24 +1529,27 @@ function getAdminDashboardHTML(): string {
     }
 
     function renderUsers(users) {
-      const tbody = document.getElementById('usersTableBody');
+      var tbody = document.getElementById('usersTableBody');
       if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">사용자가 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">사용자가 없습니다.</td></tr>';
         return;
       }
-      tbody.innerHTML = users.map(u => \`
-        <tr class="hover:bg-gray-50">
-          <td class="px-4 py-3 text-sm">\${u.id}</td>
-          <td class="px-4 py-3 text-sm font-medium">\${u.name || '-'}</td>
-          <td class="px-4 py-3 text-sm">\${u.email}</td>
-          <td class="px-4 py-3 text-sm"><span class="px-2 py-1 rounded text-xs \${u.role==='admin'?'bg-orange-100 text-orange-800':'bg-gray-100 text-gray-800'}">\${u.role==='admin'?'관리자':'사용자'}</span></td>
-          <td class="px-4 py-3 text-sm text-gray-600">\${formatDate(u.createdAt)}</td>
-          <td class="px-4 py-3 text-sm">
-            <button onclick="editUser(\${u.id})" class="text-blue-600 hover:text-blue-800 mr-2">수정</button>
-            <button onclick="deleteUser(\${u.id})" class="text-red-600 hover:text-red-800">삭제</button>
-          </td>
-        </tr>
-      \`).join('');
+      tbody.innerHTML = users.map(function(u) {
+        var roleClass = u.role==='admin' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800';
+        var roleText = u.role==='admin' ? '관리자' : '사용자';
+        return '<tr class="hover:bg-gray-50">' +
+          '<td class="px-4 py-3 text-sm">' + u.id + '</td>' +
+          '<td class="px-4 py-3 text-sm font-medium">' + (u.name || '-') + '</td>' +
+          '<td class="px-4 py-3 text-sm">' + u.email + '</td>' +
+          '<td class="px-4 py-3 text-sm"><span class="px-2 py-1 rounded text-xs ' + roleClass + '">' + roleText + '</span></td>' +
+          '<td class="px-4 py-3 text-sm text-gray-600">' + formatDate(u.createdAt) + '</td>' +
+          '<td class="px-4 py-3 text-sm">' +
+            '<button onclick="viewUserProfile(' + u.id + ')" class="text-green-600 hover:text-green-800 mr-2">상세</button>' +
+            '<button onclick="editUser(' + u.id + ')" class="text-blue-600 hover:text-blue-800 mr-2">수정</button>' +
+            '<button onclick="deleteUser(' + u.id + ')" class="text-red-600 hover:text-red-800">삭제</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
     }
 
     async function editUser(id) {
@@ -1956,6 +2204,147 @@ function getAdminDashboardHTML(): string {
         if (res.ok) { loadBans(); alert('차단 해제 완료'); }
         else { alert('해제 실패'); }
       } catch (e) { alert('서버 오류'); }
+    }
+
+    async function loadLogs() {
+      try {
+        const actionFilter = document.getElementById('logActionFilter').value;
+        const url = API_BASE+'/api/admin/logs' + (actionFilter ? '?actionType='+actionFilter : '');
+        const res = await fetch(url, { headers: { 'Authorization': 'Bearer '+adminToken } });
+        const data = await res.json();
+        
+        const tbody = document.getElementById('logsTableBody');
+        if (!data.logs || data.logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">활동 로그가 없습니다</td></tr>';
+          return;
+        }
+        
+        const actionLabels = {
+          'user_edit': '사용자 수정',
+          'user_delete': '사용자 삭제',
+          'user_ban': '사용자 차단',
+          'user_unban': '차단 해제',
+          'post_delete': '게시글 삭제'
+        };
+        
+        tbody.innerHTML = data.logs.map(function(log) {
+          var details = '';
+          if (log.details) {
+            try {
+              var d = JSON.parse(log.details);
+              if (d.before && d.after) {
+                details = '변경: ' + JSON.stringify(d.before) + ' → ' + JSON.stringify(d.after);
+              } else if (d.deletedUser) {
+                details = '삭제된 사용자: ' + (d.deletedUser.name || d.deletedUser.email || 'ID:'+log.targetId);
+              } else if (d.reason) {
+                details = '사유: ' + d.reason;
+              } else {
+                details = JSON.stringify(d);
+              }
+            } catch (e) { details = log.details; }
+          }
+          
+          return '<tr class="hover:bg-gray-50">' +
+            '<td class="px-4 py-3 text-sm">' + formatDate(log.createdAt) + '</td>' +
+            '<td class="px-4 py-3 text-sm">' + log.adminEmail + '</td>' +
+            '<td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-700">' + (actionLabels[log.actionType] || log.actionType) + '</span></td>' +
+            '<td class="px-4 py-3 text-sm">' + log.targetType + ' #' + log.targetId + '</td>' +
+            '<td class="px-4 py-3 text-xs text-gray-600 max-w-xs truncate" title="' + details.replace(/"/g, '&quot;') + '">' + (details.length > 50 ? details.substring(0, 50) + '...' : details) + '</td>' +
+            '<td class="px-4 py-3 text-xs text-gray-500">' + (log.ipAddress || '-') + '</td>' +
+          '</tr>';
+        }).join('');
+      } catch (e) {
+        document.getElementById('logsTableBody').innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-red-500">로드 실패</td></tr>';
+      }
+    }
+
+    async function viewUserProfile(userId) {
+      document.getElementById('userProfileModal').classList.add('active');
+      document.getElementById('userProfileContent').innerHTML = '<div class="text-center text-gray-500">로딩 중...</div>';
+      
+      try {
+        var res = await fetch(API_BASE+'/api/admin/users/'+userId+'/profile', { headers: { 'Authorization': 'Bearer '+adminToken } });
+        var data = await res.json();
+        
+        var html = '';
+        
+        // 기본 정보
+        html += '<div class="bg-gray-50 rounded-lg p-4">';
+        html += '<h4 class="font-semibold mb-3">기본 정보</h4>';
+        html += '<div class="grid grid-cols-2 gap-4 text-sm">';
+        html += '<div><span class="text-gray-500">ID:</span> ' + data.user.id + '</div>';
+        html += '<div><span class="text-gray-500">이름:</span> ' + (data.user.name || '-') + '</div>';
+        html += '<div><span class="text-gray-500">이메일:</span> ' + data.user.email + '</div>';
+        html += '<div><span class="text-gray-500">역할:</span> ' + (data.user.role === 'admin' ? '관리자' : '사용자') + '</div>';
+        html += '<div><span class="text-gray-500">가입일:</span> ' + formatDate(data.user.createdAt) + '</div>';
+        html += '<div><span class="text-gray-500">마지막 접속:</span> ' + (data.user.lastLoginAt ? formatDate(data.user.lastLoginAt) : '-') + '</div>';
+        html += '</div></div>';
+        
+        // 주행 통계
+        html += '<div class="bg-blue-50 rounded-lg p-4">';
+        html += '<h4 class="font-semibold mb-3">주행 통계</h4>';
+        html += '<div class="grid grid-cols-3 gap-4 text-sm text-center">';
+        html += '<div><div class="text-2xl font-bold text-blue-600">' + (data.ridingStats.totalRides || 0) + '</div><div class="text-gray-500">총 주행 횟수</div></div>';
+        html += '<div><div class="text-2xl font-bold text-blue-600">' + (data.ridingStats.totalDistance || 0).toFixed(1) + ' km</div><div class="text-gray-500">총 주행 거리</div></div>';
+        html += '<div><div class="text-2xl font-bold text-blue-600">' + Math.round((data.ridingStats.totalDuration || 0) / 60) + ' 분</div><div class="text-gray-500">총 주행 시간</div></div>';
+        html += '</div></div>';
+        
+        // 기체 목록
+        html += '<div class="bg-green-50 rounded-lg p-4">';
+        html += '<h4 class="font-semibold mb-3">등록된 기체 (' + (data.scooters ? data.scooters.length : 0) + '대)</h4>';
+        if (data.scooters && data.scooters.length > 0) {
+          html += '<div class="space-y-2">';
+          data.scooters.forEach(function(s) {
+            html += '<div class="bg-white rounded p-2 text-sm flex justify-between items-center">';
+            html += '<span class="font-medium">' + (s.name || '미등록') + '</span>';
+            html += '<span class="text-gray-500">' + (s.manufacturer || '') + ' ' + (s.model || '') + '</span>';
+            html += '</div>';
+          });
+          html += '</div>';
+        } else {
+          html += '<div class="text-gray-500 text-sm">등록된 기체가 없습니다.</div>';
+        }
+        html += '</div>';
+        
+        // 게시글 목록
+        html += '<div class="bg-yellow-50 rounded-lg p-4">';
+        html += '<h4 class="font-semibold mb-3">게시글 (' + (data.posts ? data.posts.length : 0) + '개)</h4>';
+        if (data.posts && data.posts.length > 0) {
+          html += '<div class="space-y-2 max-h-40 overflow-y-auto">';
+          data.posts.forEach(function(p) {
+            html += '<div class="bg-white rounded p-2 text-sm">';
+            html += '<div class="font-medium truncate">' + (p.content ? p.content.substring(0, 50) : '내용 없음') + '</div>';
+            html += '<div class="text-xs text-gray-500">' + formatDate(p.createdAt) + ' | 좋아요 ' + (p.likeCount || 0) + ' | 댓글 ' + (p.commentCount || 0) + '</div>';
+            html += '</div>';
+          });
+          html += '</div>';
+        } else {
+          html += '<div class="text-gray-500 text-sm">작성한 게시글이 없습니다.</div>';
+        }
+        html += '</div>';
+        
+        // 친구 목록
+        html += '<div class="bg-purple-50 rounded-lg p-4">';
+        html += '<h4 class="font-semibold mb-3">친구 (' + (data.friends ? data.friends.length : 0) + '명)</h4>';
+        if (data.friends && data.friends.length > 0) {
+          html += '<div class="flex flex-wrap gap-2">';
+          data.friends.forEach(function(f) {
+            html += '<span class="bg-white px-2 py-1 rounded text-sm">' + (f.name || f.email || 'ID:'+f.id) + '</span>';
+          });
+          html += '</div>';
+        } else {
+          html += '<div class="text-gray-500 text-sm">친구가 없습니다.</div>';
+        }
+        html += '</div>';
+        
+        document.getElementById('userProfileContent').innerHTML = html;
+      } catch (e) {
+        document.getElementById('userProfileContent').innerHTML = '<div class="text-center text-red-500">사용자 정보를 불러오는데 실패했습니다.</div>';
+      }
+    }
+
+    function closeUserProfileModal() {
+      document.getElementById('userProfileModal').classList.remove('active');
     }
   <\/script>
 </body>

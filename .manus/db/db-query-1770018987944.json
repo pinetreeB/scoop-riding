@@ -1,0 +1,14 @@
+{
+  "query": "SELECT NOW() as db_now, CURDATE() as db_today;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT NOW() as db_now, CURDATE() as db_today;",
+  "rows": [
+    {
+      "db_now": "2026-02-02 07:56:27",
+      "db_today": "2026-02-02"
+    }
+  ],
+  "messages": [],
+  "stdout": "db_now\tdb_today\n2026-02-02 07:56:27\t2026-02-02\n",
+  "stderr": "",
+  "execution_time_ms": 1524
+}

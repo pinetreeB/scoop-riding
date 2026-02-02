@@ -711,3 +711,26 @@ export const suspiciousUserReports = mysqlTable("suspiciousUserReports", {
 
 export type SuspiciousUserReport = typeof suspiciousUserReports.$inferSelect;
 export type InsertSuspiciousUserReport = typeof suspiciousUserReports.$inferInsert;
+
+/**
+ * Admin activity logs for audit trail
+ */
+export const adminLogs = mysqlTable("adminLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Admin email who performed the action */
+  adminEmail: varchar("adminEmail", { length: 320 }).notNull(),
+  /** Action type: user_ban, user_unban, user_edit, user_delete, post_delete, etc. */
+  actionType: varchar("actionType", { length: 50 }).notNull(),
+  /** Target type: user, post, comment, etc. */
+  targetType: varchar("targetType", { length: 50 }).notNull(),
+  /** Target ID */
+  targetId: int("targetId").notNull(),
+  /** Action details (JSON) */
+  details: text("details"),
+  /** IP address of admin */
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AdminLog = typeof adminLogs.$inferSelect;
+export type InsertAdminLog = typeof adminLogs.$inferInsert;

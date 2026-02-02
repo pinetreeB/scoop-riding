@@ -1,0 +1,14 @@
+{
+  "query": "SELECT COUNT(*) as today_count, DATE(createdAt) as date FROM users WHERE DATE(createdAt) = CURDATE() GROUP BY DATE(createdAt);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT COUNT(*) as today_count, DATE(createdAt) as date FROM users WHERE DATE(createdAt) = CURDATE() GROUP BY DATE(createdAt);",
+  "rows": [
+    {
+      "today_count": "13",
+      "date": "2026-02-02"
+    }
+  ],
+  "messages": [],
+  "stdout": "today_count\tdate\n13\t2026-02-02\n",
+  "stderr": "",
+  "execution_time_ms": 1622
+}
