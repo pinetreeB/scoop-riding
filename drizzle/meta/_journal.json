@@ -141,6 +141,13 @@
       "when": 1769954139955,
       "tag": "0019_youthful_major_mapleleaf",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1770002031930,
+      "tag": "0020_overrated_sheva_callister",
+      "breakpoints": true
     }
   ]
 }

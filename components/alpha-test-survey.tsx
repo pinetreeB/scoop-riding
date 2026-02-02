@@ -8,18 +8,17 @@ import {
   ScrollView,
   Platform,
   KeyboardAvoidingView,
-  Linking,
+  Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
+import * as Device from "expo-device";
+import { trpc } from "@/lib/trpc";
 
 const SURVEY_STORAGE_KEY = "@scoop_alpha_survey_completed";
 const SURVEY_DISMISS_KEY = "@scoop_alpha_survey_dismissed";
 const ALPHA_TEST_END_DATE = new Date("2026-02-28T23:59:59");
-
-interface AlphaTestSurveyProps {
-  onSubmit?: (feedback: SurveyFeedback) => void;
-}
 
 interface SurveyFeedback {
   overallRating: number;
@@ -31,9 +30,10 @@ interface SurveyFeedback {
   wouldRecommend: boolean | null;
 }
 
-export function AlphaTestSurvey({ onSubmit }: AlphaTestSurveyProps) {
+export function AlphaTestSurvey() {
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<SurveyFeedback>({
     overallRating: 0,
     usabilityRating: 0,
@@ -43,6 +43,8 @@ export function AlphaTestSurvey({ onSubmit }: AlphaTestSurveyProps) {
     bugReport: "",
     wouldRecommend: null,
   });
+
+  const submitSurveyMutation = trpc.survey.submit.useMutation();
 
   useEffect(() => {
     checkSurveyStatus();
@@ -89,13 +91,51 @@ export function AlphaTestSurvey({ onSubmit }: AlphaTestSurveyProps) {
     setVisible(false);
   };
 
+  const getDeviceInfo = () => {
+    const parts = [];
+    if (Device.brand) parts.push(Device.brand);
+    if (Device.modelName) parts.push(Device.modelName);
+    if (Device.osName) parts.push(Device.osName);
+    if (Device.osVersion) parts.push(Device.osVersion);
+    return parts.join(" / ") || "Unknown";
+  };
+
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
     try {
+      // 서버에 설문 응답 제출
+      const appVersion = Constants.expoConfig?.version || "unknown";
+      const deviceInfo = getDeviceInfo();
+
+      await submitSurveyMutation.mutateAsync({
+        overallRating: feedback.overallRating,
+        usabilityRating: feedback.usabilityRating,
+        featureRating: feedback.featureRating,
+        mostUsedFeature: feedback.mostUsedFeature,
+        improvementSuggestion: feedback.improvementSuggestion || undefined,
+        bugReport: feedback.bugReport || undefined,
+        wouldRecommend: feedback.wouldRecommend,
+        appVersion,
+        deviceInfo,
+      });
+
       await AsyncStorage.setItem(SURVEY_STORAGE_KEY, new Date().toISOString());
-      onSubmit?.(feedback);
       setVisible(false);
+      
+      Alert.alert(
+        "감사합니다!",
+        "소중한 피드백이 전달되었습니다.\n더 나은 SCOOP을 만들겠습니다.",
+        [{ text: "확인" }]
+      );
     } catch (error) {
       console.error("Survey submit error:", error);
+      // 서버 오류 시에도 로컬에 완료 표시
+      await AsyncStorage.setItem(SURVEY_STORAGE_KEY, new Date().toISOString());
+      setVisible(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -123,7 +163,7 @@ export function AlphaTestSurvey({ onSubmit }: AlphaTestSurveyProps) {
           오픈 알파 테스트 참여 감사합니다!
         </Text>
         <Text className="text-sm text-muted text-center mt-2">
-          2월 한 달간 진행되는 알파 테스트입니다.{"\n"}
+          2월 한 달간 알파 테스트가 진행됩니다.{"\n"}
           소중한 피드백을 남겨주세요!
         </Text>
       </View>
@@ -194,7 +234,9 @@ export function AlphaTestSurvey({ onSubmit }: AlphaTestSurveyProps) {
             {feature.label}
           </Text>
           {feedback.mostUsedFeature === feature.id && (
-            <Ionicons name="checkmark-circle" size={24} color="#F97316" className="ml-auto" />
+            <View className="ml-auto">
+              <Ionicons name="checkmark-circle" size={24} color="#F97316" />
+            </View>
           )}
         </TouchableOpacity>
       ))}
@@ -352,7 +394,7 @@ export function AlphaTestSurvey({ onSubmit }: AlphaTestSurveyProps) {
                 )}
                 <TouchableOpacity
                   className={`flex-1 py-4 rounded-xl ${
-                    canProceed() ? "bg-primary" : "bg-muted/30"
+                    canProceed() && !isSubmitting ? "bg-primary" : "bg-muted/30"
                   }`}
                   onPress={() => {
                     if (step < 3) {
@@ -361,14 +403,14 @@ export function AlphaTestSurvey({ onSubmit }: AlphaTestSurveyProps) {
                       handleSubmit();
                     }
                   }}
-                  disabled={!canProceed()}
+                  disabled={!canProceed() || isSubmitting}
                 >
                   <Text
                     className={`text-center font-semibold ${
-                      canProceed() ? "text-white" : "text-muted"
+                      canProceed() && !isSubmitting ? "text-white" : "text-muted"
                     }`}
                   >
-                    {step < 3 ? "다음" : "제출하기"}
+                    {isSubmitting ? "제출 중..." : step < 3 ? "다음" : "제출하기"}
                   </Text>
                 </TouchableOpacity>
               </View>

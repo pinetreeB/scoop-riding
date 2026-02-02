@@ -584,3 +584,74 @@ export const userBans = mysqlTable("userBans", {
 
 export type UserBan = typeof userBans.$inferSelect;
 export type InsertUserBan = typeof userBans.$inferInsert;
+
+
+/**
+ * Alpha test survey responses
+ */
+export const surveyResponses = mysqlTable("surveyResponses", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User ID who submitted the survey */
+  userId: int("userId").notNull(),
+  /** Overall satisfaction rating (1-5) */
+  overallRating: int("overallRating").notNull(),
+  /** Usability rating (1-5) */
+  usabilityRating: int("usabilityRating").notNull(),
+  /** Feature completeness rating (1-5) */
+  featureRating: int("featureRating").notNull(),
+  /** Most used feature (riding, group, community, scooter, stats) */
+  mostUsedFeature: varchar("mostUsedFeature", { length: 50 }).notNull(),
+  /** Improvement suggestions */
+  improvementSuggestion: text("improvementSuggestion"),
+  /** Bug reports */
+  bugReport: text("bugReport"),
+  /** Would recommend to friends */
+  wouldRecommend: boolean("wouldRecommend"),
+  /** App version at submission time */
+  appVersion: varchar("appVersion", { length: 20 }),
+  /** Device info */
+  deviceInfo: varchar("deviceInfo", { length: 200 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SurveyResponse = typeof surveyResponses.$inferSelect;
+export type InsertSurveyResponse = typeof surveyResponses.$inferInsert;
+
+/**
+ * Bug reports with screenshots
+ */
+export const bugReports = mysqlTable("bugReports", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User ID who submitted the report */
+  userId: int("userId").notNull(),
+  /** Bug title/summary */
+  title: varchar("title", { length: 200 }).notNull(),
+  /** Bug description */
+  description: text("description").notNull(),
+  /** Steps to reproduce */
+  stepsToReproduce: text("stepsToReproduce"),
+  /** Expected behavior */
+  expectedBehavior: text("expectedBehavior"),
+  /** Actual behavior */
+  actualBehavior: text("actualBehavior"),
+  /** Screenshot URLs (JSON array) */
+  screenshotUrls: text("screenshotUrls"),
+  /** Bug severity: low, medium, high, critical */
+  severity: mysqlEnum("severity", ["low", "medium", "high", "critical"]).default("medium").notNull(),
+  /** Bug status: open, in_progress, resolved, closed, wont_fix */
+  status: mysqlEnum("status", ["open", "in_progress", "resolved", "closed", "wont_fix"]).default("open").notNull(),
+  /** App version at submission time */
+  appVersion: varchar("appVersion", { length: 20 }),
+  /** Device info (OS, model, etc.) */
+  deviceInfo: varchar("deviceInfo", { length: 200 }),
+  /** Admin notes */
+  adminNotes: text("adminNotes"),
+  /** Resolved by admin ID */
+  resolvedBy: int("resolvedBy"),
+  resolvedAt: timestamp("resolvedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BugReport = typeof bugReports.$inferSelect;
+export type InsertBugReport = typeof bugReports.$inferInsert;

@@ -1421,6 +1421,136 @@ export const appRouter = router({
         return { newBadges };
       }),
   }),
+
+  // Survey router
+  survey: router({
+    // Submit survey response
+    submit: protectedProcedure
+      .input(z.object({
+        overallRating: z.number().min(1).max(5),
+        usabilityRating: z.number().min(1).max(5),
+        featureRating: z.number().min(1).max(5),
+        mostUsedFeature: z.string(),
+        improvementSuggestion: z.string().optional(),
+        bugReport: z.string().optional(),
+        wouldRecommend: z.boolean().nullable(),
+        appVersion: z.string().optional(),
+        deviceInfo: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await db.submitSurveyResponse({
+          userId: ctx.user.id,
+          ...input,
+        });
+        return { success: !!id, id };
+      }),
+
+    // Get all survey responses (admin)
+    getAll: protectedProcedure
+      .input(z.object({
+        page: z.number().default(1),
+        limit: z.number().default(50),
+      }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+        return db.getAllSurveyResponses(input.page, input.limit);
+      }),
+
+    // Get survey statistics (admin)
+    getStats: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+      return db.getSurveyStatistics();
+    }),
+  }),
+
+  // Bug reports router
+  bugReports: router({
+    // Submit bug report
+    submit: protectedProcedure
+      .input(z.object({
+        title: z.string().min(1).max(200),
+        description: z.string().min(1),
+        stepsToReproduce: z.string().optional(),
+        expectedBehavior: z.string().optional(),
+        actualBehavior: z.string().optional(),
+        screenshotUrls: z.string().optional(),
+        severity: z.enum(["low", "medium", "high", "critical"]).default("medium"),
+        appVersion: z.string().optional(),
+        deviceInfo: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await db.submitBugReport({
+          userId: ctx.user.id,
+          ...input,
+        });
+        return { success: !!id, id };
+      }),
+
+    // Get user's bug reports
+    mine: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserBugReports(ctx.user.id);
+    }),
+
+    // Get bug report by ID
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return db.getBugReportById(input.id);
+      }),
+
+    // Get all bug reports (admin)
+    getAll: protectedProcedure
+      .input(z.object({
+        page: z.number().default(1),
+        limit: z.number().default(50),
+        status: z.string().optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+        return db.getAllBugReports(input.page, input.limit, input.status);
+      }),
+
+    // Update bug report status (admin)
+    updateStatus: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        status: z.enum(["open", "in_progress", "resolved", "closed", "wont_fix"]),
+        adminNotes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+        const success = await db.updateBugReportStatus(input.id, input.status, ctx.user.id, input.adminNotes);
+        return { success };
+      }),
+  }),
+
+  // Storage router
+  storage: router({
+    // Upload image
+    uploadImage: protectedProcedure
+      .input(z.object({
+        base64Data: z.string(),
+        mimeType: z.string().default("image/jpeg"),
+        folder: z.string().default("uploads"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { storagePut } = await import("./storage");
+        
+        // Generate unique filename
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        const extension = input.mimeType === "image/png" ? "png" : "jpg";
+        const fileName = `${input.folder}/${ctx.user.id}-${timestamp}-${randomStr}.${extension}`;
+        
+        // Convert base64 to buffer
+        const buffer = Buffer.from(input.base64Data, "base64");
+        
+        // Upload to S3
+        const result = await storagePut(fileName, buffer, input.mimeType);
+        
+        return { url: result.url, key: result.key };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -1,6 +1,6 @@
 import { eq, and, desc, sql, gt, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage, announcements, InsertAnnouncement, Announcement, userAnnouncementReads, InsertUserAnnouncementRead, UserAnnouncementRead, userBans, InsertUserBan, UserBan } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage, announcements, InsertAnnouncement, Announcement, userAnnouncementReads, InsertUserAnnouncementRead, UserAnnouncementRead, userBans, InsertUserBan, UserBan, surveyResponses, InsertSurveyResponse, SurveyResponse, bugReports, InsertBugReport, BugReport } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -3285,5 +3285,298 @@ export async function deletePostAdmin(postId: number): Promise<boolean> {
   } catch (error) {
     console.error("[Database] Failed to delete post:", error);
     return false;
+  }
+}
+
+
+// ============================================
+// Survey Responses Functions
+// ============================================
+
+// Submit survey response
+export async function submitSurveyResponse(data: InsertSurveyResponse): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(surveyResponses).values(data);
+    return result[0].insertId;
+  } catch (error) {
+    console.error("[Database] Failed to submit survey response:", error);
+    return null;
+  }
+}
+
+// Get all survey responses (admin)
+export async function getAllSurveyResponses(page: number = 1, limit: number = 50): Promise<{
+  responses: (SurveyResponse & { userName: string | null })[];
+  total: number;
+  avgOverall: number;
+  avgUsability: number;
+  avgFeature: number;
+}> {
+  const db = await getDb();
+  if (!db) return { responses: [], total: 0, avgOverall: 0, avgUsability: 0, avgFeature: 0 };
+
+  try {
+    const offset = (page - 1) * limit;
+
+    // Get responses with user names
+    const responses = await db
+      .select({
+        id: surveyResponses.id,
+        userId: surveyResponses.userId,
+        overallRating: surveyResponses.overallRating,
+        usabilityRating: surveyResponses.usabilityRating,
+        featureRating: surveyResponses.featureRating,
+        mostUsedFeature: surveyResponses.mostUsedFeature,
+        improvementSuggestion: surveyResponses.improvementSuggestion,
+        bugReport: surveyResponses.bugReport,
+        wouldRecommend: surveyResponses.wouldRecommend,
+        appVersion: surveyResponses.appVersion,
+        deviceInfo: surveyResponses.deviceInfo,
+        createdAt: surveyResponses.createdAt,
+        userName: users.name,
+      })
+      .from(surveyResponses)
+      .leftJoin(users, eq(surveyResponses.userId, users.id))
+      .orderBy(desc(surveyResponses.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    // Get total count
+    const countResult = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(surveyResponses);
+    const total = countResult[0]?.count ?? 0;
+
+    // Get averages
+    const avgResult = await db
+      .select({
+        avgOverall: sql<number>`AVG(${surveyResponses.overallRating})`,
+        avgUsability: sql<number>`AVG(${surveyResponses.usabilityRating})`,
+        avgFeature: sql<number>`AVG(${surveyResponses.featureRating})`,
+      })
+      .from(surveyResponses);
+
+    return {
+      responses: responses as (SurveyResponse & { userName: string | null })[],
+      total,
+      avgOverall: avgResult[0]?.avgOverall ?? 0,
+      avgUsability: avgResult[0]?.avgUsability ?? 0,
+      avgFeature: avgResult[0]?.avgFeature ?? 0,
+    };
+  } catch (error) {
+    console.error("[Database] Failed to get survey responses:", error);
+    return { responses: [], total: 0, avgOverall: 0, avgUsability: 0, avgFeature: 0 };
+  }
+}
+
+// Get survey statistics
+export async function getSurveyStatistics(): Promise<{
+  totalResponses: number;
+  avgOverall: number;
+  avgUsability: number;
+  avgFeature: number;
+  recommendRate: number;
+  featureUsage: { feature: string; count: number }[];
+}> {
+  const db = await getDb();
+  if (!db) return { totalResponses: 0, avgOverall: 0, avgUsability: 0, avgFeature: 0, recommendRate: 0, featureUsage: [] };
+
+  try {
+    // Get totals and averages
+    const statsResult = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        avgOverall: sql<number>`AVG(${surveyResponses.overallRating})`,
+        avgUsability: sql<number>`AVG(${surveyResponses.usabilityRating})`,
+        avgFeature: sql<number>`AVG(${surveyResponses.featureRating})`,
+        recommendCount: sql<number>`SUM(CASE WHEN ${surveyResponses.wouldRecommend} = true THEN 1 ELSE 0 END)`,
+      })
+      .from(surveyResponses);
+
+    const total = statsResult[0]?.total ?? 0;
+    const recommendCount = statsResult[0]?.recommendCount ?? 0;
+
+    // Get feature usage breakdown
+    const featureResult = await db
+      .select({
+        feature: surveyResponses.mostUsedFeature,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(surveyResponses)
+      .groupBy(surveyResponses.mostUsedFeature)
+      .orderBy(desc(sql`COUNT(*)`));
+
+    return {
+      totalResponses: total,
+      avgOverall: statsResult[0]?.avgOverall ?? 0,
+      avgUsability: statsResult[0]?.avgUsability ?? 0,
+      avgFeature: statsResult[0]?.avgFeature ?? 0,
+      recommendRate: total > 0 ? (recommendCount / total) * 100 : 0,
+      featureUsage: featureResult.map(r => ({ feature: r.feature, count: r.count })),
+    };
+  } catch (error) {
+    console.error("[Database] Failed to get survey statistics:", error);
+    return { totalResponses: 0, avgOverall: 0, avgUsability: 0, avgFeature: 0, recommendRate: 0, featureUsage: [] };
+  }
+}
+
+// ============================================
+// Bug Reports Functions
+// ============================================
+
+// Submit bug report
+export async function submitBugReport(data: InsertBugReport): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(bugReports).values(data);
+    return result[0].insertId;
+  } catch (error) {
+    console.error("[Database] Failed to submit bug report:", error);
+    return null;
+  }
+}
+
+// Get user's bug reports
+export async function getUserBugReports(userId: number): Promise<BugReport[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db
+      .select()
+      .from(bugReports)
+      .where(eq(bugReports.userId, userId))
+      .orderBy(desc(bugReports.createdAt));
+  } catch (error) {
+    console.error("[Database] Failed to get user bug reports:", error);
+    return [];
+  }
+}
+
+// Get all bug reports (admin)
+export async function getAllBugReports(
+  page: number = 1,
+  limit: number = 50,
+  statusFilter?: string
+): Promise<{
+  reports: (BugReport & { userName: string | null; userEmail: string | null })[];
+  total: number;
+  openCount: number;
+  inProgressCount: number;
+  resolvedCount: number;
+}> {
+  const db = await getDb();
+  if (!db) return { reports: [], total: 0, openCount: 0, inProgressCount: 0, resolvedCount: 0 };
+
+  try {
+    const offset = (page - 1) * limit;
+
+    // Build query with optional status filter
+    let query = db
+      .select({
+        id: bugReports.id,
+        userId: bugReports.userId,
+        title: bugReports.title,
+        description: bugReports.description,
+        stepsToReproduce: bugReports.stepsToReproduce,
+        expectedBehavior: bugReports.expectedBehavior,
+        actualBehavior: bugReports.actualBehavior,
+        screenshotUrls: bugReports.screenshotUrls,
+        severity: bugReports.severity,
+        status: bugReports.status,
+        appVersion: bugReports.appVersion,
+        deviceInfo: bugReports.deviceInfo,
+        adminNotes: bugReports.adminNotes,
+        resolvedBy: bugReports.resolvedBy,
+        resolvedAt: bugReports.resolvedAt,
+        createdAt: bugReports.createdAt,
+        updatedAt: bugReports.updatedAt,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(bugReports)
+      .leftJoin(users, eq(bugReports.userId, users.id))
+      .orderBy(desc(bugReports.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    if (statusFilter) {
+      query = query.where(eq(bugReports.status, statusFilter as any)) as any;
+    }
+
+    const reports = await query;
+
+    // Get counts
+    const countResult = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        openCount: sql<number>`SUM(CASE WHEN ${bugReports.status} = 'open' THEN 1 ELSE 0 END)`,
+        inProgressCount: sql<number>`SUM(CASE WHEN ${bugReports.status} = 'in_progress' THEN 1 ELSE 0 END)`,
+        resolvedCount: sql<number>`SUM(CASE WHEN ${bugReports.status} = 'resolved' THEN 1 ELSE 0 END)`,
+      })
+      .from(bugReports);
+
+    return {
+      reports: reports as (BugReport & { userName: string | null; userEmail: string | null })[],
+      total: countResult[0]?.total ?? 0,
+      openCount: countResult[0]?.openCount ?? 0,
+      inProgressCount: countResult[0]?.inProgressCount ?? 0,
+      resolvedCount: countResult[0]?.resolvedCount ?? 0,
+    };
+  } catch (error) {
+    console.error("[Database] Failed to get bug reports:", error);
+    return { reports: [], total: 0, openCount: 0, inProgressCount: 0, resolvedCount: 0 };
+  }
+}
+
+// Update bug report status (admin)
+export async function updateBugReportStatus(
+  id: number,
+  status: string,
+  adminId: number,
+  adminNotes?: string
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    const updateData: any = {
+      status,
+      adminNotes,
+    };
+
+    if (status === "resolved" || status === "closed") {
+      updateData.resolvedBy = adminId;
+      updateData.resolvedAt = new Date();
+    }
+
+    await db.update(bugReports).set(updateData).where(eq(bugReports.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to update bug report status:", error);
+    return false;
+  }
+}
+
+// Get bug report by ID
+export async function getBugReportById(id: number): Promise<BugReport | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db
+      .select()
+      .from(bugReports)
+      .where(eq(bugReports.id, id))
+      .limit(1);
+    return result[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get bug report:", error);
+    return null;
   }
 }

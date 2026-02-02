@@ -1050,7 +1050,8 @@ export default function ProfileScreen() {
                 if (Platform.OS !== "web") {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }
-                setShowBugReportModal(true);
+                // Navigate to new bug report screen with screenshot support
+                router.push("/bug-report");
               }}
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
               className="flex-row items-center p-4 border-b border-border"
@@ -1058,7 +1059,7 @@ export default function ProfileScreen() {
               <MaterialIcons name="bug-report" size={24} color={colors.primary} />
               <View className="flex-1 ml-3">
                 <Text className="text-foreground font-medium">버그 리포트</Text>
-                <Text className="text-muted text-xs">문제점이나 개선 사항을 알려주세요</Text>
+                <Text className="text-muted text-xs">스크린샷 첨부 가능! 문제점을 알려주세요</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
