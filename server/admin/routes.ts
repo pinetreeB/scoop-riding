@@ -1692,7 +1692,7 @@ function getAdminDashboardHTML(): string {
                 '<div class="text-sm text-gray-500">' + (u.email || '') + '</div>' +
                 '<div class="text-xs text-red-500 mt-1">위험도: ' + (u.suspiciousScore || 0) + '점</div>' +
               '</div>' +
-              '<button onclick="banUserQuick(' + u.id + ', \'' + (u.name || '').replace(/'/g, "\\'") + '\')" ' +
+              '<button onclick="banUserQuick(' + u.id + ', \"' + (u.name || '').replace(/"/g, '&quot;') + '\")" ' +
                 'class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">차단</button>' +
             '</div>' +
           '</div>';
