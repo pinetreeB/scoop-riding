@@ -34,6 +34,7 @@ import {
 } from "@/lib/sync-manager";
 import { LEVEL_DEFINITIONS, calculateLevel, getLevelTitle, formatLevelDistance } from "@/lib/level-system";
 import { AnnouncementPopup } from "@/components/announcement-popup";
+import { AlphaTestBanner } from "@/components/alpha-test-survey";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -354,6 +355,9 @@ export default function HomeScreen() {
             </Pressable>
           </View>
         </View>
+
+        {/* Alpha Test Banner */}
+        <AlphaTestBanner />
 
         {/* Sync Status Bar */}
         {isAuthenticated && (syncStatus?.pendingCount ?? 0) > 0 && (

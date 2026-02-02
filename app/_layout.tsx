@@ -31,6 +31,7 @@ import { NetworkSyncManager } from "@/components/network-sync-manager";
 import { UpdateBanner } from "@/components/update-banner";
 import { NotificationProvider } from "@/lib/notification-provider";
 import { PermissionRequest } from "@/components/permission-request";
+import { AlphaTestSurvey, incrementAppUsageCount } from "@/components/alpha-test-survey";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -100,6 +101,8 @@ export default function RootLayout() {
   // Initialize Manus runtime for cookie injection from parent container
   useEffect(() => {
     initManusRuntime();
+    // 앱 사용 횟수 증가 (알파 테스트 설문 표시 조건)
+    incrementAppUsageCount();
   }, []);
 
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
@@ -150,6 +153,7 @@ export default function RootLayout() {
             <NotificationProvider>
               <AuthGuard>
                 <PermissionRequest />
+                <AlphaTestSurvey />
                 <NetworkSyncManager />
                 <UpdateBanner />
                 <RootLayoutContent />

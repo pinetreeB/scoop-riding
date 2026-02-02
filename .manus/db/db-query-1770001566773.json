@@ -1,0 +1,30 @@
+{
+  "query": "SELECT id, title, type, isActive, showPopup, priority, startDate, endDate FROM announcements ORDER BY id DESC LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, title, type, isActive, showPopup, priority, startDate, endDate FROM announcements ORDER BY id DESC LIMIT 3;",
+  "rows": [
+    {
+      "id": "30001",
+      "title": "🎉 SCOOP 오픈 알파 테스트 안내",
+      "type": "notice",
+      "isActive": "1",
+      "showPopup": "1",
+      "priority": "100",
+      "startDate": "2026-02-01 00:00:00",
+      "endDate": "2026-02-28 23:59:59"
+    },
+    {
+      "id": "1",
+      "title": "v0.0.18 업데이트 안내",
+      "type": "notice",
+      "isActive": "1",
+      "showPopup": "1",
+      "priority": "0",
+      "startDate": "NULL",
+      "endDate": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\ttype\tisActive\tshowPopup\tpriority\tstartDate\tendDate\n30001\t🎉 SCOOP 오픈 알파 테스트 안내\tnotice\t1\t1\t100\t2026-02-01 00:00:00\t2026-02-28 23:59:59\n1\tv0.0.18 업데이트 안내\tnotice\t1\t1\t0\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1660
+}
