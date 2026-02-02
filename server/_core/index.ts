@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import adminRoutes from "../admin/routes";
+import { setupWebSocket } from "../websocket";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -80,8 +81,12 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
+  // Setup WebSocket server for real-time group riding
+  setupWebSocket(server);
+
   server.listen(port, () => {
     console.log(`[api] server listening on port ${port}`);
+    console.log(`[ws] WebSocket server available at ws://localhost:${port}/ws/group-riding`);
   });
 }
 

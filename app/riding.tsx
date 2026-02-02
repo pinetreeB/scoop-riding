@@ -56,6 +56,7 @@ import { GpxRoute, GpxPoint as GpxRoutePoint } from "@/lib/gpx-parser";
 import { GroupChat } from "@/components/group-chat";
 import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
 import { useAuth } from "@/hooks/use-auth";
+import { useGroupWebSocket } from "@/hooks/use-group-websocket";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -87,11 +88,38 @@ export default function RidingScreen() {
     isRiding: boolean;
   }[]>([]);
 
-  // Group riding mutations
+  // Group riding mutations (HTTP fallback - disabled when WebSocket is connected)
   const updateGroupLocation = trpc.groups.updateLocation.useMutation();
+  
+  // WebSocket for real-time group location sharing
+  const { 
+    isConnected: wsConnected, 
+    members: wsMembers, 
+    sendLocationUpdate: wsSendLocation 
+  } = useGroupWebSocket({
+    groupId,
+    enabled: !!groupId,
+    onMembersUpdate: (members) => {
+      // Convert WebSocket members to groupMembers format
+      setGroupMembers(members.map(m => ({
+        userId: m.userId,
+        name: m.userName,
+        latitude: m.latitude,
+        longitude: m.longitude,
+        distance: m.distance,
+        currentSpeed: m.speed,
+        isRiding: m.isRiding,
+      })));
+    },
+    onError: (error) => {
+      console.error("[WebSocket] Error:", error);
+    },
+  });
+  
+  // HTTP polling fallback (only when WebSocket is not connected)
   const { data: groupMembersData, refetch: refetchGroupMembers } = trpc.groups.getMembersLocations.useQuery(
     { groupId: groupId ?? 0 },
-    { enabled: !!groupId, refetchInterval: 3000 }
+    { enabled: !!groupId && !wsConnected, refetchInterval: 3000 }
   );
 
   // Live location mutation for friends tracking
@@ -594,27 +622,34 @@ export default function RidingScreen() {
     const displaySpeed = smoothSpeed(rawSpeedKmh);
     setCurrentSpeed(displaySpeed);
 
-    // 그룹 라이딩 위치 업데이트 - validation 전에 항상 실행 (정지 상태에서도 위치 공유)
-    // groupIdRef를 사용하여 클로저 문제 해결
+    // 그룹 라이딩 위치 업데이트 - WebSocket 우선, HTTP fallback
     const currentGroupId = groupIdRef.current;
     if (currentGroupId) {
-      console.log(`[Riding] Updating group location (always): groupId=${currentGroupId}, lat=${latitude}, lng=${longitude}, speed=${displaySpeed}`);
-      updateGroupLocation.mutate({
-        groupId: currentGroupId,
+      const locationData = {
         latitude,
         longitude,
         distance: distanceRef.current,
         duration: durationRef.current,
-        currentSpeed: displaySpeed,
+        speed: displaySpeed,
         isRiding: true,
-      }, {
-        onSuccess: () => {
-          console.log(`[Riding] Group location updated successfully`);
-        },
-        onError: (error) => {
-          console.error("[Riding] Failed to update group location:", error);
-        },
-      });
+      };
+      
+      // WebSocket이 연결되어 있으면 WebSocket으로 전송 (실시간)
+      if (wsConnected) {
+        wsSendLocation(locationData);
+      } else {
+        // WebSocket 연결 안되면 HTTP fallback
+        console.log(`[Riding] Updating group location via HTTP: groupId=${currentGroupId}`);
+        updateGroupLocation.mutate({
+          groupId: currentGroupId,
+          ...locationData,
+          currentSpeed: displaySpeed,
+        }, {
+          onError: (error) => {
+            console.error("[Riding] Failed to update group location:", error);
+          },
+        });
+      }
     }
 
     // 자동 일시정지 로직: 속도가 임계값 이하면 정지 카운터 증가

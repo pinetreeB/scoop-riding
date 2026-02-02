@@ -1,0 +1,40 @@
+{
+  "query": "SELECT gm.id, gm.groupId, gm.userId, gm.latitude, gm.longitude, gm.isRiding, gm.lastLocationUpdate, u.name \nFROM groupMembers gm \nLEFT JOIN users u ON gm.userId = u.id \nORDER BY gm.lastLocationUpdate DESC \nLIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT gm.id, gm.groupId, gm.userId, gm.latitude, gm.longitude, gm.isRiding, gm.lastLocationUpdate, u.name \nFROM groupMembers gm \nLEFT JOIN users u ON gm.userId = u.id \nORDER BY gm.lastLocationUpdate DESC \nLIMIT 20;",
+  "rows": [
+    {
+      "id": "120002",
+      "groupId": "120001",
+      "userId": "30030",
+      "latitude": "37.5066537",
+      "longitude": "127.0982932",
+      "isRiding": "1",
+      "lastLocationUpdate": "2026-02-02 00:41:13",
+      "name": "스쿱 모빌리티"
+    },
+    {
+      "id": "120001",
+      "groupId": "120001",
+      "userId": "1920694",
+      "latitude": "37.506675",
+      "longitude": "127.098309",
+      "isRiding": "1",
+      "lastLocationUpdate": "2026-02-02 00:40:49",
+      "name": "소나무군"
+    },
+    {
+      "id": "30001",
+      "groupId": "30001",
+      "userId": "1",
+      "latitude": "NULL",
+      "longitude": "NULL",
+      "isRiding": "0",
+      "lastLocationUpdate": "NULL",
+      "name": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tgroupId\tuserId\tlatitude\tlongitude\tisRiding\tlastLocationUpdate\tname\n120002\t120001\t30030\t37.5066537\t127.0982932\t1\t2026-02-02 00:41:13\t스쿱 모빌리티\n120001\t120001\t1920694\t37.506675\t127.098309\t1\t2026-02-02 00:40:49\t소나무군\n30001\t30001\t1\tNULL\tNULL\t0\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1527
+}
