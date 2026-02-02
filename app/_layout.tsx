@@ -85,6 +85,8 @@ function RootLayoutContent() {
         <Stack.Screen name="challenges" options={{ presentation: "card" }} />
         <Stack.Screen name="challenge-detail" options={{ presentation: "card" }} />
         <Stack.Screen name="create-challenge" options={{ presentation: "modal" }} />
+        <Stack.Screen name="admin" options={{ presentation: "card" }} />
+        <Stack.Screen name="bug-report" options={{ presentation: "modal" }} />
       </Stack>
       <StatusBar style="auto" />
     </>
