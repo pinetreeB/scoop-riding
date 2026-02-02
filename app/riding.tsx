@@ -57,6 +57,7 @@ import { GroupChatWS, type ChatMessage as WsChatMessage } from "@/components/gro
 import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
 import { useAuth } from "@/hooks/use-auth";
 import { useGroupWebSocket } from "@/hooks/use-group-websocket";
+import { GroupMembersOverlay, type GroupMember } from "@/components/group-members-overlay";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -81,6 +82,7 @@ export default function RidingScreen() {
   const [groupMembers, setGroupMembers] = useState<{
     userId: number;
     name: string | null;
+    profileImage: string | null;
     latitude: number | null;
     longitude: number | null;
     distance: number;
@@ -116,6 +118,7 @@ export default function RidingScreen() {
       setGroupMembers(members.map(m => ({
         userId: m.userId,
         name: m.userName,
+        profileImage: m.profileImage,
         latitude: m.latitude,
         longitude: m.longitude,
         distance: m.distance,
@@ -359,7 +362,16 @@ export default function RidingScreen() {
       });
       
       // 자기 자신을 제외한 그룹원만 지도에 표시
-      setGroupMembers(otherMembers);
+      setGroupMembers(otherMembers.map(m => ({
+        userId: m.userId,
+        name: m.name,
+        profileImage: m.profileImageUrl || null,
+        latitude: m.latitude,
+        longitude: m.longitude,
+        distance: m.distance,
+        currentSpeed: m.currentSpeed,
+        isRiding: m.isRiding,
+      })));
     }
   }, [groupMembersData, user?.id]);
 
@@ -1452,6 +1464,28 @@ export default function RidingScreen() {
                   휴식 중 ({formatDuration(restTime)})
                 </Text>
               </View>
+            )}
+            {/* 그룹 라이딩 접속자 오버레이 */}
+            {groupId && groupMembers.length > 0 && (
+              <GroupMembersOverlay
+                members={groupMembers.map(m => ({
+                  id: m.userId,
+                  name: m.name,
+                  profileImage: m.profileImage,
+                  isRiding: m.isRiding,
+                  latitude: m.latitude ?? undefined,
+                  longitude: m.longitude ?? undefined,
+                  speed: m.currentSpeed,
+                  distance: m.distance,
+                }))}
+                currentUserId={user?.id ?? 0}
+                onMemberPress={(member) => {
+                  if (member.latitude && member.longitude) {
+                    // TODO: 지도를 해당 멤버 위치로 이동
+                    console.log(`[GroupOverlay] Focus on member ${member.name} at ${member.latitude}, ${member.longitude}`);
+                  }
+                }}
+              />
             )}
           </View>
         ) : (

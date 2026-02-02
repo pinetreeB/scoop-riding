@@ -10,6 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 interface GroupMember {
   userId: number;
   userName: string;
+  profileImage: string | null;
   latitude: number;
   longitude: number;
   speed: number;

@@ -31,6 +31,7 @@ interface GpxRoutePoint {
 interface GroupMemberLocation {
   userId: number;
   name: string | null;
+  profileImage: string | null;
   latitude: number | null;
   longitude: number | null;
   distance: number;
