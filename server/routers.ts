@@ -1360,7 +1360,7 @@ export const appRouter = router({
     banUser: protectedProcedure
       .input(z.object({
         userId: z.number(),
-        reason: z.string().optional(),
+        reason: z.string().default("관리자에 의한 제재"),
         banType: z.enum(["temporary", "permanent"]).default("temporary"),
         expiresAt: z.string().optional(),
       }))

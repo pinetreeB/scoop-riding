@@ -1,6 +1,6 @@
 import { eq, and, desc, sql, gt, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage, announcements, InsertAnnouncement, Announcement, userAnnouncementReads, InsertUserAnnouncementRead, UserAnnouncementRead, userBans, InsertUserBan, UserBan, surveyResponses, InsertSurveyResponse, SurveyResponse, bugReports, InsertBugReport, BugReport } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage, announcements, InsertAnnouncement, Announcement, userAnnouncementReads, InsertUserAnnouncementRead, UserAnnouncementRead, userBans, InsertUserBan, UserBan, surveyResponses, InsertSurveyResponse, SurveyResponse, bugReports, InsertBugReport, BugReport, userActivityLogs, InsertUserActivityLog, UserActivityLog, suspiciousUserReports, InsertSuspiciousUserReport, SuspiciousUserReport } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -3040,13 +3040,26 @@ export async function isUserBanned(userId: number): Promise<{ banned: boolean; r
   }
 }
 
-// Ban user (admin)
-export async function banUser(data: InsertUserBan): Promise<boolean> {
+// Ban user (admin) - enhanced with unbannedBy tracking
+export async function banUser(data: {
+  userId: number;
+  bannedBy: number;
+  reason: string;
+  banType: "temporary" | "permanent";
+  expiresAt?: Date;
+}): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
 
   try {
-    await db.insert(userBans).values(data);
+    await db.insert(userBans).values({
+      userId: data.userId,
+      bannedBy: data.bannedBy,
+      reason: data.reason,
+      banType: data.banType,
+      expiresAt: data.expiresAt,
+      isActive: true,
+    });
     return true;
   } catch (error) {
     console.error("[Database] Failed to ban user:", error);
@@ -3054,15 +3067,19 @@ export async function banUser(data: InsertUserBan): Promise<boolean> {
   }
 }
 
-// Unban user (admin)
-export async function unbanUser(userId: number): Promise<boolean> {
+// Unban user (admin) - enhanced with unbannedBy tracking
+export async function unbanUser(userId: number, unbannedBy?: number): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
 
   try {
     await db
       .update(userBans)
-      .set({ isActive: false })
+      .set({ 
+        isActive: false,
+        unbannedBy: unbannedBy,
+        unbannedAt: new Date(),
+      })
       .where(and(eq(userBans.userId, userId), eq(userBans.isActive, true)));
     return true;
   } catch (error) {
@@ -3662,5 +3679,392 @@ export async function notifyAdmins(notification: {
       userId: admin.id,
       ...notification,
     });
+  }
+}
+
+
+// ========== User Activity Logging ==========
+
+// Log user activity
+export async function logUserActivity(data: {
+  userId: number;
+  activityType: string;
+  details?: string;
+  ipAddress?: string;
+  userAgent?: string;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    await db.insert(userActivityLogs).values({
+      userId: data.userId,
+      activityType: data.activityType,
+      details: data.details,
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
+    });
+  } catch (error) {
+    console.error("[Database] Failed to log user activity:", error);
+  }
+}
+
+// Get user activity logs
+export async function getUserActivityLogs(userId: number, limit: number = 100): Promise<UserActivityLog[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db
+      .select()
+      .from(userActivityLogs)
+      .where(eq(userActivityLogs.userId, userId))
+      .orderBy(desc(userActivityLogs.createdAt))
+      .limit(limit);
+  } catch (error) {
+    console.error("[Database] Failed to get user activity logs:", error);
+    return [];
+  }
+}
+
+// Get activity count by type in time range
+export async function getActivityCountByType(
+  userId: number,
+  activityType: string,
+  hoursAgo: number
+): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  try {
+    const cutoffTime = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
+    const result = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(userActivityLogs)
+      .where(
+        and(
+          eq(userActivityLogs.userId, userId),
+          eq(userActivityLogs.activityType, activityType),
+          gt(userActivityLogs.createdAt, cutoffTime)
+        )
+      );
+    return result[0]?.count || 0;
+  } catch (error) {
+    console.error("[Database] Failed to get activity count:", error);
+    return 0;
+  }
+}
+
+// ========== Suspicious User Reports ==========
+
+// Create suspicious user report
+export async function createSuspiciousReport(data: {
+  userId: number;
+  reportType: string;
+  severityScore: number;
+  details?: string;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    await db.insert(suspiciousUserReports).values({
+      userId: data.userId,
+      reportType: data.reportType,
+      severityScore: data.severityScore,
+      details: data.details,
+    });
+  } catch (error) {
+    console.error("[Database] Failed to create suspicious report:", error);
+  }
+}
+
+// Get all suspicious reports
+export async function getSuspiciousReports(onlyUnreviewed: boolean = false): Promise<(SuspiciousUserReport & { userName: string | null; userEmail: string | null })[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const conditions = onlyUnreviewed
+      ? eq(suspiciousUserReports.isReviewed, false)
+      : undefined;
+
+    const result = await db
+      .select({
+        id: suspiciousUserReports.id,
+        userId: suspiciousUserReports.userId,
+        reportType: suspiciousUserReports.reportType,
+        severityScore: suspiciousUserReports.severityScore,
+        details: suspiciousUserReports.details,
+        isReviewed: suspiciousUserReports.isReviewed,
+        reviewedBy: suspiciousUserReports.reviewedBy,
+        reviewNotes: suspiciousUserReports.reviewNotes,
+        actionTaken: suspiciousUserReports.actionTaken,
+        reviewedAt: suspiciousUserReports.reviewedAt,
+        createdAt: suspiciousUserReports.createdAt,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(suspiciousUserReports)
+      .leftJoin(users, eq(suspiciousUserReports.userId, users.id))
+      .where(conditions)
+      .orderBy(desc(suspiciousUserReports.severityScore), desc(suspiciousUserReports.createdAt));
+
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get suspicious reports:", error);
+    return [];
+  }
+}
+
+// Review suspicious report
+export async function reviewSuspiciousReport(
+  reportId: number,
+  adminId: number,
+  action: "none" | "warning" | "temp_ban" | "perm_ban",
+  notes?: string
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.update(suspiciousUserReports)
+      .set({
+        isReviewed: true,
+        reviewedBy: adminId,
+        reviewNotes: notes,
+        actionTaken: action,
+        reviewedAt: new Date(),
+      })
+      .where(eq(suspiciousUserReports.id, reportId));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to review suspicious report:", error);
+    return false;
+  }
+}
+
+// ========== Statistics for Admin Dashboard ==========
+
+// Get daily user registrations
+export async function getDailyRegistrations(days: number = 30): Promise<{ date: string; count: number }[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const result = await db
+      .select({
+        date: sql<string>`DATE(createdAt)`,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(users)
+      .where(gt(users.createdAt, cutoffDate))
+      .groupBy(sql`DATE(createdAt)`)
+      .orderBy(sql`DATE(createdAt)`);
+
+    return result.map(r => ({
+      date: String(r.date),
+      count: Number(r.count),
+    }));
+  } catch (error) {
+    console.error("[Database] Failed to get daily registrations:", error);
+    return [];
+  }
+}
+
+// Get user riding statistics
+export async function getUserRidingStats(userId: number): Promise<{
+  totalRides: number;
+  totalDistance: number;
+  totalDuration: number;
+  avgSpeed: number;
+  maxSpeed: number;
+  ridesPerDay: { date: string; count: number; distance: number }[];
+}> {
+  const db = await getDb();
+  if (!db) return {
+    totalRides: 0,
+    totalDistance: 0,
+    totalDuration: 0,
+    avgSpeed: 0,
+    maxSpeed: 0,
+    ridesPerDay: [],
+  };
+
+  try {
+    // Get overall stats
+    const overallStats = await db
+      .select({
+        totalRides: sql<number>`COUNT(*)`,
+        totalDistance: sql<number>`COALESCE(SUM(distance), 0)`,
+        totalDuration: sql<number>`COALESCE(SUM(duration), 0)`,
+        avgSpeed: sql<number>`COALESCE(AVG(avgSpeed), 0)`,
+        maxSpeed: sql<number>`COALESCE(MAX(maxSpeed), 0)`,
+      })
+      .from(ridingRecords)
+      .where(eq(ridingRecords.userId, userId));
+
+    // Get rides per day (last 30 days)
+    const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const dailyStats = await db
+      .select({
+        date: sql<string>`DATE(createdAt)`,
+        count: sql<number>`COUNT(*)`,
+        distance: sql<number>`COALESCE(SUM(distance), 0)`,
+      })
+      .from(ridingRecords)
+      .where(and(eq(ridingRecords.userId, userId), gt(ridingRecords.createdAt, cutoffDate)))
+      .groupBy(sql`DATE(createdAt)`)
+      .orderBy(sql`DATE(createdAt)`);
+
+    const stats = overallStats[0] || {};
+    return {
+      totalRides: Number(stats.totalRides) || 0,
+      totalDistance: Number(stats.totalDistance) || 0,
+      totalDuration: Number(stats.totalDuration) || 0,
+      avgSpeed: Number(stats.avgSpeed) || 0,
+      maxSpeed: Number(stats.maxSpeed) || 0,
+      ridesPerDay: dailyStats.map(r => ({
+        date: String(r.date),
+        count: Number(r.count),
+        distance: Number(r.distance),
+      })),
+    };
+  } catch (error) {
+    console.error("[Database] Failed to get user riding stats:", error);
+    return {
+      totalRides: 0,
+      totalDistance: 0,
+      totalDuration: 0,
+      avgSpeed: 0,
+      maxSpeed: 0,
+      ridesPerDay: [],
+    };
+  }
+}
+
+// Get suspicious activity indicators for a user
+export async function getSuspiciousIndicators(userId: number): Promise<{
+  abnormalRiding: boolean;
+  spamPosts: boolean;
+  excessiveApiCalls: boolean;
+  details: string[];
+}> {
+  const db = await getDb();
+  if (!db) return { abnormalRiding: false, spamPosts: false, excessiveApiCalls: false, details: [] };
+
+  const details: string[] = [];
+  let abnormalRiding = false;
+  let spamPosts = false;
+  let excessiveApiCalls = false;
+
+  try {
+    // Check for abnormal riding patterns (very long rides > 12 hours)
+    const longRides = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(ridingRecords)
+      .where(and(eq(ridingRecords.userId, userId), gt(ridingRecords.duration, 43200))); // 12 hours in seconds
+
+    if ((longRides[0]?.count || 0) > 0) {
+      abnormalRiding = true;
+      details.push(`비정상적으로 긴 주행 기록 ${longRides[0]?.count}건 (12시간 이상)`);
+    }
+
+    // Check for very short rides with high distance (possible GPS spoofing)
+    const suspiciousRides = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(ridingRecords)
+      .where(
+        and(
+          eq(ridingRecords.userId, userId),
+          lt(ridingRecords.duration, 60), // Less than 1 minute
+          gt(ridingRecords.distance, 1000) // More than 1km
+        )
+      );
+
+    if ((suspiciousRides[0]?.count || 0) > 0) {
+      abnormalRiding = true;
+      details.push(`의심스러운 주행 기록 ${suspiciousRides[0]?.count}건 (1분 미만에 1km 이상)`);
+    }
+
+    // Check for spam posts (more than 10 posts in last hour)
+    const recentPosts = await getActivityCountByType(userId, "post_create", 1);
+    if (recentPosts > 10) {
+      spamPosts = true;
+      details.push(`최근 1시간 내 게시글 ${recentPosts}개 작성`);
+    }
+
+    // Check for excessive API calls (more than 1000 in last hour)
+    const recentApiCalls = await getActivityCountByType(userId, "api_call", 1);
+    if (recentApiCalls > 1000) {
+      excessiveApiCalls = true;
+      details.push(`최근 1시간 내 API 호출 ${recentApiCalls}회`);
+    }
+
+    return { abnormalRiding, spamPosts, excessiveApiCalls, details };
+  } catch (error) {
+    console.error("[Database] Failed to get suspicious indicators:", error);
+    return { abnormalRiding: false, spamPosts: false, excessiveApiCalls: false, details: [] };
+  }
+}
+
+// Get all users with suspicious activity
+export async function getUsersWithSuspiciousActivity(): Promise<{
+  userId: number;
+  name: string | null;
+  email: string | null;
+  indicators: {
+    abnormalRiding: boolean;
+    spamPosts: boolean;
+    excessiveApiCalls: boolean;
+    details: string[];
+  };
+  severityScore: number;
+}[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    // Get all users
+    const allUsers = await db.select().from(users);
+    const suspiciousUsers: {
+      userId: number;
+      name: string | null;
+      email: string | null;
+      indicators: {
+        abnormalRiding: boolean;
+        spamPosts: boolean;
+        excessiveApiCalls: boolean;
+        details: string[];
+      };
+      severityScore: number;
+    }[] = [];
+
+    for (const user of allUsers) {
+      const indicators = await getSuspiciousIndicators(user.id);
+      
+      // Calculate severity score
+      let severityScore = 0;
+      if (indicators.abnormalRiding) severityScore += 30;
+      if (indicators.spamPosts) severityScore += 40;
+      if (indicators.excessiveApiCalls) severityScore += 30;
+
+      if (severityScore > 0) {
+        suspiciousUsers.push({
+          userId: user.id,
+          name: user.name,
+          email: user.email,
+          indicators,
+          severityScore,
+        });
+      }
+    }
+
+    // Sort by severity score
+    return suspiciousUsers.sort((a, b) => b.severityScore - a.severityScore);
+  } catch (error) {
+    console.error("[Database] Failed to get users with suspicious activity:", error);
+    return [];
   }
 }

@@ -590,6 +590,156 @@ router.delete("/posts/:id", verifyAdminToken, async (req: Request, res: Response
   }
 });
 
+// ============ Statistics API ============
+// Get daily registrations for chart
+router.get("/stats/registrations", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const days = parseInt(req.query.days as string) || 30;
+    const data = await db.getDailyRegistrations(days);
+    res.json(data);
+  } catch (e) {
+    console.error("Admin registrations stats error:", e);
+    res.status(500).json({ error: "일별 가입자 통계를 불러오는데 실패했습니다." });
+  }
+});
+
+// Get user riding statistics
+router.get("/stats/user/:userId", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const stats = await db.getUserRidingStats(userId);
+    res.json(stats);
+  } catch (e) {
+    console.error("Admin user stats error:", e);
+    res.status(500).json({ error: "사용자 주행 통계를 불러오는데 실패했습니다." });
+  }
+});
+
+// ============ Suspicious User Monitoring API ============
+// Get suspicious users list
+router.get("/monitoring/suspicious", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const users = await db.getUsersWithSuspiciousActivity();
+    res.json(users);
+  } catch (e) {
+    console.error("Admin suspicious users error:", e);
+    res.status(500).json({ error: "의심 사용자 목록을 불러오는데 실패했습니다." });
+  }
+});
+
+// Get suspicious reports
+router.get("/monitoring/reports", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const onlyUnreviewed = req.query.unreviewed === "true";
+    const reports = await db.getSuspiciousReports(onlyUnreviewed);
+    res.json(reports);
+  } catch (e) {
+    console.error("Admin suspicious reports error:", e);
+    res.status(500).json({ error: "의심 리포트를 불러오는데 실패했습니다." });
+  }
+});
+
+// Review suspicious report
+router.post("/monitoring/reports/:id/review", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const reportId = parseInt(req.params.id);
+    const { action, notes, adminId } = req.body;
+    
+    const success = await db.reviewSuspiciousReport(
+      reportId,
+      adminId || 1,
+      action || "none",
+      notes
+    );
+    
+    res.json({ success });
+  } catch (e) {
+    console.error("Admin review report error:", e);
+    res.status(500).json({ error: "리포트 검토에 실패했습니다." });
+  }
+});
+
+// Get user activity logs
+router.get("/monitoring/activity/:userId", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const limit = parseInt(req.query.limit as string) || 100;
+    const logs = await db.getUserActivityLogs(userId, limit);
+    res.json(logs);
+  } catch (e) {
+    console.error("Admin activity logs error:", e);
+    res.status(500).json({ error: "활동 로그를 불러오는데 실패했습니다." });
+  }
+});
+
+// Get suspicious indicators for a user
+router.get("/monitoring/indicators/:userId", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const indicators = await db.getSuspiciousIndicators(userId);
+    res.json(indicators);
+  } catch (e) {
+    console.error("Admin indicators error:", e);
+    res.status(500).json({ error: "의심 지표를 불러오는데 실패했습니다." });
+  }
+});
+
+// ============ Ban Management API ============
+// Get active bans
+router.get("/bans", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const bans = await db.getBannedUsers();
+    res.json(bans);
+  } catch (e) {
+    console.error("Admin bans error:", e);
+    res.status(500).json({ error: "차단 목록을 불러오는데 실패했습니다." });
+  }
+});
+
+// Ban user
+router.post("/bans", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const { userId, reason, banType, expiresAt, adminId } = req.body;
+    
+    const success = await db.banUser({
+      userId,
+      bannedBy: adminId || 1,
+      reason: reason || "관리자에 의한 제재",
+      banType: banType || "temporary",
+      expiresAt: expiresAt ? new Date(expiresAt) : undefined,
+    });
+    
+    res.json({ success });
+  } catch (e) {
+    console.error("Admin ban user error:", e);
+    res.status(500).json({ error: "사용자 차단에 실패했습니다." });
+  }
+});
+
+// Unban user
+router.delete("/bans/:userId", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const success = await db.unbanUser(userId);
+    res.json({ success });
+  } catch (e) {
+    console.error("Admin unban user error:", e);
+    res.status(500).json({ error: "차단 해제에 실패했습니다." });
+  }
+});
+
+// Check if user is banned
+router.get("/bans/check/:userId", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const result = await db.isUserBanned(userId);
+    res.json(result);
+  } catch (e) {
+    console.error("Admin check ban error:", e);
+    res.status(500).json({ error: "차단 상태 확인에 실패했습니다." });
+  }
+});
+
 // Serve admin dashboard HTML (inline to avoid file path issues in production)
 router.get("/", (req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -668,14 +818,141 @@ function getAdminDashboardHTML(): string {
       </div>
 
       <div class="bg-white rounded-xl shadow mb-6 p-2 flex flex-wrap gap-2">
-        <button onclick="switchTab('users')" class="tab-btn active px-4 py-2 rounded-lg font-medium" data-tab="users">사용자 관리</button>
+        <button onclick="switchTab('stats')" class="tab-btn active px-4 py-2 rounded-lg font-medium" data-tab="stats">통계</button>
+        <button onclick="switchTab('monitoring')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="monitoring">모니터링</button>
+        <button onclick="switchTab('bans')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="bans">차단 관리</button>
+        <button onclick="switchTab('users')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="users">사용자 관리</button>
         <button onclick="switchTab('announcements')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="announcements">공지사항</button>
         <button onclick="switchTab('surveys')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="surveys">설문 응답</button>
         <button onclick="switchTab('bugs')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="bugs">버그 리포트</button>
         <button onclick="switchTab('posts')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="posts">게시글 관리</button>
       </div>
 
-      <div id="tab-users" class="tab-content active">
+      <div id="tab-stats" class="tab-content active">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="bg-white rounded-xl p-6 shadow">
+            <h3 class="text-lg font-semibold mb-4">일별 가입자 추이</h3>
+            <canvas id="registrationChart" height="200"></canvas>
+          </div>
+          <div class="bg-white rounded-xl p-6 shadow">
+            <h3 class="text-lg font-semibold mb-4">사용자 주행 통계</h3>
+            <div class="mb-4">
+              <input type="number" id="userStatsId" placeholder="사용자 ID 입력" class="px-4 py-2 border border-gray-300 rounded-lg mr-2">
+              <button onclick="loadUserStats()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg">조회</button>
+            </div>
+            <div id="userStatsResult" class="text-sm text-gray-600">사용자 ID를 입력하고 조회하세요.</div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl p-6 shadow">
+          <h3 class="text-lg font-semibold mb-4">주간 통계 요약</h3>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="text-center p-4 bg-gray-50 rounded-lg">
+              <div class="text-2xl font-bold text-blue-600" id="weeklyNewUsers">-</div>
+              <div class="text-sm text-gray-500">이번 주 신규 가입</div>
+            </div>
+            <div class="text-center p-4 bg-gray-50 rounded-lg">
+              <div class="text-2xl font-bold text-green-600" id="weeklyRides">-</div>
+              <div class="text-sm text-gray-500">이번 주 주행 횟수</div>
+            </div>
+            <div class="text-center p-4 bg-gray-50 rounded-lg">
+              <div class="text-2xl font-bold text-orange-600" id="weeklyDistance">-</div>
+              <div class="text-sm text-gray-500">이번 주 총 거리 (km)</div>
+            </div>
+            <div class="text-center p-4 bg-gray-50 rounded-lg">
+              <div class="text-2xl font-bold text-purple-600" id="weeklyPosts">-</div>
+              <div class="text-sm text-gray-500">이번 주 게시글</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-monitoring" class="tab-content">
+        <div class="bg-white rounded-xl p-4 shadow mb-4">
+          <div class="flex justify-between items-center">
+            <h3 class="text-lg font-semibold">악성 유저 모니터링</h3>
+            <button onclick="loadSuspiciousUsers()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg">새로고침</button>
+          </div>
+          <p class="text-sm text-gray-500 mt-2">비정상적인 활동 패턴을 보이는 사용자를 탐지합니다.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="bg-red-50 px-4 py-3 border-b">
+              <h4 class="font-semibold text-red-700">의심 사용자 목록</h4>
+            </div>
+            <div id="suspiciousUsersList" class="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+              <div class="px-4 py-8 text-center text-gray-500">로딩 중...</div>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="bg-yellow-50 px-4 py-3 border-b">
+              <h4 class="font-semibold text-yellow-700">의심 활동 리포트</h4>
+            </div>
+            <div id="suspiciousReportsList" class="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+              <div class="px-4 py-8 text-center text-gray-500">로딩 중...</div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow mt-6">
+          <h4 class="font-semibold mb-4">의심 활동 기준</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="font-medium text-gray-700">비정상 주행</div>
+              <div class="text-gray-500">상시 앱 실행, 24시간 이상 주행, 비현실적 속도</div>
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="font-medium text-gray-700">스팸 게시글</div>
+              <div class="text-gray-500">단시간 대량 게시, 중복 콘텐츠, 의미없는 내용</div>
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="font-medium text-gray-700">서버 트래픽 증가</div>
+              <div class="text-gray-500">비정상적 API 호출, 동시 다중 접속</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-bans" class="tab-content">
+        <div class="bg-white rounded-xl p-4 shadow mb-4">
+          <div class="flex justify-between items-center">
+            <h3 class="text-lg font-semibold">차단된 사용자 목록</h3>
+            <button onclick="loadBans()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg">새로고침</button>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">사용자</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">사유</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">만료일</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">차단일</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+              </tr>
+            </thead>
+            <tbody id="bansTableBody" class="divide-y divide-gray-200">
+              <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">로딩 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow mt-6">
+          <h4 class="font-semibold mb-4">새 차단 추가</h4>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <input type="number" id="banUserId" placeholder="사용자 ID" class="px-4 py-2 border border-gray-300 rounded-lg">
+            <input type="text" id="banReason" placeholder="차단 사유" class="px-4 py-2 border border-gray-300 rounded-lg">
+            <select id="banType" class="px-4 py-2 border border-gray-300 rounded-lg">
+              <option value="temporary">임시 차단</option>
+              <option value="permanent">영구 차단</option>
+            </select>
+            <button onclick="banUser()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">차단</button>
+          </div>
+          <div class="mt-2">
+            <input type="datetime-local" id="banExpiresAt" class="px-4 py-2 border border-gray-300 rounded-lg" placeholder="만료일 (임시 차단시)">
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-users" class="tab-content">
         <div class="bg-white rounded-xl p-4 shadow mb-4">
           <div class="flex flex-wrap gap-4 items-center">
             <input type="text" id="searchInput" placeholder="이름 또는 이메일로 검색..." class="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg" onkeyup="debounceSearch()">
@@ -901,7 +1178,7 @@ function getAdminDashboardHTML(): string {
       showLogin();
     }
 
-    function loadAllData() { loadStats(); loadUsers(); loadAnnouncements(); loadSurveys(); loadBugs(); loadPosts(); }
+    function loadAllData() { loadStats(); loadUsers(); loadAnnouncements(); loadSurveys(); loadBugs(); loadPosts(); loadRegistrationChart(); loadSuspiciousUsers(); loadSuspiciousReports(); loadBans(); }
 
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1294,6 +1571,282 @@ function getAdminDashboardHTML(): string {
     function formatDate(d) { 
       if (!d) return '-'; 
       return new Date(d).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }); 
+    }
+
+    // ========== Statistics Functions ==========
+    let registrationChart = null;
+
+    async function loadRegistrationChart() {
+      try {
+        const res = await fetch(API_BASE+'/api/admin/stats/registrations?days=30', { headers: { 'Authorization': 'Bearer '+adminToken } });
+        const data = await res.json();
+        
+        const ctx = document.getElementById('registrationChart');
+        if (!ctx) return;
+        
+        if (registrationChart) registrationChart.destroy();
+        
+        // Simple canvas chart
+        const canvas = ctx.getContext('2d');
+        const width = ctx.width;
+        const height = ctx.height;
+        
+        canvas.clearRect(0, 0, width, height);
+        
+        if (data.length === 0) {
+          canvas.fillStyle = '#666';
+          canvas.font = '14px sans-serif';
+          canvas.fillText('데이터가 없습니다', width/2-40, height/2);
+          return;
+        }
+        
+        const maxCount = Math.max(...data.map(d => d.count), 1);
+        const barWidth = (width - 60) / data.length;
+        
+        // Draw bars
+        data.forEach((d, i) => {
+          const barHeight = (d.count / maxCount) * (height - 40);
+          const x = 30 + i * barWidth;
+          const y = height - 20 - barHeight;
+          
+          canvas.fillStyle = '#f97316';
+          canvas.fillRect(x, y, barWidth - 2, barHeight);
+          
+          // Draw count on top
+          if (d.count > 0) {
+            canvas.fillStyle = '#333';
+            canvas.font = '10px sans-serif';
+            canvas.fillText(d.count, x + barWidth/2 - 5, y - 5);
+          }
+        });
+        
+        // Calculate weekly stats
+        const weeklyData = data.slice(-7);
+        const weeklyNewUsers = weeklyData.reduce((sum, d) => sum + d.count, 0);
+        document.getElementById('weeklyNewUsers').textContent = weeklyNewUsers;
+      } catch (e) { console.error('Registration chart error:', e); }
+    }
+
+    async function loadUserStats() {
+      const userId = document.getElementById('userStatsId').value;
+      if (!userId) { alert('사용자 ID를 입력하세요'); return; }
+      
+      try {
+        const res = await fetch(API_BASE+'/api/admin/stats/user/'+userId, { headers: { 'Authorization': 'Bearer '+adminToken } });
+        const data = await res.json();
+        
+        if (data.error) {
+          document.getElementById('userStatsResult').innerHTML = '<span class="text-red-500">'+data.error+'</span>';
+          return;
+        }
+        
+        document.getElementById('userStatsResult').innerHTML = 
+          '<div class="grid grid-cols-2 gap-4 mt-4">' +
+            '<div class="p-3 bg-gray-50 rounded-lg">' +
+              '<div class="text-xl font-bold text-blue-600">' + (data.totalRides || 0) + '</div>' +
+              '<div class="text-xs text-gray-500">총 주행 횟수</div>' +
+            '</div>' +
+            '<div class="p-3 bg-gray-50 rounded-lg">' +
+              '<div class="text-xl font-bold text-green-600">' + (data.totalDistance || 0).toFixed(1) + ' km</div>' +
+              '<div class="text-xs text-gray-500">총 주행 거리</div>' +
+            '</div>' +
+            '<div class="p-3 bg-gray-50 rounded-lg">' +
+              '<div class="text-xl font-bold text-orange-600">' + Math.floor((data.totalDuration || 0) / 60) + '분</div>' +
+              '<div class="text-xs text-gray-500">총 주행 시간</div>' +
+            '</div>' +
+            '<div class="p-3 bg-gray-50 rounded-lg">' +
+              '<div class="text-xl font-bold text-purple-600">' + (data.avgSpeed || 0).toFixed(1) + ' km/h</div>' +
+              '<div class="text-xs text-gray-500">평균 속도</div>' +
+            '</div>' +
+            '<div class="p-3 bg-gray-50 rounded-lg">' +
+              '<div class="text-xl font-bold text-red-600">' + (data.maxSpeed || 0).toFixed(1) + ' km/h</div>' +
+              '<div class="text-xs text-gray-500">최고 속도</div>' +
+            '</div>' +
+            '<div class="p-3 bg-gray-50 rounded-lg">' +
+              '<div class="text-xl font-bold text-gray-600">' + formatDate(data.lastRideDate) + '</div>' +
+              '<div class="text-xs text-gray-500">마지막 주행</div>' +
+            '</div>' +
+          '</div>';
+      } catch (e) { 
+        document.getElementById('userStatsResult').innerHTML = '<span class="text-red-500">오류가 발생했습니다</span>';
+      }
+    }
+
+    // ========== Monitoring Functions ==========
+    async function loadSuspiciousUsers() {
+      try {
+        const res = await fetch(API_BASE+'/api/admin/monitoring/suspicious', { headers: { 'Authorization': 'Bearer '+adminToken } });
+        const data = await res.json();
+        
+        const container = document.getElementById('suspiciousUsersList');
+        if (data.length === 0) {
+          container.innerHTML = '<div class="px-4 py-8 text-center text-gray-500">의심 사용자가 없습니다</div>';
+          return;
+        }
+        
+        container.innerHTML = data.map(function(u) {
+          return '<div class="px-4 py-3 hover:bg-gray-50">' +
+            '<div class="flex justify-between items-start">' +
+              '<div>' +
+                '<div class="font-medium">' + (u.name || '이름 없음') + '</div>' +
+                '<div class="text-sm text-gray-500">' + (u.email || '') + '</div>' +
+                '<div class="text-xs text-red-500 mt-1">위험도: ' + (u.suspiciousScore || 0) + '점</div>' +
+              '</div>' +
+              '<button onclick="banUserQuick(' + u.id + ', \'' + (u.name || '').replace(/'/g, "\\'") + '\')" ' +
+                'class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">차단</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      } catch (e) { 
+        document.getElementById('suspiciousUsersList').innerHTML = '<div class="px-4 py-8 text-center text-red-500">로드 실패</div>';
+      }
+    }
+
+    async function loadSuspiciousReports() {
+      try {
+        const res = await fetch(API_BASE+'/api/admin/monitoring/reports?unreviewed=true', { headers: { 'Authorization': 'Bearer '+adminToken } });
+        const data = await res.json();
+        
+        const container = document.getElementById('suspiciousReportsList');
+        if (data.length === 0) {
+          container.innerHTML = '<div class="px-4 py-8 text-center text-gray-500">미검토 리포트가 없습니다</div>';
+          return;
+        }
+        
+        container.innerHTML = data.map(function(r) {
+          return '<div class="px-4 py-3 hover:bg-gray-50">' +
+            '<div class="flex justify-between items-start">' +
+              '<div>' +
+                '<div class="font-medium text-sm">' + (r.reportType || '알 수 없음') + '</div>' +
+                '<div class="text-xs text-gray-500">사용자: ' + (r.userName || 'ID:'+r.userId) + '</div>' +
+                '<div class="text-xs text-gray-400">' + (r.details || '') + '</div>' +
+                '<div class="text-xs text-orange-500 mt-1">심각도: ' + (r.severityScore || 0) + '</div>' +
+              '</div>' +
+              '<button onclick="reviewReport(' + r.id + ')" ' +
+                'class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">검토</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      } catch (e) { 
+        document.getElementById('suspiciousReportsList').innerHTML = '<div class="px-4 py-8 text-center text-red-500">로드 실패</div>';
+      }
+    }
+
+    async function reviewReport(reportId) {
+      const action = prompt('조치를 선택하세요 (none/warning/temporary_ban/permanent_ban):', 'none');
+      if (!action) return;
+      
+      const notes = prompt('검토 메모:');
+      
+      try {
+        const res = await fetch(API_BASE+'/api/admin/monitoring/reports/'+reportId+'/review', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer '+adminToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, notes })
+        });
+        if (res.ok) { loadSuspiciousReports(); alert('검토 완료'); }
+        else { alert('검토 실패'); }
+      } catch (e) { alert('서버 오류'); }
+    }
+
+    // ========== Ban Functions ==========
+    async function loadBans() {
+      try {
+        const res = await fetch(API_BASE+'/api/admin/bans', { headers: { 'Authorization': 'Bearer '+adminToken } });
+        const data = await res.json();
+        
+        const tbody = document.getElementById('bansTableBody');
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">차단된 사용자가 없습니다</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = data.map(function(b) {
+          var banTypeClass = b.banType === 'permanent' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700';
+          var banTypeText = b.banType === 'permanent' ? '영구' : '임시';
+          return '<tr class="hover:bg-gray-50">' +
+            '<td class="px-4 py-3">' +
+              '<div class="font-medium">' + (b.name || 'ID:'+b.userId) + '</div>' +
+              '<div class="text-xs text-gray-500">' + (b.email || '') + '</div>' +
+            '</td>' +
+            '<td class="px-4 py-3 text-sm">' + (b.reason || '-') + '</td>' +
+            '<td class="px-4 py-3">' +
+              '<span class="px-2 py-1 text-xs rounded ' + banTypeClass + '">' + banTypeText + '</span>' +
+            '</td>' +
+            '<td class="px-4 py-3 text-sm">' + (b.expiresAt ? formatDate(b.expiresAt) : '-') + '</td>' +
+            '<td class="px-4 py-3 text-sm">' + formatDate(b.createdAt) + '</td>' +
+            '<td class="px-4 py-3">' +
+              '<button onclick="unbanUser(' + b.userId + ')" class="text-blue-600 hover:text-blue-800 text-sm">해제</button>' +
+            '</td>' +
+          '</tr>';
+        }).join('');
+      } catch (e) { 
+        document.getElementById('bansTableBody').innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-red-500">로드 실패</td></tr>';
+      }
+    }
+
+    async function banUser() {
+      const userId = document.getElementById('banUserId').value;
+      const reason = document.getElementById('banReason').value;
+      const banType = document.getElementById('banType').value;
+      const expiresAt = document.getElementById('banExpiresAt').value;
+      
+      if (!userId) { alert('사용자 ID를 입력하세요'); return; }
+      if (!reason) { alert('차단 사유를 입력하세요'); return; }
+      
+      try {
+        const res = await fetch(API_BASE+'/api/admin/bans', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer '+adminToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: parseInt(userId), reason, banType, expiresAt: expiresAt || undefined })
+        });
+        if (res.ok) {
+          loadBans();
+          document.getElementById('banUserId').value = '';
+          document.getElementById('banReason').value = '';
+          document.getElementById('banExpiresAt').value = '';
+          alert('차단 완료');
+        } else {
+          const err = await res.json();
+          alert(err.error || '차단 실패');
+        }
+      } catch (e) { alert('서버 오류'); }
+    }
+
+    async function banUserQuick(userId, userName) {
+      const reason = prompt('"' + userName + '" 사용자를 차단합니다. 사유를 입력하세요:');
+      if (!reason) return;
+      
+      const banType = confirm('영구 차단하시겠습니까? (취소 = 임시 차단)') ? 'permanent' : 'temporary';
+      
+      try {
+        const res = await fetch(API_BASE+'/api/admin/bans', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer '+adminToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, reason, banType })
+        });
+        if (res.ok) {
+          loadBans();
+          loadSuspiciousUsers();
+          alert('차단 완료');
+        } else {
+          const err = await res.json();
+          alert(err.error || '차단 실패');
+        }
+      } catch (e) { alert('서버 오류'); }
+    }
+
+    async function unbanUser(userId) {
+      if (!confirm('정말로 차단을 해제하시겠습니까?')) return;
+      
+      try {
+        const res = await fetch(API_BASE+'/api/admin/bans/'+userId, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer '+adminToken }
+        });
+        if (res.ok) { loadBans(); alert('차단 해제 완료'); }
+        else { alert('해제 실패'); }
+      } catch (e) { alert('서버 오류'); }
     }
   <\/script>
 </body>
