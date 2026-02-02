@@ -37,6 +37,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log("[AuthContext] Using cached user info");
           setUser(cachedUser);
           setLoading(false);
+          
+          // Background refresh to get latest role from server
+          if (Platform.OS !== "web") {
+            Api.getMe().then(async (apiUser) => {
+              if (apiUser && apiUser.role !== cachedUser.role) {
+                console.log("[AuthContext] Role updated from server:", apiUser.role);
+                const updatedUser = { ...cachedUser, role: apiUser.role };
+                setUser(updatedUser);
+                await Auth.setUserInfo(updatedUser);
+              }
+            }).catch(() => {});
+          }
           return;
         }
       }
