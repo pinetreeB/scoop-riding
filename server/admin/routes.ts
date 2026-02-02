@@ -177,6 +177,109 @@ router.get("/stats", verifyAdminToken, async (req: Request, res: Response) => {
   }
 });
 
+// Get chart data for dashboard (daily/weekly stats)
+router.get("/chart-data", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const dbInstance = await db.getDb();
+    if (!dbInstance) {
+      return res.json({ dailyUsers: [], weeklyUsers: [], dailyRides: [], weeklyRides: [] });
+    }
+
+    const kstOffset = 9 * 60 * 60 * 1000; // UTC+9 in milliseconds
+    const now = new Date();
+    const nowKST = new Date(now.getTime() + kstOffset);
+
+    // Daily users for last 7 days
+    const dailyUsers = [];
+    for (let i = 6; i >= 0; i--) {
+      const dayKST = new Date(Date.UTC(nowKST.getUTCFullYear(), nowKST.getUTCMonth(), nowKST.getUTCDate() - i));
+      const dayStartUTC = new Date(dayKST.getTime() - kstOffset);
+      const dayEndUTC = new Date(dayStartUTC.getTime() + 24 * 60 * 60 * 1000);
+      
+      const result = await dbInstance
+        .select({ count: sql`COUNT(*)` })
+        .from(users)
+        .where(and(gte(users.createdAt, dayStartUTC), sql`${users.createdAt} < ${dayEndUTC}`));
+      
+      const month = dayKST.getUTCMonth() + 1;
+      const date = dayKST.getUTCDate();
+      dailyUsers.push({
+        label: `${month}/${date}`,
+        count: Number(result[0]?.count) || 0
+      });
+    }
+
+    // Weekly users for last 4 weeks
+    const weeklyUsers = [];
+    const dayOfWeekKST = nowKST.getUTCDay();
+    const daysFromMonday = dayOfWeekKST === 0 ? 6 : dayOfWeekKST - 1;
+    const thisWeekMondayKST = new Date(Date.UTC(nowKST.getUTCFullYear(), nowKST.getUTCMonth(), nowKST.getUTCDate() - daysFromMonday));
+    
+    for (let i = 3; i >= 0; i--) {
+      const weekStartKST = new Date(thisWeekMondayKST.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+      const weekStartUTC = new Date(weekStartKST.getTime() - kstOffset);
+      const weekEndUTC = new Date(weekStartUTC.getTime() + 7 * 24 * 60 * 60 * 1000);
+      
+      const result = await dbInstance
+        .select({ count: sql`COUNT(*)` })
+        .from(users)
+        .where(and(gte(users.createdAt, weekStartUTC), sql`${users.createdAt} < ${weekEndUTC}`));
+      
+      const weekLabel = i === 0 ? "이번주" : i === 1 ? "지난주" : `${i}주 전`;
+      weeklyUsers.push({
+        label: weekLabel,
+        count: Number(result[0]?.count) || 0
+      });
+    }
+
+    // Daily rides for last 7 days
+    const dailyRides = [];
+    for (let i = 6; i >= 0; i--) {
+      const dayKST = new Date(Date.UTC(nowKST.getUTCFullYear(), nowKST.getUTCMonth(), nowKST.getUTCDate() - i));
+      const dayStartUTC = new Date(dayKST.getTime() - kstOffset);
+      const dayEndUTC = new Date(dayStartUTC.getTime() + 24 * 60 * 60 * 1000);
+      
+      const result = await dbInstance
+        .select({ count: sql`COUNT(*)`, distance: sql`COALESCE(SUM(distance), 0)` })
+        .from(ridingRecords)
+        .where(and(gte(ridingRecords.createdAt, dayStartUTC), sql`${ridingRecords.createdAt} < ${dayEndUTC}`));
+      
+      const month = dayKST.getUTCMonth() + 1;
+      const date = dayKST.getUTCDate();
+      dailyRides.push({
+        label: `${month}/${date}`,
+        count: Number(result[0]?.count) || 0,
+        distance: Math.round(Number(result[0]?.distance || 0) / 1000 * 10) / 10 // km
+      });
+    }
+
+    // Weekly rides for last 4 weeks
+    const weeklyRides = [];
+    for (let i = 3; i >= 0; i--) {
+      const weekStartKST = new Date(thisWeekMondayKST.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+      const weekStartUTC = new Date(weekStartKST.getTime() - kstOffset);
+      const weekEndUTC = new Date(weekStartUTC.getTime() + 7 * 24 * 60 * 60 * 1000);
+      
+      const result = await dbInstance
+        .select({ count: sql`COUNT(*)`, distance: sql`COALESCE(SUM(distance), 0)` })
+        .from(ridingRecords)
+        .where(and(gte(ridingRecords.createdAt, weekStartUTC), sql`${ridingRecords.createdAt} < ${weekEndUTC}`));
+      
+      const weekLabel = i === 0 ? "이번주" : i === 1 ? "지난주" : `${i}주 전`;
+      weeklyRides.push({
+        label: weekLabel,
+        count: Number(result[0]?.count) || 0,
+        distance: Math.round(Number(result[0]?.distance || 0) / 1000 * 10) / 10 // km
+      });
+    }
+
+    res.json({ dailyUsers, weeklyUsers, dailyRides, weeklyRides });
+  } catch (e) {
+    console.error("Admin chart data error:", e);
+    res.status(500).json({ error: "차트 데이터를 불러오는데 실패했습니다." });
+  }
+});
+
 // Get users list with pagination and search
 router.get("/users", verifyAdminToken, async (req: Request, res: Response) => {
   try {
@@ -1011,6 +1114,7 @@ function getAdminDashboardHTML(): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SCOOP Riding - 관리자 대시보드</title>
   <script src="https://cdn.tailwindcss.com"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     .modal { display: none; }
@@ -1087,11 +1191,29 @@ function getAdminDashboardHTML(): string {
       </div>
 
       <div id="tab-stats" class="tab-content active">
+        <!-- 차트 섹션 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div class="bg-white rounded-xl p-6 shadow">
-            <h3 class="text-lg font-semibold mb-4">일별 가입자 추이</h3>
-            <canvas id="registrationChart" height="200"></canvas>
+            <h3 class="text-lg font-semibold mb-4">일별 가입자 추이 (최근 7일)</h3>
+            <canvas id="dailyUsersChart" height="200"></canvas>
           </div>
+          <div class="bg-white rounded-xl p-6 shadow">
+            <h3 class="text-lg font-semibold mb-4">주별 가입자 추이 (최근 4주)</h3>
+            <canvas id="weeklyUsersChart" height="200"></canvas>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="bg-white rounded-xl p-6 shadow">
+            <h3 class="text-lg font-semibold mb-4">일별 주행 통계 (최근 7일)</h3>
+            <canvas id="dailyRidesChart" height="200"></canvas>
+          </div>
+          <div class="bg-white rounded-xl p-6 shadow">
+            <h3 class="text-lg font-semibold mb-4">주별 주행 통계 (최근 4주)</h3>
+            <canvas id="weeklyRidesChart" height="200"></canvas>
+          </div>
+        </div>
+        <!-- 사용자 주행 통계 조회 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div class="bg-white rounded-xl p-6 shadow">
             <h3 class="text-lg font-semibold mb-4">사용자 주행 통계</h3>
             <div class="mb-4">
@@ -1104,6 +1226,10 @@ function getAdminDashboardHTML(): string {
               <h4 class="font-semibold mb-2">주행 기록 목록</h4>
               <div id="rideHistoryList" class="max-h-64 overflow-y-auto"></div>
             </div>
+          </div>
+          <div class="bg-white rounded-xl p-6 shadow">
+            <h3 class="text-lg font-semibold mb-4">주행 거리 분포 (최근 7일)</h3>
+            <canvas id="dailyDistanceChart" height="200"></canvas>
           </div>
         </div>
         <div class="bg-white rounded-xl p-6 shadow">
@@ -1497,6 +1623,13 @@ function getAdminDashboardHTML(): string {
       if (tab === 'logs') loadLogs();
     }
 
+    // Chart instances
+    let dailyUsersChartInstance = null;
+    let weeklyUsersChartInstance = null;
+    let dailyRidesChartInstance = null;
+    let weeklyRidesChartInstance = null;
+    let dailyDistanceChartInstance = null;
+
     async function loadStats() {
       try {
         const res = await fetch(API_BASE+'/api/admin/stats', { headers: { 'Authorization': 'Bearer '+adminToken } });
@@ -1510,7 +1643,151 @@ function getAdminDashboardHTML(): string {
         document.getElementById('weeklyRides').textContent = data.weeklyRides || '0';
         document.getElementById('weeklyDistance').textContent = (data.weeklyDistance || 0).toLocaleString();
         document.getElementById('weeklyPosts').textContent = data.weeklyPosts || '0';
+        // Load charts
+        loadChartData();
       } catch (e) { console.error(e); }
+    }
+
+    async function loadChartData() {
+      try {
+        const res = await fetch(API_BASE+'/api/admin/chart-data', { headers: { 'Authorization': 'Bearer '+adminToken } });
+        const data = await res.json();
+        
+        // Daily Users Chart
+        const dailyUsersCtx = document.getElementById('dailyUsersChart').getContext('2d');
+        if (dailyUsersChartInstance) dailyUsersChartInstance.destroy();
+        dailyUsersChartInstance = new Chart(dailyUsersCtx, {
+          type: 'bar',
+          data: {
+            labels: data.dailyUsers.map(d => d.label),
+            datasets: [{
+              label: '가입자 수',
+              data: data.dailyUsers.map(d => d.count),
+              backgroundColor: 'rgba(249, 115, 22, 0.7)',
+              borderColor: 'rgb(249, 115, 22)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+          }
+        });
+
+        // Weekly Users Chart
+        const weeklyUsersCtx = document.getElementById('weeklyUsersChart').getContext('2d');
+        if (weeklyUsersChartInstance) weeklyUsersChartInstance.destroy();
+        weeklyUsersChartInstance = new Chart(weeklyUsersCtx, {
+          type: 'bar',
+          data: {
+            labels: data.weeklyUsers.map(d => d.label),
+            datasets: [{
+              label: '가입자 수',
+              data: data.weeklyUsers.map(d => d.count),
+              backgroundColor: 'rgba(59, 130, 246, 0.7)',
+              borderColor: 'rgb(59, 130, 246)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+          }
+        });
+
+        // Daily Rides Chart (dual axis: count + distance)
+        const dailyRidesCtx = document.getElementById('dailyRidesChart').getContext('2d');
+        if (dailyRidesChartInstance) dailyRidesChartInstance.destroy();
+        dailyRidesChartInstance = new Chart(dailyRidesCtx, {
+          type: 'bar',
+          data: {
+            labels: data.dailyRides.map(d => d.label),
+            datasets: [{
+              label: '주행 횟수',
+              data: data.dailyRides.map(d => d.count),
+              backgroundColor: 'rgba(34, 197, 94, 0.7)',
+              borderColor: 'rgb(34, 197, 94)',
+              borderWidth: 1,
+              yAxisID: 'y'
+            }, {
+              label: '거리 (km)',
+              data: data.dailyRides.map(d => d.distance),
+              type: 'line',
+              borderColor: 'rgb(168, 85, 247)',
+              backgroundColor: 'rgba(168, 85, 247, 0.2)',
+              tension: 0.3,
+              yAxisID: 'y1'
+            }]
+          },
+          options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+              y: { type: 'linear', display: true, position: 'left', beginAtZero: true, ticks: { stepSize: 1 } },
+              y1: { type: 'linear', display: true, position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } }
+            }
+          }
+        });
+
+        // Weekly Rides Chart
+        const weeklyRidesCtx = document.getElementById('weeklyRidesChart').getContext('2d');
+        if (weeklyRidesChartInstance) weeklyRidesChartInstance.destroy();
+        weeklyRidesChartInstance = new Chart(weeklyRidesCtx, {
+          type: 'bar',
+          data: {
+            labels: data.weeklyRides.map(d => d.label),
+            datasets: [{
+              label: '주행 횟수',
+              data: data.weeklyRides.map(d => d.count),
+              backgroundColor: 'rgba(34, 197, 94, 0.7)',
+              borderColor: 'rgb(34, 197, 94)',
+              borderWidth: 1,
+              yAxisID: 'y'
+            }, {
+              label: '거리 (km)',
+              data: data.weeklyRides.map(d => d.distance),
+              type: 'line',
+              borderColor: 'rgb(168, 85, 247)',
+              backgroundColor: 'rgba(168, 85, 247, 0.2)',
+              tension: 0.3,
+              yAxisID: 'y1'
+            }]
+          },
+          options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+              y: { type: 'linear', display: true, position: 'left', beginAtZero: true, ticks: { stepSize: 1 } },
+              y1: { type: 'linear', display: true, position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } }
+            }
+          }
+        });
+
+        // Daily Distance Chart
+        const dailyDistanceCtx = document.getElementById('dailyDistanceChart').getContext('2d');
+        if (dailyDistanceChartInstance) dailyDistanceChartInstance.destroy();
+        dailyDistanceChartInstance = new Chart(dailyDistanceCtx, {
+          type: 'line',
+          data: {
+            labels: data.dailyRides.map(d => d.label),
+            datasets: [{
+              label: '주행 거리 (km)',
+              data: data.dailyRides.map(d => d.distance),
+              borderColor: 'rgb(249, 115, 22)',
+              backgroundColor: 'rgba(249, 115, 22, 0.2)',
+              fill: true,
+              tension: 0.4
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+      } catch (e) { console.error('Chart load error:', e); }
     }
 
     function debounceSearch() { clearTimeout(searchTimeout); searchTimeout = setTimeout(loadUsers, 300); }
