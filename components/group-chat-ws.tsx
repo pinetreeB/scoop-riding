@@ -28,6 +28,7 @@ interface GroupChatWSProps {
   wsConnected: boolean;
   sendChatMessage: (message: string, messageType?: "text" | "location" | "alert") => void;
   onChatMessageReceived?: (callback: (message: ChatMessage) => void) => void;
+  currentLocation?: { latitude: number; longitude: number } | null;
 }
 
 interface ChatMessage {
@@ -48,6 +49,7 @@ export function GroupChatWS({
   onClose, 
   wsConnected,
   sendChatMessage,
+  currentLocation,
 }: GroupChatWSProps) {
   const colors = useColors();
   const { user } = useAuth();
@@ -101,6 +103,41 @@ export function GroupChatWS({
 
   // WebSocket 메시지 수신 처리를 위한 외부 콜백 등록
   // 이 컴포넌트는 riding.tsx에서 onChatMessage 콜백을 통해 메시지를 받음
+
+  // 위치 공유 전송
+  const handleShareLocation = useCallback(() => {
+    if (!currentLocation) return;
+    
+    const locationMessage = `📍 내 위치: ${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}`;
+    
+    if (wsConnected) {
+      // WebSocket으로 전송
+      const tempId = --messageIdCounterRef.current;
+      setMessages(prev => [...prev, {
+        id: tempId,
+        userId: user?.id || 0,
+        userName: user?.name || null,
+        userProfileImage: user?.profileImageUrl || null,
+        message: locationMessage,
+        messageType: "location",
+        createdAt: new Date(),
+        pending: true,
+      }]);
+      
+      sendChatMessage(locationMessage, "location");
+      
+      if (Platform.OS !== "web") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    } else {
+      // HTTP fallback
+      sendMessageMutation.mutate({
+        groupId,
+        message: locationMessage,
+        messageType: "location",
+      });
+    }
+  }, [currentLocation, wsConnected, sendChatMessage, sendMessageMutation, groupId, user]);
 
   // 메시지 전송
   const handleSend = useCallback(() => {
@@ -171,12 +208,60 @@ export function GroupChatWS({
   const renderMessage = useCallback(({ item }: { item: ChatMessage }) => {
     const isMyMessage = item.userId === user?.id;
     const isAlert = item.messageType === "alert";
+    const isLocation = item.messageType === "location";
 
     if (isAlert) {
       return (
         <View className="items-center my-2">
           <View className="bg-yellow-500/20 px-3 py-1.5 rounded-full">
             <Text className="text-yellow-600 text-xs">{item.message}</Text>
+          </View>
+        </View>
+      );
+    }
+
+    if (isLocation) {
+      return (
+        <View className={`flex-row mb-3 ${isMyMessage ? "justify-end" : "justify-start"}`}>
+          {!isMyMessage && (
+            <View className="mr-2">
+              {item.userProfileImage ? (
+                <Image
+                  source={{ uri: item.userProfileImage }}
+                  style={{ width: 32, height: 32, borderRadius: 16 }}
+                />
+              ) : (
+                <View
+                  style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary }}
+                  className="items-center justify-center"
+                >
+                  <Text className="text-white text-sm font-bold">
+                    {(item.userName || "?").charAt(0)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+          <View className={`max-w-[70%] ${isMyMessage ? "items-end" : "items-start"}`}>
+            {!isMyMessage && (
+              <Text className="text-xs text-muted mb-1">{item.userName || "익명"}</Text>
+            )}
+            <View
+              className={`px-3 py-2 rounded-2xl ${isMyMessage ? "bg-blue-500" : "bg-blue-100"} ${item.pending ? "opacity-60" : ""}`}
+            >
+              <View className="flex-row items-center">
+                <MaterialIcons name="location-on" size={16} color={isMyMessage ? "#FFFFFF" : "#3B82F6"} />
+                <Text className={`ml-1 ${isMyMessage ? "text-white" : "text-blue-600"}`}>
+                  {item.message.replace("📍 ", "")}
+                </Text>
+              </View>
+            </View>
+            <Text className="text-xs text-muted mt-1">
+              {item.pending ? "전송 중..." : new Date(item.createdAt).toLocaleTimeString("ko-KR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </Text>
           </View>
         </View>
       );
@@ -279,6 +364,17 @@ export function GroupChatWS({
 
       {/* Input */}
       <View className="flex-row items-center px-4 py-3 border-t border-border bg-background">
+        {/* 위치 공유 버튼 */}
+        <Pressable
+          onPress={handleShareLocation}
+          disabled={!currentLocation}
+          style={({ pressed }) => [
+            { opacity: pressed || !currentLocation ? 0.5 : 1 },
+          ]}
+          className="w-10 h-10 bg-blue-500 rounded-full items-center justify-center mr-2"
+        >
+          <MaterialIcons name="location-on" size={20} color="#FFFFFF" />
+        </Pressable>
         <TextInput
           value={message}
           onChangeText={setMessage}

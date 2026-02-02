@@ -9,7 +9,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { RideMap } from "@/components/ride-map";
-import { GoogleRideMap } from "@/components/google-ride-map";
+import { GoogleRideMap, GoogleRideMapRef } from "@/components/google-ride-map";
 import { trpc } from "@/lib/trpc";
 import {
   saveRidingRecord,
@@ -203,6 +203,7 @@ export default function RidingScreen() {
   // Battery optimization guide
   const batteryGuide = useBatteryOptimizationGuide();
 
+  const googleMapRef = useRef<GoogleRideMapRef>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const startTimeRef = useRef<Date>(new Date());
@@ -1312,6 +1313,7 @@ export default function RidingScreen() {
           <View style={{ flex: 1, position: 'absolute', top: 50, left: 0, right: 0, bottom: 0 }}>
             {Platform.OS !== "web" ? (
               <GoogleRideMap
+                ref={googleMapRef}
                 gpsPoints={gpsPoints}
                 currentLocation={currentLocation}
                 isLive={true}
@@ -1480,8 +1482,8 @@ export default function RidingScreen() {
                 }))}
                 currentUserId={user?.id ?? 0}
                 onMemberPress={(member) => {
-                  if (member.latitude && member.longitude) {
-                    // TODO: 지도를 해당 멤버 위치로 이동
+                  if (member.latitude && member.longitude && googleMapRef.current) {
+                    googleMapRef.current.focusOnLocation(member.latitude, member.longitude);
                     console.log(`[GroupOverlay] Focus on member ${member.name} at ${member.latitude}, ${member.longitude}`);
                   }
                 }}
@@ -1642,6 +1644,7 @@ export default function RidingScreen() {
             onClose={() => setShowChat(false)}
             wsConnected={wsConnected}
             sendChatMessage={wsSendChatMessage}
+            currentLocation={currentLocation}
           />
         </View>
       )}

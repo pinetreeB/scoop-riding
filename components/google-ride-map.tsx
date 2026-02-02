@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback, useImperativeHandle } from "react";
 import { View, StyleSheet, Text, ActivityIndicator, Platform, TouchableOpacity } from "react-native";
 
 // Only import react-native-maps on native platforms
@@ -102,7 +102,11 @@ function GroupMemberMarker({ name, speed }: { name: string | null; speed: number
   );
 }
 
-export function GoogleRideMap({
+export interface GoogleRideMapRef {
+  focusOnLocation: (latitude: number, longitude: number) => void;
+}
+
+export const GoogleRideMap = React.forwardRef<GoogleRideMapRef, GoogleRideMapProps>(({
   gpsPoints,
   currentLocation,
   showCurrentLocation = false,
@@ -116,7 +120,7 @@ export function GoogleRideMap({
   currentSpeed = 0,
   showRecenterButton = true,
   onRecenterPress,
-}: GoogleRideMapProps) {
+}, ref) => {
   const colors = useColors();
   const colorScheme = useColorScheme();
   const mapStyle = colorScheme === 'dark' ? darkMapStyle : lightMapStyle;
@@ -169,7 +173,7 @@ export function GoogleRideMap({
     }, autoFollowDelay * 1000);
   }, [allowInteraction, isLive, autoFollowDelay]);
   
-  // 컴포넌트 언마운트 시 타이머 정리
+  // 컨포넌트 언마운트 시 타이머 정리
   useEffect(() => {
     return () => {
       if (interactionTimeoutRef.current) {
@@ -177,6 +181,37 @@ export function GoogleRideMap({
       }
     };
   }, []);
+  
+  // 외부에서 특정 위치로 지도 이동하는 함수 노출
+  useImperativeHandle(ref, () => ({
+    focusOnLocation: (latitude: number, longitude: number) => {
+      if (mapRef.current) {
+        // 사용자 조작 모드로 전환 (자동 추적 일시 정지)
+        setIsUserInteracting(true);
+        
+        // 기존 타이머 취소
+        if (interactionTimeoutRef.current) {
+          clearTimeout(interactionTimeoutRef.current);
+        }
+        
+        // 해당 위치로 지도 이동
+        mapRef.current.animateToRegion({
+          latitude,
+          longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        }, 500);
+        
+        console.log(`[GoogleRideMap] Focused on location: ${latitude}, ${longitude}`);
+        
+        // 10초 후 자동 추적 모드 복귀
+        interactionTimeoutRef.current = setTimeout(() => {
+          setIsUserInteracting(false);
+          console.log("[GoogleRideMap] Auto-follow mode resumed after focus");
+        }, 10000);
+      }
+    },
+  }), []);
 
   // Calculate initial region from GPS points
   const initialRegion = useMemo(() => {
@@ -458,7 +493,7 @@ export function GoogleRideMap({
       )}
     </View>
   );
-}
+});
 
 // Custom map style for cleaner look (light mode)
 const lightMapStyle = [

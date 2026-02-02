@@ -682,7 +682,7 @@ export const appRouter = router({
 
   // Images
   images: router({
-    // Upload image
+    // Upload image (optimized with size limit)
     upload: protectedProcedure
       .input(
         z.object({
@@ -694,7 +694,15 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const { storagePut } = await import("./storage");
         const buffer = Buffer.from(input.base64, "base64");
-        const key = `posts/${ctx.user.id}/${Date.now()}-${input.filename}`;
+        
+        // Size limit: 10MB
+        const MAX_SIZE = 10 * 1024 * 1024;
+        if (buffer.length > MAX_SIZE) {
+          throw new Error("이미지 크기가 10MB를 초과합니다.");
+        }
+        
+        const sanitizedFilename = input.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const key = `posts/${ctx.user.id}/${Date.now()}-${sanitizedFilename}`;
         const result = await storagePut(key, buffer, input.contentType);
         return { url: result.url, key: result.key };
       }),
@@ -722,7 +730,7 @@ export const appRouter = router({
         }
       }),
 
-    // Upload profile image
+    // Upload profile image (optimized with size limit)
     uploadImage: protectedProcedure
       .input(
         z.object({
@@ -735,6 +743,13 @@ export const appRouter = router({
         try {
           const { storagePut } = await import("./storage");
           const buffer = Buffer.from(input.base64, "base64");
+          
+          // Size limit: 5MB for profile images
+          const MAX_SIZE = 5 * 1024 * 1024;
+          if (buffer.length > MAX_SIZE) {
+            throw new Error("프로필 이미지 크기가 5MB를 초과합니다.");
+          }
+          
           // Sanitize filename to prevent issues
           const sanitizedFilename = input.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
           const key = `profiles/${ctx.user.id}/${Date.now()}-${sanitizedFilename}`;
@@ -746,6 +761,9 @@ export const appRouter = router({
           return { url: result.url, key: result.key };
         } catch (error) {
           console.error("Profile image upload error:", error);
+          if (error instanceof Error && error.message.includes("초과")) {
+            throw error;
+          }
           throw new Error("이미지 업로드에 실패했습니다. 다시 시도해주세요.");
         }
       }),
