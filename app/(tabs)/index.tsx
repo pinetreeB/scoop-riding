@@ -448,76 +448,88 @@ export default function HomeScreen() {
 
         {/* Quick Stats Widget */}
         <View className="mx-5 mb-4">
-          <View className="flex-row gap-2">
+          <View className="flex-row gap-2" style={{ minHeight: 100 }}>
             {/* Weekly Stats */}
             <View 
-              className="flex-1 rounded-2xl p-4"
-              style={{ backgroundColor: colors.primary }}
+              className="flex-1 rounded-2xl p-4 justify-between"
+              style={{ backgroundColor: colors.primary, minHeight: 100 }}
             >
-              <View className="flex-row items-center mb-2">
+              <View className="flex-row items-center">
                 <MaterialIcons name="date-range" size={16} color="#FFFFFF" />
                 <Text className="text-white font-semibold ml-1">이번 주</Text>
               </View>
-              <Text className="text-white text-2xl font-bold">
-                {(stats.weeklyDistance / 1000).toFixed(1)} km
-              </Text>
-              <View className="flex-row items-center mt-1">
-                <Text className="text-white/70 text-xs">{stats.weeklyRides}회 주행</Text>
-                <Text className="text-white/50 text-xs mx-1">·</Text>
-                <Text className="text-white/70 text-xs">{formatDuration(stats.weeklyDuration)}</Text>
+              <View>
+                <Text className="text-white text-2xl font-bold">
+                  {(stats.weeklyDistance / 1000).toFixed(1)} km
+                </Text>
+                <View className="flex-row items-center mt-1">
+                  <Text className="text-white/70 text-xs">{stats.weeklyRides}회 주행</Text>
+                  <Text className="text-white/50 text-xs mx-1">·</Text>
+                  <Text className="text-white/70 text-xs">{formatDuration(stats.weeklyDuration)}</Text>
+                </View>
               </View>
             </View>
 
             {/* Monthly Stats */}
-            <View className="flex-1 rounded-2xl p-4 bg-surface border border-border">
-              <View className="flex-row items-center mb-2">
+            <View 
+              className="flex-1 rounded-2xl p-4 bg-surface border border-border justify-between"
+              style={{ minHeight: 100 }}
+            >
+              <View className="flex-row items-center">
                 <MaterialIcons name="calendar-month" size={16} color={colors.primary} />
                 <Text className="text-foreground font-semibold ml-1">이번 달</Text>
               </View>
-              <Text className="text-foreground text-2xl font-bold">
-                {(stats.monthlyDistance / 1000).toFixed(1)} km
-              </Text>
-              <View className="flex-row items-center mt-1">
-                <Text className="text-muted text-xs">{stats.monthlyRides}회 주행</Text>
-                <Text className="text-muted text-xs mx-1">·</Text>
-                <Text className="text-muted text-xs">{formatDuration(stats.monthlyDuration)}</Text>
+              <View>
+                <Text className="text-foreground text-2xl font-bold">
+                  {(stats.monthlyDistance / 1000).toFixed(1)} km
+                </Text>
+                <View className="flex-row items-center mt-1">
+                  <Text className="text-muted text-xs">{stats.monthlyRides}회 주행</Text>
+                  <Text className="text-muted text-xs mx-1">·</Text>
+                  <Text className="text-muted text-xs">{formatDuration(stats.monthlyDuration)}</Text>
+                </View>
               </View>
             </View>
           </View>
         </View>
 
         {/* Quick Actions Row */}
-        <View className="flex-row mx-5 mb-4">
+        <View className="flex-row mx-5 mb-4" style={{ gap: 8 }}>
           {/* My Tracking Report */}
           <Pressable
             onPress={handleViewHistory}
             style={({ pressed }) => [
               {
                 flex: 1,
-                marginRight: 8,
                 opacity: pressed ? 0.9 : 1,
               },
             ]}
           >
-            <View className="bg-surface rounded-2xl p-4 h-24 justify-between border border-border">
+            <View 
+              className="bg-surface rounded-2xl p-4 justify-between border border-border"
+              style={{ height: 100 }}
+            >
               <View className="flex-row items-center">
                 <MaterialIcons name="analytics" size={18} color={colors.primary} />
                 <Text className="text-foreground font-semibold ml-2">내 트래킹 보고서</Text>
               </View>
-              <View className="flex-row items-end">
-                <View className="flex-row">
+              <View className="flex-row items-end justify-between">
+                <View className="flex-row items-end">
                   <View className="w-2 h-6 bg-primary rounded-full mr-1" />
                   <View className="w-2 h-4 bg-primary/60 rounded-full mr-1" />
                   <View className="w-2 h-8 bg-primary rounded-full" />
                 </View>
-                <MaterialIcons name="chevron-right" size={20} color={colors.muted} style={{ marginLeft: 'auto' }} />
+                <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
               </View>
             </View>
           </Pressable>
 
           {/* Total Stats */}
-          <View className="flex-1 ml-2">
-            <View className="bg-surface rounded-2xl p-4 h-24 justify-between border border-border">
+          <View style={{ flex: 1 }}>
+            <View 
+              className="bg-surface rounded-2xl p-4 justify-between border border-border"
+              style={{ height: 100 }}
+            >
               <View className="flex-row items-center">
                 <MaterialIcons name="speed" size={18} color={colors.success} />
                 <Text className="text-foreground font-semibold ml-2">전체 통계</Text>

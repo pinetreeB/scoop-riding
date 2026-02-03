@@ -33,6 +33,8 @@ import { NotificationProvider } from "@/lib/notification-provider";
 import { PermissionRequest } from "@/components/permission-request";
 import { AlphaTestSurvey, incrementAppUsageCount } from "@/components/alpha-test-survey";
 import { BadgeEarnedPopup } from "@/components/badge-earned-popup";
+import { AppLoading } from "@/components/app-loading";
+import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -41,27 +43,72 @@ export const unstable_settings = {
   anchor: "(tabs)",
 };
 
-// Auth guard component
+// Battery optimization guide wrapper for Android
+function BatteryOptimizationGuideWrapper() {
+  const { shouldShow, isVisible, showGuide, hideGuide, markAsShown } = useBatteryOptimizationGuide();
+  const { isAuthenticated } = useAuthContext();
+
+  useEffect(() => {
+    // Show guide after user is authenticated
+    if (isAuthenticated && shouldShow) {
+      // Small delay to let the app load first
+      const timer = setTimeout(() => {
+        showGuide();
+        markAsShown();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, shouldShow]);
+
+  return (
+    <BatteryOptimizationGuide
+      visible={isVisible}
+      onClose={hideGuide}
+    />
+  );
+}
+
+// Auth guard component with loading splash
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuthContext();
   const segments = useSegments();
   const router = useRouter();
+  const [showLoading, setShowLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState("로딩 중...");
 
   useEffect(() => {
-    if (loading) return;
+    if (loading) {
+      setLoadingMessage("계정 확인 중...");
+      return;
+    }
 
     const inAuthGroup = segments[0] === "login" || segments[0] === "register";
 
     if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to login if not authenticated and not already on auth pages
-      router.replace("/login");
+      setLoadingMessage("로그인 페이지로 이동 중...");
+      // Small delay for smooth transition
+      setTimeout(() => {
+        router.replace("/login");
+        setShowLoading(false);
+      }, 300);
     } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to home if authenticated and on auth pages
-      router.replace("/(tabs)");
+      setLoadingMessage("홈으로 이동 중...");
+      setTimeout(() => {
+        router.replace("/(tabs)");
+        setShowLoading(false);
+      }, 300);
+    } else {
+      // Already on correct page, hide loading
+      setShowLoading(false);
     }
   }, [isAuthenticated, loading, segments, router]);
 
-  return <>{children}</>;
+  return (
+    <>
+      <AppLoading isLoading={showLoading || loading} message={loadingMessage} />
+      {children}
+    </>
+  );
 }
 
 function RootLayoutContent() {
@@ -156,6 +203,7 @@ export default function RootLayout() {
             <NotificationProvider>
               <AuthGuard>
                 <PermissionRequest />
+                <BatteryOptimizationGuideWrapper />
                 <AlphaTestSurvey />
                 <BadgeEarnedPopup />
                 <NetworkSyncManager />

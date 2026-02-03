@@ -913,3 +913,34 @@ export const batteryAnalysis = mysqlTable("batteryAnalysis", {
 
 export type BatteryAnalysisRecord = typeof batteryAnalysis.$inferSelect;
 export type InsertBatteryAnalysis = typeof batteryAnalysis.$inferInsert;
+
+/**
+ * Battery charging records - stores charging history for battery analysis
+ */
+export const chargingRecords = mysqlTable("chargingRecords", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User ID */
+  userId: int("userId").notNull(),
+  /** Scooter ID */
+  scooterId: int("scooterId").notNull(),
+  /** Charging date */
+  chargeDate: varchar("chargeDate", { length: 32 }).notNull(),
+  /** Voltage before charging (V) */
+  voltageBefore: decimal("voltageBefore", { precision: 5, scale: 2 }).notNull(),
+  /** Voltage after charging (V) */
+  voltageAfter: decimal("voltageAfter", { precision: 5, scale: 2 }).notNull(),
+  /** SOC before charging (%) */
+  socBefore: decimal("socBefore", { precision: 5, scale: 2 }),
+  /** SOC after charging (%) */
+  socAfter: decimal("socAfter", { precision: 5, scale: 2 }),
+  /** Charging duration in minutes */
+  chargingDuration: int("chargingDuration"),
+  /** Charging type: full, partial, top-up */
+  chargeType: varchar("chargeType", { length: 32 }),
+  /** Notes about the charging session */
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ChargingRecord = typeof chargingRecords.$inferSelect;
+export type InsertChargingRecord = typeof chargingRecords.$inferInsert;

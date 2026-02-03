@@ -253,8 +253,12 @@ export function useGroupWebSocket({
     setMembers([]);
   }, []);
 
-  // Throttled location update - sends at most once every 2 seconds
-  const LOCATION_THROTTLE_MS = 2000;
+  // Adaptive throttled location update
+  // - Fast updates when moving (1 second)
+  // - Slow updates when stationary (3 seconds)
+  const LOCATION_THROTTLE_FAST_MS = 1000; // When moving
+  const LOCATION_THROTTLE_SLOW_MS = 3000; // When stationary
+  const SPEED_THRESHOLD = 2; // km/h - below this is considered stationary
   
   const sendLocationUpdate = useCallback((location: {
     latitude: number;
@@ -274,8 +278,13 @@ export function useGroupWebSocket({
     // Store the latest location
     pendingLocationRef.current = location;
     
+    // Adaptive throttle based on speed
+    const throttleMs = location.speed > SPEED_THRESHOLD 
+      ? LOCATION_THROTTLE_FAST_MS 
+      : LOCATION_THROTTLE_SLOW_MS;
+    
     // If enough time has passed, send immediately
-    if (timeSinceLastSent >= LOCATION_THROTTLE_MS) {
+    if (timeSinceLastSent >= throttleMs) {
       lastLocationSentRef.current = now;
       wsRef.current.send(JSON.stringify({
         type: "location_update",
@@ -294,7 +303,7 @@ export function useGroupWebSocket({
       }
     } else if (!locationThrottleTimeoutRef.current) {
       // Schedule a delayed send for the remaining time
-      const delay = LOCATION_THROTTLE_MS - timeSinceLastSent;
+      const delay = throttleMs - timeSinceLastSent;
       locationThrottleTimeoutRef.current = setTimeout(() => {
         if (pendingLocationRef.current && wsRef.current && wsRef.current.readyState === WebSocket.OPEN && currentGroupIdRef.current) {
           lastLocationSentRef.current = Date.now();

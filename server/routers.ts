@@ -269,6 +269,32 @@ export const appRouter = router({
           },
         };
       }),
+    // 회원탈퇴 (Account Deletion)
+    deleteAccount: protectedProcedure
+      .input(z.object({
+        confirmText: z.string(),
+        reason: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Verify confirmation text
+        if (input.confirmText !== "회원탈퇴") {
+          return { success: false, error: "확인 텍스트가 일치하지 않습니다." };
+        }
+
+        try {
+          // Delete user account and all associated data
+          await db.deleteUserAccount(ctx.user.id, input.reason);
+
+          // Clear session cookie
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+
+          return { success: true };
+        } catch (error: any) {
+          console.error("[Auth] Delete account error:", error);
+          return { success: false, error: error.message || "회원탈퇴 중 오류가 발생했습니다." };
+        }
+      }),
   }),
 
   // Riding records (protected - requires login)
@@ -1989,6 +2015,54 @@ ${recentRides.map((r, i) => `${i + 1}. ${r.date}: ${(r.distance / 1000).toFixed(
           energyConsumedWh: energyWh,
           efficiencyWhKm,
         };
+      }),
+  }),
+
+  // Charging records router
+  charging: router({
+    // Create charging record
+    create: protectedProcedure
+      .input(z.object({
+        scooterId: z.number(),
+        voltageBefore: z.number(),
+        voltageAfter: z.number(),
+        socBefore: z.number().optional(),
+        socAfter: z.number().optional(),
+        chargingDuration: z.number().optional(),
+        chargeType: z.enum(["full", "partial", "top-up"]).default("full"),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const record = await db.createChargingRecord({
+          userId: ctx.user.id,
+          scooterId: input.scooterId,
+          chargeDate: new Date().toISOString().split("T")[0],
+          voltageBefore: input.voltageBefore.toString(),
+          voltageAfter: input.voltageAfter.toString(),
+          socBefore: input.socBefore?.toString(),
+          socAfter: input.socAfter?.toString(),
+          chargingDuration: input.chargingDuration,
+          chargeType: input.chargeType,
+          notes: input.notes,
+        });
+        return { success: true, record };
+      }),
+
+    // Get charging history for a scooter
+    getHistory: protectedProcedure
+      .input(z.object({
+        scooterId: z.number(),
+        limit: z.number().default(20),
+      }))
+      .query(async ({ ctx, input }) => {
+        return db.getChargingHistory(ctx.user.id, input.scooterId, input.limit);
+      }),
+
+    // Get charging statistics
+    getStats: protectedProcedure
+      .input(z.object({ scooterId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return db.getChargingStats(ctx.user.id, input.scooterId);
       }),
   }),
 });

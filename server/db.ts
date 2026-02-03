@@ -1,6 +1,6 @@
 import { eq, and, desc, sql, gt, lt, isNotNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage, announcements, InsertAnnouncement, Announcement, userAnnouncementReads, InsertUserAnnouncementRead, UserAnnouncementRead, userBans, InsertUserBan, UserBan, surveyResponses, InsertSurveyResponse, SurveyResponse, bugReports, InsertBugReport, BugReport, userActivityLogs, InsertUserActivityLog, UserActivityLog, suspiciousUserReports, InsertSuspiciousUserReport, SuspiciousUserReport, aiChatUsage, AiChatUsage, aiChatHistory, AiChatHistoryRecord, batteryAnalysis, BatteryAnalysisRecord } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage, announcements, InsertAnnouncement, Announcement, userAnnouncementReads, InsertUserAnnouncementRead, UserAnnouncementRead, userBans, InsertUserBan, UserBan, surveyResponses, InsertSurveyResponse, SurveyResponse, bugReports, InsertBugReport, BugReport, userActivityLogs, InsertUserActivityLog, UserActivityLog, suspiciousUserReports, InsertSuspiciousUserReport, SuspiciousUserReport, aiChatUsage, AiChatUsage, aiChatHistory, AiChatHistoryRecord, batteryAnalysis, BatteryAnalysisRecord, chargingRecords, ChargingRecord, InsertChargingRecord } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -4364,5 +4364,294 @@ export async function getRecentRidesWithVoltage(
   } catch (error) {
     console.error("[Database] Failed to get recent rides with voltage:", error);
     return [];
+  }
+}
+
+
+// ============================================
+// Charging Records Functions
+// ============================================
+
+/**
+ * Create a new charging record
+ */
+export async function createChargingRecord(data: {
+  userId: number;
+  scooterId: number;
+  chargeDate: string;
+  voltageBefore: string;
+  voltageAfter: string;
+  socBefore?: string;
+  socAfter?: string;
+  chargingDuration?: number;
+  chargeType?: string;
+  notes?: string;
+}) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+  try {
+    const result = await db.insert(chargingRecords).values({
+      userId: data.userId,
+      scooterId: data.scooterId,
+      chargeDate: data.chargeDate,
+      voltageBefore: data.voltageBefore,
+      voltageAfter: data.voltageAfter,
+      socBefore: data.socBefore,
+      socAfter: data.socAfter,
+      chargingDuration: data.chargingDuration,
+      chargeType: data.chargeType,
+      notes: data.notes,
+    });
+    console.log("[Database] Created charging record for scooter:", data.scooterId);
+    return { id: result[0].insertId, ...data };
+  } catch (error) {
+    console.error("[Database] Failed to create charging record:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get charging history for a scooter
+ */
+export async function getChargingHistory(userId: number, scooterId: number, limit: number = 20) {
+  const db = await getDb();
+  if (!db) {
+    return [];
+  }
+  try {
+    const result = await db
+      .select()
+      .from(chargingRecords)
+      .where(
+        and(
+          eq(chargingRecords.userId, userId),
+          eq(chargingRecords.scooterId, scooterId)
+        )
+      )
+      .orderBy(desc(chargingRecords.createdAt))
+      .limit(limit);
+    
+    return result.map(r => ({
+      id: r.id,
+      chargeDate: r.chargeDate,
+      voltageBefore: Number(r.voltageBefore),
+      voltageAfter: Number(r.voltageAfter),
+      socBefore: r.socBefore ? Number(r.socBefore) : null,
+      socAfter: r.socAfter ? Number(r.socAfter) : null,
+      chargingDuration: r.chargingDuration,
+      chargeType: r.chargeType,
+      notes: r.notes,
+      createdAt: r.createdAt,
+    }));
+  } catch (error) {
+    console.error("[Database] Failed to get charging history:", error);
+    return [];
+  }
+}
+
+/**
+ * Get charging statistics for a scooter
+ */
+export async function getChargingStats(userId: number, scooterId: number) {
+  const db = await getDb();
+  if (!db) {
+    return {
+      totalCharges: 0,
+      fullCharges: 0,
+      partialCharges: 0,
+      avgChargingDuration: null,
+      lastChargeDate: null,
+      avgSocGain: null,
+    };
+  }
+  try {
+    const records = await db
+      .select()
+      .from(chargingRecords)
+      .where(
+        and(
+          eq(chargingRecords.userId, userId),
+          eq(chargingRecords.scooterId, scooterId)
+        )
+      )
+      .orderBy(desc(chargingRecords.createdAt));
+    
+    if (records.length === 0) {
+      return {
+        totalCharges: 0,
+        fullCharges: 0,
+        partialCharges: 0,
+        avgChargingDuration: null,
+        lastChargeDate: null,
+        avgSocGain: null,
+      };
+    }
+
+    type RecordType = typeof records[0];
+    const fullCharges = records.filter((r: RecordType) => r.chargeType === "full").length;
+    const partialCharges = records.filter((r: RecordType) => r.chargeType === "partial").length;
+    
+    const durationsWithValue = records.filter((r: RecordType) => r.chargingDuration != null);
+    const avgChargingDuration = durationsWithValue.length > 0
+      ? Math.round(durationsWithValue.reduce((sum: number, r: RecordType) => sum + (r.chargingDuration || 0), 0) / durationsWithValue.length)
+      : null;
+
+    const socGains: number[] = records
+      .filter((r: typeof records[0]) => r.socBefore && r.socAfter)
+      .map((r: typeof records[0]) => Number(r.socAfter) - Number(r.socBefore));
+    const avgSocGain = socGains.length > 0
+      ? Math.round(socGains.reduce((sum: number, g: number) => sum + g, 0) / socGains.length)
+      : null;
+
+    return {
+      totalCharges: records.length,
+      fullCharges,
+      partialCharges,
+      avgChargingDuration,
+      lastChargeDate: records[0].chargeDate,
+      avgSocGain,
+    };
+  } catch (error) {
+    console.error("[Database] Failed to get charging stats:", error);
+    return {
+      totalCharges: 0,
+      fullCharges: 0,
+      partialCharges: 0,
+      avgChargingDuration: null,
+      lastChargeDate: null,
+      avgSocGain: null,
+    };
+  }
+}
+
+
+/**
+ * Delete user account and all associated data
+ */
+export async function deleteUserAccount(userId: number, reason?: string): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  try {
+    console.log(`[Database] Deleting user account: ${userId}, reason: ${reason || "not provided"}`);
+
+    // Delete in order to respect foreign key constraints
+    // 1. Delete charging records
+    await db.delete(chargingRecords).where(eq(chargingRecords.userId, userId));
+    
+    // 2. Delete battery analysis records
+    await db.delete(batteryAnalysis).where(eq(batteryAnalysis.userId, userId));
+    
+    // 3. Delete AI chat history
+    await db.delete(aiChatHistory).where(eq(aiChatHistory.userId, userId));
+    
+    // 4. Delete AI chat usage
+    await db.delete(aiChatUsage).where(eq(aiChatUsage.userId, userId));
+    
+    // 5. Delete scooters
+    await db.delete(scooters).where(eq(scooters.userId, userId));
+    
+    // 6. Delete riding records
+    await db.delete(ridingRecords).where(eq(ridingRecords.userId, userId));
+    
+    // 7. Delete notifications
+    await db.delete(notifications).where(eq(notifications.userId, userId));
+    
+    // 8. Delete user badges
+    await db.delete(userBadges).where(eq(userBadges.userId, userId));
+    
+    // 9. Delete challenge participations
+    await db.delete(challengeParticipants).where(eq(challengeParticipants.userId, userId));
+    
+    // 10. Delete challenge invitations (sent and received)
+    await db.delete(challengeInvitations).where(
+      or(
+        eq(challengeInvitations.inviterId, userId),
+        eq(challengeInvitations.inviteeId, userId)
+      )
+    );
+    
+    // 11. Delete live locations
+    await db.delete(liveLocations).where(eq(liveLocations.userId, userId));
+    
+    // 12. Delete group memberships
+    await db.delete(groupMembers).where(eq(groupMembers.userId, userId));
+    
+    // 13. Delete group messages
+    await db.delete(groupMessages).where(eq(groupMessages.userId, userId));
+    
+    // 14. Delete friend requests (sent and received)
+    await db.delete(friendRequests).where(
+      or(
+        eq(friendRequests.senderId, userId),
+        eq(friendRequests.receiverId, userId)
+      )
+    );
+    
+    // 15. Delete friendships
+    await db.delete(friends).where(
+      or(
+        eq(friends.userId1, userId),
+        eq(friends.userId2, userId)
+      )
+    );
+    
+    // 16. Delete follows (following and followers)
+    await db.delete(follows).where(
+      or(
+        eq(follows.followerId, userId),
+        eq(follows.followingId, userId)
+      )
+    );
+    
+    // 17. Delete post likes
+    await db.delete(postLikes).where(eq(postLikes.userId, userId));
+    
+    // 18. Delete post views
+    await db.delete(postViews).where(eq(postViews.userId, userId));
+    
+    // 19. Delete comments
+    await db.delete(comments).where(eq(comments.userId, userId));
+    
+    // 20. Delete post images (for user's posts)
+    const userPosts = await db.select({ id: posts.id }).from(posts).where(eq(posts.userId, userId));
+    for (const post of userPosts) {
+      await db.delete(postImages).where(eq(postImages.postId, post.id));
+    }
+    
+    // 21. Delete posts
+    await db.delete(posts).where(eq(posts.userId, userId));
+    
+    // 22. Delete announcement reads
+    await db.delete(userAnnouncementReads).where(eq(userAnnouncementReads.userId, userId));
+    
+    // 23. Delete survey responses
+    await db.delete(surveyResponses).where(eq(surveyResponses.userId, userId));
+    
+    // 24. Delete bug reports
+    await db.delete(bugReports).where(eq(bugReports.userId, userId));
+    
+    // 25. Delete activity logs
+    await db.delete(userActivityLogs).where(eq(userActivityLogs.userId, userId));
+    
+    // 26. Delete suspicious user reports (about user)
+    await db.delete(suspiciousUserReports).where(
+      eq(suspiciousUserReports.userId, userId)
+    );
+    
+    // 27. Delete user bans
+    await db.delete(userBans).where(eq(userBans.userId, userId));
+    
+    // 28. Finally, delete the user
+    await db.delete(users).where(eq(users.id, userId));
+
+    console.log(`[Database] Successfully deleted user account: ${userId}`);
+  } catch (error) {
+    console.error("[Database] Failed to delete user account:", error);
+    throw error;
   }
 }

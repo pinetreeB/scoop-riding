@@ -64,6 +64,10 @@ export default function ProfileScreen() {
   const [featureRequestText, setFeatureRequestText] = useState("");
   const [isCapturingScreen, setIsCapturingScreen] = useState(false);
   const [capturedScreenshot, setCapturedScreenshot] = useState<string | null>(null);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteReason, setDeleteReason] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
   const [appUpdateInfo, setAppUpdateInfo] = useState<{
     hasUpdate: boolean;
     latestVersion: string | null;
@@ -665,7 +669,7 @@ export default function ProfileScreen() {
               onPress={handleLogout}
               disabled={isLoggingOut}
               style={({ pressed }) => [{ opacity: pressed || isLoggingOut ? 0.7 : 1 }]}
-              className="flex-row items-center p-4"
+              className="flex-row items-center p-4 border-b border-border"
             >
               <MaterialIcons name="logout" size={24} color={colors.error} />
               <View className="flex-1 ml-3">
@@ -677,6 +681,25 @@ export default function ProfileScreen() {
               ) : (
                 <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
               )}
+            </Pressable>
+
+            {/* Delete Account Button */}
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                setShowDeleteAccountModal(true);
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              className="flex-row items-center p-4"
+            >
+              <MaterialIcons name="person-remove" size={24} color={colors.error} />
+              <View className="flex-1 ml-3">
+                <Text className="text-error font-medium">회원탈퇴</Text>
+                <Text className="text-muted text-xs">계정과 모든 데이터가 삭제됩니다</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
           </View>
         </View>
@@ -1376,6 +1399,164 @@ export default function ProfileScreen() {
               style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
             >
               <Text className="text-muted font-medium">취소</Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+      {/* Delete Account Modal */}
+      <Modal
+        visible={showDeleteAccountModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDeleteAccountModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1"
+        >
+          <Pressable
+            className="flex-1 bg-black/50 justify-center items-center p-6"
+            onPress={() => setShowDeleteAccountModal(false)}
+          >
+            <Pressable
+              className="bg-background rounded-2xl p-6 w-full max-w-sm"
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View className="flex-row items-center mb-4">
+                <MaterialIcons name="warning" size={28} color={colors.error} />
+                <Text className="text-xl font-bold text-foreground ml-2">
+                  회원탈퇴
+                </Text>
+              </View>
+
+              <Text className="text-foreground mb-4">
+                회원탈퇴 시 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
+              </Text>
+
+              <View className="bg-surface rounded-xl p-4 border border-border mb-4">
+                <Text className="text-muted text-sm mb-2">삭제되는 데이터:</Text>
+                <Text className="text-foreground text-sm">• 모든 주행 기록</Text>
+                <Text className="text-foreground text-sm">• 등록된 기체 정보</Text>
+                <Text className="text-foreground text-sm">• 친구 및 소셜 데이터</Text>
+                <Text className="text-foreground text-sm">• 커뮤니티 게시글 및 댓글</Text>
+                <Text className="text-foreground text-sm">• 모든 설정 및 환경설정</Text>
+              </View>
+
+              <Text className="text-muted text-sm mb-2">탈퇴 사유 (선택사항)</Text>
+              <View className="bg-surface rounded-xl border border-border mb-4">
+                <TextInput
+                  value={deleteReason}
+                  onChangeText={setDeleteReason}
+                  placeholder="탈퇴 사유를 알려주세요..."
+                  placeholderTextColor={colors.muted}
+                  multiline
+                  numberOfLines={2}
+                  textAlignVertical="top"
+                  style={{
+                    padding: 12,
+                    color: colors.foreground,
+                    minHeight: 60,
+                    fontSize: 14,
+                  }}
+                />
+              </View>
+
+              <Text className="text-muted text-sm mb-2">
+                탈퇴를 확인하려면 '회원탈퇴'를 입력하세요
+              </Text>
+              <View className="bg-surface rounded-xl border border-border mb-4">
+                <TextInput
+                  value={deleteConfirmText}
+                  onChangeText={setDeleteConfirmText}
+                  placeholder="회원탈퇴"
+                  placeholderTextColor={colors.muted}
+                  style={{
+                    padding: 12,
+                    color: colors.foreground,
+                    fontSize: 14,
+                  }}
+                />
+              </View>
+
+              <Pressable
+                onPress={async () => {
+                  if (deleteConfirmText !== "회원탈퇴") {
+                    Alert.alert("오류", "'회원탈퇴'를 정확히 입력해주세요.");
+                    return;
+                  }
+
+                  Alert.alert(
+                    "최종 확인",
+                    "정말로 회원탈퇴를 진행하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+                    [
+                      { text: "취소", style: "cancel" },
+                      {
+                        text: "탈퇴",
+                        style: "destructive",
+                        onPress: async () => {
+                          setIsDeleting(true);
+                          try {
+                            const result = await trpcUtils.client.auth.deleteAccount.mutate({
+                              confirmText: deleteConfirmText,
+                              reason: deleteReason || undefined,
+                            });
+
+                            if (result.success) {
+                              if (Platform.OS !== "web") {
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                              }
+                              Alert.alert(
+                                "회원탈퇴 완료",
+                                "계정이 성공적으로 삭제되었습니다. 그동안 SCOOP을 이용해주셔서 감사합니다.",
+                                [
+                                  {
+                                    text: "확인",
+                                    onPress: () => {
+                                      setShowDeleteAccountModal(false);
+                                      logout();
+                                    },
+                                  },
+                                ]
+                              );
+                            } else {
+                              Alert.alert("오류", result.error || "회원탈퇴 중 오류가 발생했습니다.");
+                            }
+                          } catch (error: any) {
+                            console.error("Delete account error:", error);
+                            Alert.alert("오류", error.message || "회원탈퇴 중 오류가 발생했습니다.");
+                          } finally {
+                            setIsDeleting(false);
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }}
+                disabled={isDeleting || deleteConfirmText !== "회원탈퇴"}
+                className="rounded-xl py-3 items-center mb-3"
+                style={({ pressed }) => [{
+                  backgroundColor: deleteConfirmText === "회원탈퇴" ? colors.error : colors.border,
+                  opacity: pressed || isDeleting ? 0.8 : 1,
+                }]}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text className="text-white font-semibold">회원탈퇴 진행</Text>
+                )}
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  setShowDeleteAccountModal(false);
+                  setDeleteConfirmText("");
+                  setDeleteReason("");
+                }}
+                className="py-3 items-center"
+                style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+              >
+                <Text className="text-muted font-medium">취소</Text>
               </Pressable>
             </Pressable>
           </Pressable>
