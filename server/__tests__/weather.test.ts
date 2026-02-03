@@ -11,9 +11,8 @@ describe("Weather API", () => {
     expect(ny).toBeLessThan(140);
   });
 
-  // API 키가 활성화되면 이 테스트를 활성화하세요
-  // 공공데이터포털 API 키는 발급 후 1-2시간 후에 활성화됩니다
-  it.skip("should fetch weather info from KMA API (enable after API key activation)", async () => {
+  // 기상청 API 키 활성화 테스트
+  it("should fetch weather info from KMA API", async () => {
     const apiKey = process.env.KMA_API_KEY;
     if (!apiKey) {
       console.log("KMA_API_KEY not set, skipping API test");

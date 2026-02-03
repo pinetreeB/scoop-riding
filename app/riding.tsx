@@ -239,6 +239,21 @@ export default function RidingScreen() {
     weatherCondition: string;
   } | null>(null);
   const getWeather = trpc.weather.getCurrent.useQuery;
+  
+  // 경로별 날씨 변화 추적 (장거리 주행 시)
+  const [weatherChanges, setWeatherChanges] = useState<{
+    timestamp: string;
+    latitude: number;
+    longitude: number;
+    distanceFromStart: number;
+    temperature?: number;
+    humidity?: number;
+    windSpeed?: number;
+    weatherCondition?: string;
+  }[]>([]);
+  const lastWeatherCheckRef = useRef<{ distance: number; time: number }>({ distance: 0, time: 0 });
+  const WEATHER_CHECK_DISTANCE_INTERVAL = 5000; // 5km마다 날씨 체크
+  const WEATHER_CHECK_TIME_INTERVAL = 30 * 60 * 1000; // 30분마다 날씨 체크
   const [showEndVoltageModal, setShowEndVoltageModal] = useState(false);
   const [pendingRideData, setPendingRideData] = useState<any>(null);
   
@@ -903,6 +918,46 @@ export default function RidingScreen() {
         setAvgSpeed(avgSpd);
       }
 
+      // 경로별 날씨 변화 체크 (5km마다 또는 30분마다)
+      const currentDistance = distance + (lastValidPointRef.current ? calculateDistance(
+        lastValidPointRef.current.latitude,
+        lastValidPointRef.current.longitude,
+        latitude,
+        longitude
+      ) : 0);
+      const now = Date.now();
+      const distanceSinceLastCheck = currentDistance - lastWeatherCheckRef.current.distance;
+      const timeSinceLastCheck = now - lastWeatherCheckRef.current.time;
+      
+      if (distanceSinceLastCheck >= WEATHER_CHECK_DISTANCE_INTERVAL || 
+          (timeSinceLastCheck >= WEATHER_CHECK_TIME_INTERVAL && currentDistance > 1000)) {
+        // 날씨 체크포인트 추가
+        lastWeatherCheckRef.current = { distance: currentDistance, time: now };
+        
+        trpcUtils.weather.getCurrent.fetch({ lat: latitude, lon: longitude })
+          .then((result) => {
+            if (result.success && result.weather) {
+              console.log("[Riding] Weather checkpoint at", (currentDistance / 1000).toFixed(1), "km:", result.weather.weatherCondition);
+              setWeatherChanges((prev) => [
+                ...prev,
+                {
+                  timestamp: new Date().toISOString(),
+                  latitude,
+                  longitude,
+                  distanceFromStart: currentDistance,
+                  temperature: result.weather.temperature ?? undefined,
+                  humidity: result.weather.humidity ?? undefined,
+                  windSpeed: result.weather.windSpeed ?? undefined,
+                  weatherCondition: result.weather.weatherCondition,
+                },
+              ]);
+            }
+          })
+          .catch((err) => {
+            console.log("[Riding] Weather checkpoint fetch failed:", err);
+          });
+      }
+
       // Update navigation step if navigation is active
       if (hasNavigation && navigationRoute.length > 0) {
         updateNavigationProgress(latitude, longitude);
@@ -1130,6 +1185,8 @@ export default function RidingScreen() {
         humidity: weatherInfo?.humidity ?? undefined,
         windSpeed: weatherInfo?.windSpeed ?? undefined,
         weatherCondition: weatherInfo?.weatherCondition ?? undefined,
+        // 경로별 날씨 변화 (장거리 주행 시)
+        weatherChanges: weatherChanges.length > 0 ? weatherChanges : undefined,
       };
 
       console.log("[Riding] Saving record with voltage data:", {

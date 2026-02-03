@@ -30,6 +30,20 @@ export interface RidingRecord {
   humidity?: number; // 습도 (%)
   windSpeed?: number; // 풍속 (m/s)
   weatherCondition?: string; // 날씨 상태 (맑음/흐림/비/눈 등)
+  // 경로별 날씨 변화 (장거리 주행 시)
+  weatherChanges?: WeatherCheckpoint[];
+}
+
+// 경로별 날씨 체크포인트
+export interface WeatherCheckpoint {
+  timestamp: string; // 체크 시간
+  latitude: number;
+  longitude: number;
+  distanceFromStart: number; // 출발지로부터 거리 (m)
+  temperature?: number;
+  humidity?: number;
+  windSpeed?: number;
+  weatherCondition?: string;
 }
 
 export interface RidingStats {

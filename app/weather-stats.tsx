@@ -21,6 +21,10 @@ interface WeatherStats {
   avgSpeed: number; // km/h
   avgTemperature: number | null;
   avgHumidity: number | null;
+  // 연비 관련 필드
+  totalEnergyWh: number; // 총 에너지 소모량 (Wh)
+  avgEfficiency: number | null; // 평균 연비 (Wh/km)
+  ridesWithEnergy: number; // 에너지 데이터가 있는 주행 수
 }
 
 /**
@@ -81,11 +85,11 @@ export default function WeatherStatsScreen() {
   // 날씨별 통계 계산
   const weatherStats = useMemo(() => {
     const stats: Record<WeatherCategory, WeatherStats> = {
-      all: { category: "all", label: "전체", icon: "analytics", rideCount: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, avgTemperature: null, avgHumidity: null },
-      sunny: { category: "sunny", label: "맑음", icon: "wb-sunny", rideCount: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, avgTemperature: null, avgHumidity: null },
-      cloudy: { category: "cloudy", label: "흐림", icon: "cloud", rideCount: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, avgTemperature: null, avgHumidity: null },
-      rainy: { category: "rainy", label: "비", icon: "grain", rideCount: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, avgTemperature: null, avgHumidity: null },
-      snowy: { category: "snowy", label: "눈", icon: "ac-unit", rideCount: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, avgTemperature: null, avgHumidity: null },
+      all: { category: "all", label: "전체", icon: "analytics", rideCount: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, avgTemperature: null, avgHumidity: null, totalEnergyWh: 0, avgEfficiency: null, ridesWithEnergy: 0 },
+      sunny: { category: "sunny", label: "맑음", icon: "wb-sunny", rideCount: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, avgTemperature: null, avgHumidity: null, totalEnergyWh: 0, avgEfficiency: null, ridesWithEnergy: 0 },
+      cloudy: { category: "cloudy", label: "흐림", icon: "cloud", rideCount: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, avgTemperature: null, avgHumidity: null, totalEnergyWh: 0, avgEfficiency: null, ridesWithEnergy: 0 },
+      rainy: { category: "rainy", label: "비", icon: "grain", rideCount: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, avgTemperature: null, avgHumidity: null, totalEnergyWh: 0, avgEfficiency: null, ridesWithEnergy: 0 },
+      snowy: { category: "snowy", label: "눈", icon: "ac-unit", rideCount: 0, totalDistance: 0, totalDuration: 0, avgSpeed: 0, avgTemperature: null, avgHumidity: null, totalEnergyWh: 0, avgEfficiency: null, ridesWithEnergy: 0 },
     };
 
     let allTempSum = 0, allTempCount = 0;
@@ -133,9 +137,17 @@ export default function WeatherStatsScreen() {
         categoryHumiditySums[category].sum += record.humidity;
         categoryHumiditySums[category].count++;
       }
+      
+      // 에너지 소모량 (연비 계산용)
+      if (record.energyWh !== undefined && record.energyWh > 0) {
+        stats.all.totalEnergyWh += record.energyWh;
+        stats.all.ridesWithEnergy++;
+        stats[category].totalEnergyWh += record.energyWh;
+        stats[category].ridesWithEnergy++;
+      }
     }
 
-    // 평균 속도 및 온도/습도 계산
+    // 평균 속도, 온도/습도, 연비 계산
     for (const key of Object.keys(stats) as WeatherCategory[]) {
       const s = stats[key];
       if (s.totalDuration > 0) {
@@ -146,6 +158,10 @@ export default function WeatherStatsScreen() {
       }
       if (categoryHumiditySums[key].count > 0) {
         s.avgHumidity = categoryHumiditySums[key].sum / categoryHumiditySums[key].count;
+      }
+      // 연비 계산 (Wh/km)
+      if (s.totalEnergyWh > 0 && s.totalDistance > 0) {
+        s.avgEfficiency = s.totalEnergyWh / (s.totalDistance / 1000);
       }
     }
 
@@ -353,8 +369,8 @@ export default function WeatherStatsScreen() {
           </View>
         )}
 
-        {/* Weather Stats Comparison Chart */}
-        <View className="mx-4 bg-surface rounded-2xl p-4 mb-6">
+        {/* Weather Stats Comparison Chart - Speed */}
+        <View className="mx-4 bg-surface rounded-2xl p-4 mb-4">
           <Text className="text-foreground font-semibold mb-4">날씨별 평균 속도 비교</Text>
           
           {WEATHER_CATEGORIES.filter(c => c.category !== "all").map((cat) => {
@@ -383,6 +399,113 @@ export default function WeatherStatsScreen() {
               </View>
             );
           })}
+        </View>
+
+        {/* Weather Stats Comparison Chart - Efficiency */}
+        <View className="mx-4 bg-surface rounded-2xl p-4 mb-6">
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-foreground font-semibold">날씨별 연비 비교</Text>
+            <View className="flex-row items-center">
+              <MaterialIcons name="bolt" size={16} color={colors.warning} />
+              <Text className="text-xs text-muted ml-1">Wh/km (낮을수록 효율적)</Text>
+            </View>
+          </View>
+          
+          {WEATHER_CATEGORIES.filter(c => c.category !== "all").map((cat) => {
+            const stats = weatherStats[cat.category];
+            const hasEfficiencyData = stats.avgEfficiency !== null && stats.avgEfficiency > 0;
+            const maxEfficiency = Math.max(
+              ...WEATHER_CATEGORIES.filter(c => c.category !== "all")
+                .map(c => weatherStats[c.category].avgEfficiency || 0),
+              1
+            );
+            const barWidth = hasEfficiencyData ? (stats.avgEfficiency! / maxEfficiency) * 100 : 0;
+            
+            // 연비 효율 색상 (낮을수록 좋음 - 녹색, 높을수록 나쁨 - 빨간색)
+            const getEfficiencyColor = (efficiency: number | null) => {
+              if (efficiency === null) return colors.muted;
+              if (efficiency < 15) return colors.success;
+              if (efficiency < 25) return colors.warning;
+              return colors.error;
+            };
+            
+            return (
+              <View key={cat.category} className="mb-3">
+                <View className="flex-row items-center justify-between mb-1">
+                  <View className="flex-row items-center">
+                    <MaterialIcons name={cat.icon as any} size={16} color={cat.color} />
+                    <Text className="text-sm text-foreground ml-2">{cat.label}</Text>
+                    <Text className="text-xs text-muted ml-2">({stats.ridesWithEnergy}회)</Text>
+                  </View>
+                  <Text 
+                    className="text-sm font-medium"
+                    style={{ color: getEfficiencyColor(stats.avgEfficiency) }}
+                  >
+                    {hasEfficiencyData ? `${stats.avgEfficiency!.toFixed(1)} Wh/km` : "-"}
+                  </Text>
+                </View>
+                <View className="h-2 bg-border rounded-full overflow-hidden">
+                  {hasEfficiencyData && (
+                    <View 
+                      className="h-full rounded-full"
+                      style={{ 
+                        width: `${barWidth}%`, 
+                        backgroundColor: getEfficiencyColor(stats.avgEfficiency)
+                      }}
+                    />
+                  )}
+                </View>
+              </View>
+            );
+          })}
+          
+          {/* 연비 데이터가 없는 경우 안내 */}
+          {weatherStats.all.ridesWithEnergy === 0 && (
+            <View className="items-center py-4">
+              <MaterialIcons name="battery-unknown" size={32} color={colors.muted} />
+              <Text className="text-sm text-muted mt-2 text-center">
+                연비 데이터가 없습니다.{"\n"}
+                주행 시작/종료 시 배터리 전압을 입력하면 연비가 계산됩니다.
+              </Text>
+            </View>
+          )}
+          
+          {/* 연비 비교 요약 */}
+          {weatherStats.all.ridesWithEnergy > 0 && (
+            <View className="mt-4 p-3 bg-background rounded-xl">
+              <View className="flex-row items-center mb-2">
+                <MaterialIcons name="insights" size={18} color={colors.primary} />
+                <Text className="text-foreground font-medium ml-2">연비 분석 요약</Text>
+              </View>
+              {(() => {
+                const sunnyEff = weatherStats.sunny.avgEfficiency;
+                const rainyEff = weatherStats.rainy.avgEfficiency;
+                const snowyEff = weatherStats.snowy.avgEfficiency;
+                
+                if (sunnyEff && rainyEff && rainyEff > sunnyEff) {
+                  const diff = ((rainyEff - sunnyEff) / sunnyEff * 100).toFixed(0);
+                  return (
+                    <Text className="text-sm text-muted">
+                      비 오는 날은 맑은 날 대비 연비가 약 <Text className="text-warning font-medium">{diff}%</Text> 더 소모됩니다.
+                    </Text>
+                  );
+                }
+                if (sunnyEff && snowyEff && snowyEff > sunnyEff) {
+                  const diff = ((snowyEff - sunnyEff) / sunnyEff * 100).toFixed(0);
+                  return (
+                    <Text className="text-sm text-muted">
+                      눈 오는 날은 맑은 날 대비 연비가 약 <Text className="text-error font-medium">{diff}%</Text> 더 소모됩니다.
+                    </Text>
+                  );
+                }
+                return (
+                  <Text className="text-sm text-muted">
+                    더 많은 주행 데이터가 쌍이면 날씨별 연비 차이를 분석할 수 있습니다.
+                  </Text>
+                );
+              })()}
+            </View>
+          )}
         </View>
 
         {/* Empty State */}

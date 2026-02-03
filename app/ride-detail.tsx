@@ -24,6 +24,7 @@ import { shareRideAsText } from "@/lib/share-utils";
 import { RideChart } from "@/components/ride-chart";
 import { RideAnalysisModal, type RideAnalysis } from "@/components/ride-analysis-modal";
 import { WeatherInfoCard } from "@/components/weather-icon";
+import { WeatherTimeline } from "@/components/weather-timeline";
 
 export default function RideDetailScreen() {
   const router = useRouter();
@@ -292,6 +293,22 @@ export default function RideDetailScreen() {
               humidity={record.humidity}
               windSpeed={record.windSpeed}
               weatherCondition={record.weatherCondition}
+            />
+          </View>
+        )}
+
+        {/* 경로별 날씨 변화 (장거리 주행 시) */}
+        {record.weatherChanges && record.weatherChanges.length > 0 && (
+          <View className="mx-4 mb-4">
+            <WeatherTimeline
+              startWeather={{
+                temperature: record.temperature,
+                humidity: record.humidity,
+                windSpeed: record.windSpeed,
+                weatherCondition: record.weatherCondition,
+              }}
+              weatherChanges={record.weatherChanges}
+              startTime={record.startTime}
             />
           </View>
         )}
