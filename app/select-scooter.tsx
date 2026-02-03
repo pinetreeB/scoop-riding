@@ -16,14 +16,23 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
+import { VoltageInputModal } from "@/components/voltage-input-modal";
 
 const SELECTED_SCOOTER_KEY_PREFIX = "@scoop_selected_scooter";
 const USER_ID_KEY = "scoop_current_user_id";
+const START_VOLTAGE_KEY = "@scoop_start_voltage";
 
 export interface SelectedScooter {
   id: number;
   name: string;
   color: string;
+  // Battery info
+  batteryVoltage?: number | null;
+  batteryCapacity?: string | null;
+  batteryType?: string | null;
+  batteryCellCount?: number | null;
+  batteryFullVoltage?: string | null;
+  batteryEmptyVoltage?: string | null;
 }
 
 // Get storage key for current user (user-specific data isolation)
@@ -64,6 +73,38 @@ export async function setSelectedScooter(scooter: SelectedScooter | null): Promi
   }
 }
 
+// Helper functions for start voltage storage
+export async function saveStartVoltage(voltage: number, soc: number): Promise<void> {
+  try {
+    const userId = await AsyncStorage.getItem(USER_ID_KEY);
+    const key = userId ? `${START_VOLTAGE_KEY}_${userId}` : START_VOLTAGE_KEY;
+    await AsyncStorage.setItem(key, JSON.stringify({ voltage, soc, timestamp: Date.now() }));
+  } catch (e) {
+    console.error("Failed to save start voltage:", e);
+  }
+}
+
+export async function getStartVoltage(): Promise<{ voltage: number; soc: number; timestamp: number } | null> {
+  try {
+    const userId = await AsyncStorage.getItem(USER_ID_KEY);
+    const key = userId ? `${START_VOLTAGE_KEY}_${userId}` : START_VOLTAGE_KEY;
+    const data = await AsyncStorage.getItem(key);
+    return data ? JSON.parse(data) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearStartVoltage(): Promise<void> {
+  try {
+    const userId = await AsyncStorage.getItem(USER_ID_KEY);
+    const key = userId ? `${START_VOLTAGE_KEY}_${userId}` : START_VOLTAGE_KEY;
+    await AsyncStorage.removeItem(key);
+  } catch (e) {
+    console.error("Failed to clear start voltage:", e);
+  }
+}
+
 export default function SelectScooterScreen() {
   const colors = useColors();
   const router = useRouter();
@@ -77,6 +118,8 @@ export default function SelectScooterScreen() {
   }>();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedScooterData, setSelectedScooterData] = useState<any>(null);
+  const [showVoltageModal, setShowVoltageModal] = useState(false);
 
   // Check if this is a navigation-enabled ride
   const hasNavigation = params.withNavigation === "true";
@@ -106,10 +149,17 @@ export default function SelectScooterScreen() {
     }
 
     setSelectedId(scooter.id);
+    setSelectedScooterData(scooter);
     await setSelectedScooter({
       id: scooter.id,
       name: scooter.name,
       color: scooter.color || "#FF6D00",
+      batteryVoltage: scooter.batteryVoltage,
+      batteryCapacity: scooter.batteryCapacity,
+      batteryType: scooter.batteryType,
+      batteryCellCount: scooter.batteryCellCount,
+      batteryFullVoltage: scooter.batteryFullVoltage,
+      batteryEmptyVoltage: scooter.batteryEmptyVoltage,
     });
   };
 
@@ -118,6 +168,18 @@ export default function SelectScooterScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     
+    // Check if selected scooter has battery info
+    const scooter = scootersQuery.data?.find((s: any) => s.id === selectedId);
+    if (scooter && (scooter.batteryVoltage || scooter.batteryCapacity)) {
+      setSelectedScooterData(scooter);
+      setShowVoltageModal(true);
+    } else {
+      // No battery info, go directly to riding
+      navigateToRiding();
+    }
+  };
+
+  const navigateToRiding = () => {
     // Pass navigation params to riding screen if available
     if (hasNavigation) {
       router.push({
@@ -136,11 +198,26 @@ export default function SelectScooterScreen() {
     }
   };
 
+  const handleVoltageSubmit = async (voltage: number, soc: number) => {
+    // Save start voltage for later comparison
+    await saveStartVoltage(voltage, soc);
+    setShowVoltageModal(false);
+    navigateToRiding();
+  };
+
+  const handleVoltageSkip = async () => {
+    // Clear any previous start voltage
+    await clearStartVoltage();
+    setShowVoltageModal(false);
+    navigateToRiding();
+  };
+
   const handleSkip = () => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setSelectedScooter(null);
+    clearStartVoltage();
     
     // Pass navigation params to riding screen if available
     if (hasNavigation) {
@@ -158,6 +235,15 @@ export default function SelectScooterScreen() {
     } else {
       router.push("/riding");
     }
+  };
+
+  // Format battery info for display
+  const formatBatteryInfo = (scooter: any) => {
+    if (!scooter.batteryVoltage && !scooter.batteryCapacity) return null;
+    const parts = [];
+    if (scooter.batteryVoltage) parts.push(`${scooter.batteryVoltage}V`);
+    if (scooter.batteryCapacity) parts.push(`${scooter.batteryCapacity}Ah`);
+    return parts.join(" ");
   };
 
   if (authLoading) {
@@ -248,6 +334,7 @@ export default function SelectScooterScreen() {
           <View className="px-5">
             {scooters.map((scooter: any) => {
               const isSelected = selectedId === scooter.id;
+              const batteryInfo = formatBatteryInfo(scooter);
               return (
                 <Pressable
                   key={scooter.id}
@@ -284,9 +371,17 @@ export default function SelectScooterScreen() {
                           {[scooter.brand, scooter.model].filter(Boolean).join(" ")}
                         </Text>
                       )}
-                      <Text className="text-muted text-xs mt-1">
-                        총 {((scooter.totalDistance || 0) / 1000).toFixed(1)}km • {scooter.totalRides || 0}회 주행
-                      </Text>
+                      <View className="flex-row flex-wrap mt-1">
+                        <Text className="text-muted text-xs">
+                          총 {((scooter.totalDistance || 0) / 1000).toFixed(1)}km • {scooter.totalRides || 0}회 주행
+                        </Text>
+                        {batteryInfo && (
+                          <View className="flex-row items-center ml-2">
+                            <MaterialIcons name="battery-charging-full" size={12} color={colors.success} />
+                            <Text className="text-muted text-xs ml-0.5">{batteryInfo}</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
 
                     {/* Selection indicator */}
@@ -330,6 +425,16 @@ export default function SelectScooterScreen() {
           </Pressable>
         </View>
       </View>
+
+      {/* Voltage Input Modal */}
+      <VoltageInputModal
+        visible={showVoltageModal}
+        scooter={selectedScooterData}
+        mode="start"
+        onSubmit={handleVoltageSubmit}
+        onSkip={handleVoltageSkip}
+        onCancel={() => setShowVoltageModal(false)}
+      />
     </ScreenContainer>
   );
 }

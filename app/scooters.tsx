@@ -33,6 +33,22 @@ const SCOOTER_COLORS = [
   "#607D8B", // Blue Grey
 ];
 
+// Battery type options
+const BATTERY_TYPES = [
+  { value: "lithium_ion", label: "리튬이온 (Li-ion)", cellVoltage: { full: 4.2, empty: 3.0 } },
+  { value: "lifepo4", label: "리튬인산철 (LiFePO4)", cellVoltage: { full: 3.65, empty: 2.5 } },
+  { value: "lead_acid", label: "납축전지", cellVoltage: { full: 2.4, empty: 1.75 } },
+];
+
+// Common voltage presets
+const VOLTAGE_PRESETS = [
+  { voltage: 48, cells: 13, label: "48V (13S)" },
+  { voltage: 52, cells: 14, label: "52V (14S)" },
+  { voltage: 60, cells: 16, label: "60V (16S)" },
+  { voltage: 72, cells: 20, label: "72V (20S)" },
+  { voltage: 84, cells: 20, label: "84V (20S LiFePO4)" },
+];
+
 interface ScooterFormData {
   name: string;
   brand: string;
@@ -41,6 +57,13 @@ interface ScooterFormData {
   initialOdometer: string;
   color: string;
   notes: string;
+  // Battery fields
+  batteryVoltage: string;
+  batteryCapacity: string;
+  batteryType: string;
+  batteryCellCount: string;
+  batteryFullVoltage: string;
+  batteryEmptyVoltage: string;
 }
 
 const initialFormData: ScooterFormData = {
@@ -51,7 +74,25 @@ const initialFormData: ScooterFormData = {
   initialOdometer: "0",
   color: "#FF6D00",
   notes: "",
+  // Battery fields
+  batteryVoltage: "",
+  batteryCapacity: "",
+  batteryType: "lithium_ion",
+  batteryCellCount: "",
+  batteryFullVoltage: "",
+  batteryEmptyVoltage: "",
 };
+
+// Calculate full/empty voltage based on battery type and cell count
+function calculateVoltages(batteryType: string, cellCount: number) {
+  const type = BATTERY_TYPES.find(t => t.value === batteryType);
+  if (!type || cellCount <= 0) return { full: "", empty: "" };
+  
+  return {
+    full: (type.cellVoltage.full * cellCount).toFixed(1),
+    empty: (type.cellVoltage.empty * cellCount).toFixed(1),
+  };
+}
 
 export default function ScootersScreen() {
   const colors = useColors();
@@ -61,6 +102,7 @@ export default function ScootersScreen() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<ScooterFormData>(initialFormData);
   const [isSaving, setIsSaving] = useState(false);
+  const [showBatterySection, setShowBatterySection] = useState(false);
 
   const trpcUtils = trpc.useUtils();
   const scootersQuery = trpc.scooters.list.useQuery(undefined, {
@@ -85,6 +127,7 @@ export default function ScootersScreen() {
     }
     setEditingId(null);
     setFormData(initialFormData);
+    setShowBatterySection(false);
     setIsModalVisible(true);
   };
 
@@ -93,6 +136,7 @@ export default function ScootersScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setEditingId(scooter.id);
+    const hasBatteryInfo = scooter.batteryVoltage || scooter.batteryCapacity;
     setFormData({
       name: scooter.name || "",
       brand: scooter.brand || "",
@@ -101,8 +145,49 @@ export default function ScootersScreen() {
       initialOdometer: String(scooter.initialOdometer || 0),
       color: scooter.color || "#FF6D00",
       notes: scooter.notes || "",
+      batteryVoltage: scooter.batteryVoltage ? String(scooter.batteryVoltage) : "",
+      batteryCapacity: scooter.batteryCapacity ? String(scooter.batteryCapacity) : "",
+      batteryType: scooter.batteryType || "lithium_ion",
+      batteryCellCount: scooter.batteryCellCount ? String(scooter.batteryCellCount) : "",
+      batteryFullVoltage: scooter.batteryFullVoltage ? String(scooter.batteryFullVoltage) : "",
+      batteryEmptyVoltage: scooter.batteryEmptyVoltage ? String(scooter.batteryEmptyVoltage) : "",
     });
+    setShowBatterySection(hasBatteryInfo);
     setIsModalVisible(true);
+  };
+
+  const handleVoltagePresetSelect = (preset: typeof VOLTAGE_PRESETS[0]) => {
+    const voltages = calculateVoltages(formData.batteryType, preset.cells);
+    setFormData({
+      ...formData,
+      batteryVoltage: String(preset.voltage),
+      batteryCellCount: String(preset.cells),
+      batteryFullVoltage: voltages.full,
+      batteryEmptyVoltage: voltages.empty,
+    });
+  };
+
+  const handleBatteryTypeChange = (type: string) => {
+    const cellCount = parseInt(formData.batteryCellCount) || 0;
+    const voltages = calculateVoltages(type, cellCount);
+    setFormData({
+      ...formData,
+      batteryType: type,
+      batteryFullVoltage: voltages.full,
+      batteryEmptyVoltage: voltages.empty,
+    });
+  };
+
+  const handleCellCountChange = (text: string) => {
+    const numericText = text.replace(/[^0-9]/g, "");
+    const cellCount = parseInt(numericText) || 0;
+    const voltages = calculateVoltages(formData.batteryType, cellCount);
+    setFormData({
+      ...formData,
+      batteryCellCount: numericText,
+      batteryFullVoltage: voltages.full,
+      batteryEmptyVoltage: voltages.empty,
+    });
   };
 
   const handleSaveScooter = async () => {
@@ -117,6 +202,15 @@ export default function ScootersScreen() {
 
     setIsSaving(true);
     try {
+      const batteryData = showBatterySection ? {
+        batteryVoltage: formData.batteryVoltage ? parseInt(formData.batteryVoltage) : undefined,
+        batteryCapacity: formData.batteryCapacity ? parseFloat(formData.batteryCapacity) : undefined,
+        batteryType: formData.batteryType || undefined,
+        batteryCellCount: formData.batteryCellCount ? parseInt(formData.batteryCellCount) : undefined,
+        batteryFullVoltage: formData.batteryFullVoltage ? parseFloat(formData.batteryFullVoltage) : undefined,
+        batteryEmptyVoltage: formData.batteryEmptyVoltage ? parseFloat(formData.batteryEmptyVoltage) : undefined,
+      } : {};
+
       if (editingId) {
         await updateMutation.mutateAsync({
           id: editingId,
@@ -127,6 +221,7 @@ export default function ScootersScreen() {
           initialOdometer: parseInt(formData.initialOdometer) || 0,
           color: formData.color,
           notes: formData.notes.trim() || undefined,
+          ...batteryData,
         });
       } else {
         await createMutation.mutateAsync({
@@ -137,6 +232,7 @@ export default function ScootersScreen() {
           initialOdometer: parseInt(formData.initialOdometer) || 0,
           color: formData.color,
           notes: formData.notes.trim() || undefined,
+          ...batteryData,
         });
       }
 
@@ -208,6 +304,14 @@ export default function ScootersScreen() {
       return `${(meters / 1000).toFixed(1)} km`;
     }
     return `${meters} m`;
+  };
+
+  const formatBatteryInfo = (scooter: any) => {
+    if (!scooter.batteryVoltage && !scooter.batteryCapacity) return null;
+    const parts = [];
+    if (scooter.batteryVoltage) parts.push(`${scooter.batteryVoltage}V`);
+    if (scooter.batteryCapacity) parts.push(`${scooter.batteryCapacity}Ah`);
+    return parts.join(" ");
   };
 
   if (authLoading) {
@@ -326,28 +430,45 @@ export default function ScootersScreen() {
                         {[scooter.brand, scooter.model].filter(Boolean).join(" ")}
                       </Text>
                     )}
-                    <View className="flex-row mt-2">
+                    <View className="flex-row flex-wrap mt-2">
                       <View className="flex-row items-center mr-4">
                         <MaterialIcons name="straighten" size={14} color={colors.muted} />
                         <Text className="text-muted text-xs ml-1">
                           {formatDistance((scooter.initialOdometer || 0) + (scooter.totalDistance || 0))}
                         </Text>
                       </View>
-                      <View className="flex-row items-center">
+                      <View className="flex-row items-center mr-4">
                         <MaterialIcons name="electric-scooter" size={14} color={colors.muted} />
                         <Text className="text-muted text-xs ml-1">{scooter.totalRides || 0}회</Text>
                       </View>
+                      {formatBatteryInfo(scooter) && (
+                        <View className="flex-row items-center">
+                          <MaterialIcons name="battery-charging-full" size={14} color={colors.success} />
+                          <Text className="text-muted text-xs ml-1">{formatBatteryInfo(scooter)}</Text>
+                        </View>
+                      )}
                     </View>
                   </View>
 
                   {/* Actions */}
-                  <Pressable
-                    onPress={() => handleDeleteScooter(scooter)}
-                    style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
-                    className="p-2"
-                  >
-                    <MaterialIcons name="delete-outline" size={22} color={colors.error} />
-                  </Pressable>
+                  <View className="flex-row items-center">
+                    {scooter.batteryVoltage && scooter.batteryCapacity && (
+                      <Pressable
+                        onPress={() => router.push(`/battery-ai?scooterId=${scooter.id}&scooterName=${encodeURIComponent(scooter.name)}`)}
+                        style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
+                        className="p-2"
+                      >
+                        <MaterialIcons name="smart-toy" size={22} color={colors.primary} />
+                      </Pressable>
+                    )}
+                    <Pressable
+                      onPress={() => handleDeleteScooter(scooter)}
+                      style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
+                      className="p-2"
+                    >
+                      <MaterialIcons name="delete-outline" size={22} color={colors.error} />
+                    </Pressable>
+                  </View>
                 </View>
               </Pressable>
             ))}
@@ -489,6 +610,194 @@ export default function ScootersScreen() {
                 ))}
               </View>
             </View>
+
+            {/* Battery Section Toggle */}
+            <Pressable
+              onPress={() => setShowBatterySection(!showBatterySection)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+              className="flex-row items-center justify-between bg-surface border border-border rounded-xl px-4 py-3 mb-4"
+            >
+              <View className="flex-row items-center">
+                <MaterialIcons name="battery-charging-full" size={20} color={colors.success} />
+                <Text className="text-foreground font-medium ml-2">배터리 정보 설정</Text>
+              </View>
+              <MaterialIcons 
+                name={showBatterySection ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
+                size={24} 
+                color={colors.muted} 
+              />
+            </Pressable>
+
+            {/* Battery Section */}
+            {showBatterySection && (
+              <View className="bg-surface border border-border rounded-xl p-4 mb-4">
+                <Text className="text-xs text-muted mb-3">
+                  배터리 정보를 입력하면 주행 시 전압을 기록하여 연비 분석 및 배터리 수명 예측이 가능합니다.
+                </Text>
+
+                {/* Voltage Presets */}
+                <View className="mb-4">
+                  <Text className="text-sm font-medium text-foreground mb-2">빠른 선택</Text>
+                  <View className="flex-row flex-wrap">
+                    {VOLTAGE_PRESETS.map((preset) => (
+                      <Pressable
+                        key={preset.label}
+                        onPress={() => handleVoltagePresetSelect(preset)}
+                        style={({ pressed }) => [
+                          { 
+                            backgroundColor: formData.batteryVoltage === String(preset.voltage) 
+                              ? colors.primary 
+                              : colors.background,
+                            opacity: pressed ? 0.8 : 1,
+                          },
+                        ]}
+                        className="px-3 py-2 rounded-lg mr-2 mb-2 border border-border"
+                      >
+                        <Text 
+                          className="text-sm"
+                          style={{ 
+                            color: formData.batteryVoltage === String(preset.voltage) 
+                              ? "#FFFFFF" 
+                              : colors.foreground 
+                          }}
+                        >
+                          {preset.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Battery Type */}
+                <View className="mb-4">
+                  <Text className="text-sm font-medium text-foreground mb-2">배터리 종류</Text>
+                  <View className="flex-row flex-wrap">
+                    {BATTERY_TYPES.map((type) => (
+                      <Pressable
+                        key={type.value}
+                        onPress={() => handleBatteryTypeChange(type.value)}
+                        style={({ pressed }) => [
+                          { 
+                            backgroundColor: formData.batteryType === type.value 
+                              ? colors.primary 
+                              : colors.background,
+                            opacity: pressed ? 0.8 : 1,
+                          },
+                        ]}
+                        className="px-3 py-2 rounded-lg mr-2 mb-2 border border-border"
+                      >
+                        <Text 
+                          className="text-sm"
+                          style={{ 
+                            color: formData.batteryType === type.value 
+                              ? "#FFFFFF" 
+                              : colors.foreground 
+                          }}
+                        >
+                          {type.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Voltage and Capacity Row */}
+                <View className="flex-row mb-4">
+                  <View className="flex-1 mr-2">
+                    <Text className="text-sm font-medium text-foreground mb-2">공칭 전압 (V)</Text>
+                    <TextInput
+                      value={formData.batteryVoltage}
+                      onChangeText={(text) => {
+                        const numericText = text.replace(/[^0-9]/g, "");
+                        setFormData({ ...formData, batteryVoltage: numericText });
+                      }}
+                      placeholder="60"
+                      placeholderTextColor={colors.muted}
+                      keyboardType="numeric"
+                      className="bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                      style={{ fontSize: 16 }}
+                    />
+                  </View>
+                  <View className="flex-1 ml-2">
+                    <Text className="text-sm font-medium text-foreground mb-2">용량 (Ah)</Text>
+                    <TextInput
+                      value={formData.batteryCapacity}
+                      onChangeText={(text) => {
+                        const numericText = text.replace(/[^0-9.]/g, "");
+                        setFormData({ ...formData, batteryCapacity: numericText });
+                      }}
+                      placeholder="30"
+                      placeholderTextColor={colors.muted}
+                      keyboardType="decimal-pad"
+                      className="bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                      style={{ fontSize: 16 }}
+                    />
+                  </View>
+                </View>
+
+                {/* Cell Count */}
+                <View className="mb-4">
+                  <Text className="text-sm font-medium text-foreground mb-2">직렬 셀 수 (S)</Text>
+                  <TextInput
+                    value={formData.batteryCellCount}
+                    onChangeText={handleCellCountChange}
+                    placeholder="16"
+                    placeholderTextColor={colors.muted}
+                    keyboardType="numeric"
+                    className="bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                    style={{ fontSize: 16 }}
+                  />
+                  <Text className="text-xs text-muted mt-1">
+                    셀 수를 입력하면 만충/방전 전압이 자동 계산됩니다
+                  </Text>
+                </View>
+
+                {/* Full/Empty Voltage Row */}
+                <View className="flex-row mb-2">
+                  <View className="flex-1 mr-2">
+                    <Text className="text-sm font-medium text-foreground mb-2">만충 전압 (V)</Text>
+                    <TextInput
+                      value={formData.batteryFullVoltage}
+                      onChangeText={(text) => {
+                        const numericText = text.replace(/[^0-9.]/g, "");
+                        setFormData({ ...formData, batteryFullVoltage: numericText });
+                      }}
+                      placeholder="67.2"
+                      placeholderTextColor={colors.muted}
+                      keyboardType="decimal-pad"
+                      className="bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                      style={{ fontSize: 16 }}
+                    />
+                  </View>
+                  <View className="flex-1 ml-2">
+                    <Text className="text-sm font-medium text-foreground mb-2">방전 전압 (V)</Text>
+                    <TextInput
+                      value={formData.batteryEmptyVoltage}
+                      onChangeText={(text) => {
+                        const numericText = text.replace(/[^0-9.]/g, "");
+                        setFormData({ ...formData, batteryEmptyVoltage: numericText });
+                      }}
+                      placeholder="48.0"
+                      placeholderTextColor={colors.muted}
+                      keyboardType="decimal-pad"
+                      className="bg-background border border-border rounded-xl px-4 py-3 text-foreground"
+                      style={{ fontSize: 16 }}
+                    />
+                  </View>
+                </View>
+
+                {/* Battery Capacity Info */}
+                {formData.batteryVoltage && formData.batteryCapacity && (
+                  <View className="bg-background rounded-lg p-3 mt-2">
+                    <Text className="text-sm text-foreground">
+                      총 용량: <Text className="font-bold">
+                        {(parseInt(formData.batteryVoltage) * parseFloat(formData.batteryCapacity)).toFixed(0)} Wh
+                      </Text>
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
 
             {/* Notes */}
             <View className="mb-6">

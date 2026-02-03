@@ -36,7 +36,8 @@ import {
   requestBackgroundLocationPermission,
   updateForegroundNotification,
 } from "@/lib/background-location";
-import { getSelectedScooter, type SelectedScooter } from "@/app/select-scooter";
+import { getSelectedScooter, getStartVoltage, clearStartVoltage, type SelectedScooter } from "@/app/select-scooter";
+import { VoltageInputModal } from "@/components/voltage-input-modal";
 import {
   getVoiceSettings,
   announceRidingStatus,
@@ -169,6 +170,11 @@ export default function RidingScreen() {
   const [selectedScooter, setSelectedScooter] = useState<SelectedScooter | null>(null);
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings | null>(null);
   
+  // Battery voltage tracking
+  const [startVoltage, setStartVoltage] = useState<{ voltage: number; soc: number } | null>(null);
+  const [showEndVoltageModal, setShowEndVoltageModal] = useState(false);
+  const [pendingRideData, setPendingRideData] = useState<any>(null);
+  
   // Auto-pause when stationary
   const [isAutoPaused, setIsAutoPaused] = useState(false);
   const isAutoPausedRef = useRef(false); // ref로도 추적하여 클로저 문제 해결
@@ -249,9 +255,15 @@ export default function RidingScreen() {
     isAutoPausedRef.current = isAutoPaused;
   }, [isAutoPaused]);
 
-  // Load selected scooter on mount
+  // Load selected scooter and start voltage on mount
   useEffect(() => {
     getSelectedScooter().then(setSelectedScooter);
+    getStartVoltage().then((data) => {
+      if (data) {
+        setStartVoltage({ voltage: data.voltage, soc: data.soc });
+        console.log("[Riding] Start voltage loaded:", data.voltage, "V, SOC:", data.soc, "%");
+      }
+    });
   }, []);
 
   // Parse groupId from params
@@ -1011,6 +1023,105 @@ export default function RidingScreen() {
     setIsRunning((prev) => !prev);
   };
 
+  // Function to save ride record (called after voltage input or skip)
+  const saveRideRecord = async (rideData: any, endVoltage?: number, endSoc?: number) => {
+    try {
+      // Add voltage data if available
+      const recordWithVoltage = {
+        ...rideData,
+        voltageStart: startVoltage?.voltage,
+        socStart: startVoltage?.soc,
+        voltageEnd: endVoltage,
+        socEnd: endSoc,
+      };
+
+      console.log("[Riding] Saving record with voltage data:", {
+        voltageStart: startVoltage?.voltage,
+        voltageEnd: endVoltage,
+      });
+
+      // Save to local storage with error handling
+      try {
+        await saveRidingRecord(recordWithVoltage);
+        console.log("[Riding] Record saved to local storage");
+      } catch (saveError) {
+        console.error("[Riding] Failed to save record:", saveError);
+        Alert.alert(
+          "저장 오류",
+          "주행 기록을 저장하는 중 오류가 발생했습니다. 다시 시도해주세요.",
+          [{ text: "확인" }]
+        );
+        return;
+      }
+
+      // Voice announcement for ride completion
+      try {
+        await announceEnd(rideData.distance, rideData.duration, rideData.avgSpeed);
+      } catch (e) {
+        console.log("[Riding] Voice announcement error:", e);
+      }
+
+      // Send ride completion notification
+      try {
+        await notifyRideCompleted(rideData.distance, rideData.duration, rideData.avgSpeed);
+      } catch (e) {
+        console.log("[Riding] Notification error:", e);
+      }
+
+      // Sync to server for ranking - blocking with verification
+      try {
+        console.log("[Riding] Starting server sync for record:", rideData.id);
+        const syncResult = await syncToServer.mutateAsync({
+          recordId: rideData.id,
+          date: rideData.date,
+          duration: Math.round(rideData.duration),
+          distance: Math.round(rideData.distance),
+          avgSpeed: rideData.avgSpeed,
+          maxSpeed: rideData.maxSpeed,
+          startTime: rideData.startTime,
+          endTime: rideData.endTime,
+          gpsPointsJson: rideData.gpsPoints?.length > 0 
+            ? JSON.stringify(rideData.gpsPoints) 
+            : undefined,
+          // Include voltage data for server
+          voltageStart: startVoltage?.voltage ? String(startVoltage.voltage) : undefined,
+          voltageEnd: endVoltage ? String(endVoltage) : undefined,
+          socStart: startVoltage?.soc ? String(startVoltage.soc) : undefined,
+          socEnd: endSoc ? String(endSoc) : undefined,
+        });
+        console.log("[Riding] Server sync result:", syncResult);
+        
+        // Invalidate ranking queries to reflect new data
+        await trpcUtils.ranking.getWeekly.invalidate();
+        await trpcUtils.ranking.getMonthly.invalidate();
+        await trpcUtils.rides.list.invalidate();
+      } catch (e) {
+        console.error("[Riding] Server sync error:", e);
+        Alert.alert(
+          "동기화 알림",
+          "주행 기록이 로컬에 저장되었습니다. 서버 동기화는 다음 접속 시 자동으로 시도됩니다.",
+          [{ text: "확인" }]
+        );
+      }
+
+      // Clear start voltage data
+      await clearStartVoltage();
+
+      // Navigate to home screen
+      router.replace("/(tabs)");
+    } catch (error) {
+      console.error("[Riding] Critical error during save:", error);
+      Alert.alert(
+        "오류 발생",
+        "주행 기록 저장 중 예상치 못한 오류가 발생했습니다.",
+        [
+          { text: "다시 시도", onPress: () => handleStop() },
+          { text: "저장 안함", style: "destructive", onPress: () => router.back() },
+        ]
+      );
+    }
+  };
+
   const handleStop = () => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -1021,6 +1132,7 @@ export default function RidingScreen() {
       if (Platform.OS !== "web") {
         stopBackgroundLocationTracking();
       }
+      clearStartVoltage();
       router.back();
       return;
     }
@@ -1093,77 +1205,15 @@ export default function RidingScreen() {
 
               console.log("[Riding] Saving record:", recordId, "duration:", record.duration);
               
-              // Save to local storage with error handling
-              try {
-                await saveRidingRecord(record);
-                console.log("[Riding] Record saved to local storage");
-              } catch (saveError) {
-                console.error("[Riding] Failed to save record:", saveError);
-                Alert.alert(
-                  "저장 오류",
-                  "주행 기록을 저장하는 중 오류가 발생했습니다. 다시 시도해주세요.",
-                  [{ text: "확인" }]
-                );
-                return; // Don't navigate back if save failed
+              // Check if scooter has battery info and start voltage was recorded
+              if (selectedScooter?.batteryVoltage && startVoltage) {
+                // Show end voltage modal
+                setPendingRideData(record);
+                setShowEndVoltageModal(true);
+              } else {
+                // No battery info, save directly
+                await saveRideRecord(record);
               }
-
-              // Voice announcement for ride completion
-              try {
-                await announceEnd(finalDist, record.duration, finalAvg);
-              } catch (e) {
-                console.log("[Riding] Voice announcement error:", e);
-              }
-
-              // Send ride completion notification
-              try {
-                await notifyRideCompleted(finalDist, record.duration, finalAvg);
-              } catch (e) {
-                console.log("[Riding] Notification error:", e);
-              }
-
-              // Sync to server for ranking - blocking with verification
-              let serverSyncSuccess = false;
-              try {
-                console.log("[Riding] Starting server sync for record:", record.id);
-                const syncResult = await syncToServer.mutateAsync({
-                  recordId: record.id,
-                  date: record.date,
-                  duration: Math.round(record.duration),
-                  distance: Math.round(record.distance),
-                  avgSpeed: record.avgSpeed,
-                  maxSpeed: record.maxSpeed,
-                  startTime: record.startTime,
-                  endTime: record.endTime,
-                  gpsPointsJson: gpsPointsCopy.length > 0 
-                    ? JSON.stringify(gpsPointsCopy) 
-                    : undefined,
-                });
-                console.log("[Riding] Server sync result:", syncResult);
-                
-                // Verify the record was uploaded by checking if we got a valid response
-                if (syncResult && (syncResult.id || syncResult.success)) {
-                  serverSyncSuccess = true;
-                  console.log("[Riding] Server sync verified successfully");
-                } else {
-                  console.log("[Riding] Server sync response invalid, will retry");
-                }
-                
-                // Invalidate ranking queries to reflect new data
-                await trpcUtils.ranking.getWeekly.invalidate();
-                await trpcUtils.ranking.getMonthly.invalidate();
-                await trpcUtils.rides.list.invalidate();
-              } catch (e) {
-                console.error("[Riding] Server sync error:", e);
-                // Show warning but don't block navigation
-                Alert.alert(
-                  "동기화 알림",
-                  "주행 기록이 로컬에 저장되었습니다. 서버 동기화는 다음 접속 시 자동으로 시도됩니다.",
-                  [{ text: "확인" }]
-                );
-              }
-
-              // Navigate to home screen instead of back
-              router.replace("/(tabs)");
             } catch (error) {
               console.error("[Riding] Critical error during save:", error);
               Alert.alert(
@@ -1648,6 +1698,37 @@ export default function RidingScreen() {
           />
         </View>
       )}
+
+      {/* End Voltage Input Modal */}
+      <VoltageInputModal
+        visible={showEndVoltageModal}
+        scooter={selectedScooter}
+        mode="end"
+        startVoltage={startVoltage?.voltage}
+        rideSummary={pendingRideData ? {
+          distance: pendingRideData.distance,
+          duration: pendingRideData.duration,
+          avgSpeed: pendingRideData.avgSpeed,
+        } : undefined}
+        onSubmit={async (voltage, soc) => {
+          setShowEndVoltageModal(false);
+          if (pendingRideData) {
+            await saveRideRecord(pendingRideData, voltage, soc);
+            setPendingRideData(null);
+          }
+        }}
+        onSkip={async () => {
+          setShowEndVoltageModal(false);
+          if (pendingRideData) {
+            await saveRideRecord(pendingRideData);
+            setPendingRideData(null);
+          }
+        }}
+        onCancel={() => {
+          setShowEndVoltageModal(false);
+          setPendingRideData(null);
+        }}
+      />
     </ScreenContainer>
   );
 }

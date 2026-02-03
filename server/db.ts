@@ -1,6 +1,6 @@
-import { eq, and, desc, sql, gt, lt } from "drizzle-orm";
+import { eq, and, desc, sql, gt, lt, isNotNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage, announcements, InsertAnnouncement, Announcement, userAnnouncementReads, InsertUserAnnouncementRead, UserAnnouncementRead, userBans, InsertUserBan, UserBan, surveyResponses, InsertSurveyResponse, SurveyResponse, bugReports, InsertBugReport, BugReport, userActivityLogs, InsertUserActivityLog, UserActivityLog, suspiciousUserReports, InsertSuspiciousUserReport, SuspiciousUserReport } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage, announcements, InsertAnnouncement, Announcement, userAnnouncementReads, InsertUserAnnouncementRead, UserAnnouncementRead, userBans, InsertUserBan, UserBan, surveyResponses, InsertSurveyResponse, SurveyResponse, bugReports, InsertBugReport, BugReport, userActivityLogs, InsertUserActivityLog, UserActivityLog, suspiciousUserReports, InsertSuspiciousUserReport, SuspiciousUserReport, aiChatUsage, AiChatUsage, aiChatHistory, AiChatHistoryRecord, batteryAnalysis, BatteryAnalysisRecord } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -334,6 +334,22 @@ export async function createRidingRecord(data: InsertRidingRecord): Promise<numb
   }
   if (data.scooterId !== undefined && data.scooterId !== null) {
     insertData.scooterId = data.scooterId;
+  }
+  // Battery voltage fields
+  if (data.voltageStart !== undefined && data.voltageStart !== null) {
+    insertData.voltageStart = data.voltageStart;
+  }
+  if (data.voltageEnd !== undefined && data.voltageEnd !== null) {
+    insertData.voltageEnd = data.voltageEnd;
+  }
+  if (data.socStart !== undefined && data.socStart !== null) {
+    insertData.socStart = data.socStart;
+  }
+  if (data.socEnd !== undefined && data.socEnd !== null) {
+    insertData.socEnd = data.socEnd;
+  }
+  if (data.temperature !== undefined && data.temperature !== null) {
+    insertData.temperature = data.temperature;
   }
 
   const result = await db.insert(ridingRecords).values(insertData);
@@ -4065,6 +4081,288 @@ export async function getUsersWithSuspiciousActivity(): Promise<{
     return suspiciousUsers.sort((a, b) => b.severityScore - a.severityScore);
   } catch (error) {
     console.error("[Database] Failed to get users with suspicious activity:", error);
+    return [];
+  }
+}
+
+
+// ============================================
+// AI Chat and Battery Analysis Functions
+// ============================================
+
+// Get AI chat usage for a specific date
+export async function getAiChatUsage(userId: number, date: string): Promise<AiChatUsage | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db
+      .select()
+      .from(aiChatUsage)
+      .where(and(eq(aiChatUsage.userId, userId), eq(aiChatUsage.usageDate, date)))
+      .limit(1);
+    return result[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get AI chat usage:", error);
+    return null;
+  }
+}
+
+// Increment AI chat usage count
+export async function incrementAiChatUsage(userId: number, date: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    const existing = await getAiChatUsage(userId, date);
+    
+    if (existing) {
+      await db
+        .update(aiChatUsage)
+        .set({
+          messageCount: sql`${aiChatUsage.messageCount} + 1`,
+          lastMessageAt: new Date(),
+        })
+        .where(eq(aiChatUsage.id, existing.id));
+    } else {
+      await db.insert(aiChatUsage).values({
+        userId,
+        usageDate: date,
+        messageCount: 1,
+        lastMessageAt: new Date(),
+      });
+    }
+  } catch (error) {
+    console.error("[Database] Failed to increment AI chat usage:", error);
+  }
+}
+
+// Get AI chat history
+export async function getAiChatHistory(
+  userId: number,
+  scooterId?: number,
+  limit: number = 20
+): Promise<AiChatHistoryRecord[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const conditions = [eq(aiChatHistory.userId, userId)];
+    if (scooterId !== undefined) {
+      conditions.push(eq(aiChatHistory.scooterId, scooterId));
+    }
+
+    const result = await db
+      .select()
+      .from(aiChatHistory)
+      .where(and(...conditions))
+      .orderBy(desc(aiChatHistory.createdAt))
+      .limit(limit);
+    
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get AI chat history:", error);
+    return [];
+  }
+}
+
+// Save AI chat message
+export async function saveAiChatMessage(
+  userId: number,
+  role: "user" | "assistant",
+  content: string,
+  scooterId?: number
+): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(aiChatHistory).values({
+      userId,
+      role,
+      content,
+      scooterId: scooterId || null,
+    });
+    return result[0].insertId;
+  } catch (error) {
+    console.error("[Database] Failed to save AI chat message:", error);
+    return null;
+  }
+}
+
+// Clear AI chat history
+export async function clearAiChatHistory(userId: number, scooterId?: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    const conditions = [eq(aiChatHistory.userId, userId)];
+    if (scooterId !== undefined) {
+      conditions.push(eq(aiChatHistory.scooterId, scooterId));
+    }
+
+    await db.delete(aiChatHistory).where(and(...conditions));
+  } catch (error) {
+    console.error("[Database] Failed to clear AI chat history:", error);
+  }
+}
+
+// Get battery analysis for a scooter
+export async function getBatteryAnalysis(
+  userId: number,
+  scooterId: number
+): Promise<BatteryAnalysisRecord | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db
+      .select()
+      .from(batteryAnalysis)
+      .where(and(eq(batteryAnalysis.userId, userId), eq(batteryAnalysis.scooterId, scooterId)))
+      .limit(1);
+    return result[0] || null;
+  } catch (error) {
+    console.error("[Database] Failed to get battery analysis:", error);
+    return null;
+  }
+}
+
+// Update battery analysis after a ride
+export async function updateBatteryAnalysis(
+  userId: number,
+  scooterId: number,
+  data: {
+    distanceMeters: number;
+    energyWh: number;
+    efficiencyWhKm: number;
+    totalDistanceMeters: number;
+  }
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    const existing = await getBatteryAnalysis(userId, scooterId);
+    const efficiencyInt = Math.round(data.efficiencyWhKm * 100); // Store as integer * 100
+
+    if (existing) {
+      // Calculate new averages
+      const newTotalRides = existing.totalRidesWithVoltage + 1;
+      const newTotalDistance = existing.totalDistanceWithVoltage + data.distanceMeters;
+      const newTotalEnergy = existing.totalEnergyConsumed + Math.round(data.energyWh * 10);
+      const newAvgEfficiency = Math.round((newTotalEnergy / 10) / (newTotalDistance / 1000) * 100);
+      
+      // Estimate battery cycles based on total distance and efficiency
+      const scooterData = await getScooterById(scooterId, userId);
+      const nominalVoltage = scooterData?.batteryVoltage || 60;
+      const capacity = parseFloat(scooterData?.batteryCapacity || "30");
+      const totalCapacityWh = nominalVoltage * capacity;
+      const totalEnergyUsedWh = newTotalEnergy / 10;
+      const estimatedCycles = Math.round(totalEnergyUsedWh / (totalCapacityWh * 0.5)); // Assuming 50% average discharge
+
+      // Estimate battery health (simple linear model)
+      const maxCycles = 500; // Typical li-ion lifecycle
+      const healthReduction = Math.min(estimatedCycles / maxCycles, 1) * 20;
+      const batteryHealth = Math.max(0, 100 - healthReduction);
+
+      await db
+        .update(batteryAnalysis)
+        .set({
+          totalRidesWithVoltage: newTotalRides,
+          totalDistanceWithVoltage: newTotalDistance,
+          totalEnergyConsumed: newTotalEnergy,
+          avgEfficiency: newAvgEfficiency,
+          bestEfficiency: existing.bestEfficiency 
+            ? Math.min(existing.bestEfficiency, efficiencyInt) 
+            : efficiencyInt,
+          worstEfficiency: existing.worstEfficiency 
+            ? Math.max(existing.worstEfficiency, efficiencyInt) 
+            : efficiencyInt,
+          estimatedCycles,
+          batteryHealth: Math.round(batteryHealth),
+          lastAnalyzedAt: new Date(),
+        })
+        .where(eq(batteryAnalysis.id, existing.id));
+    } else {
+      // Create new analysis record
+      await db.insert(batteryAnalysis).values({
+        userId,
+        scooterId,
+        totalRidesWithVoltage: 1,
+        totalDistanceWithVoltage: data.distanceMeters,
+        totalEnergyConsumed: Math.round(data.energyWh * 10),
+        avgEfficiency: efficiencyInt,
+        bestEfficiency: efficiencyInt,
+        worstEfficiency: efficiencyInt,
+        estimatedCycles: 0,
+        batteryHealth: 100,
+        lastAnalyzedAt: new Date(),
+      });
+    }
+  } catch (error) {
+    console.error("[Database] Failed to update battery analysis:", error);
+  }
+}
+
+// Get recent rides with voltage data for a specific scooter
+export async function getRecentRidesWithVoltage(
+  userId: number,
+  scooterId: number,
+  limit: number = 10
+): Promise<{
+  id: number;
+  date: string;
+  distance: number;
+  duration: number;
+  avgSpeed: number;
+  voltageStart: number;
+  voltageEnd: number;
+  socStart: number;
+  socEnd: number;
+  energyWh: number | null;
+}[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const result = await db
+      .select({
+        id: ridingRecords.id,
+        date: ridingRecords.date,
+        distance: ridingRecords.distance,
+        duration: ridingRecords.duration,
+        avgSpeed: ridingRecords.avgSpeed,
+        voltageStart: ridingRecords.voltageStart,
+        voltageEnd: ridingRecords.voltageEnd,
+        socStart: ridingRecords.socStart,
+        socEnd: ridingRecords.socEnd,
+        energyWh: ridingRecords.energyWh,
+      })
+      .from(ridingRecords)
+      .where(and(
+        eq(ridingRecords.userId, userId),
+        eq(ridingRecords.scooterId, scooterId),
+        isNotNull(ridingRecords.voltageStart),
+        isNotNull(ridingRecords.voltageEnd)
+      ))
+      .orderBy(desc(ridingRecords.createdAt))
+      .limit(limit);
+
+    return result.map(r => ({
+      id: r.id,
+      date: r.date || "",
+      distance: r.distance || 0,
+      duration: r.duration || 0,
+      avgSpeed: Number(r.avgSpeed) || 0,
+      voltageStart: Number(r.voltageStart) || 0,
+      voltageEnd: Number(r.voltageEnd) || 0,
+      socStart: Number(r.socStart) || 0,
+      socEnd: Number(r.socEnd) || 0,
+      energyWh: r.energyWh ? Number(r.energyWh) : null,
+    }));
+  } catch (error) {
+    console.error("[Database] Failed to get recent rides with voltage:", error);
     return [];
   }
 }

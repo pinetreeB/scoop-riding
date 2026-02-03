@@ -1,0 +1,1 @@
+ALTER TABLE `ridingRecords` ADD `energyWh` decimal(8,2);

@@ -64,6 +64,18 @@ export const ridingRecords = mysqlTable("ridingRecords", {
   gpsPointsJson: mediumtext("gpsPointsJson"),
   /** Scooter used for this ride (optional) */
   scooterId: int("scooterId"),
+  /** Battery voltage at ride start (V) */
+  voltageStart: decimal("voltageStart", { precision: 5, scale: 2 }),
+  /** Battery voltage at ride end (V) */
+  voltageEnd: decimal("voltageEnd", { precision: 5, scale: 2 }),
+  /** Calculated SOC at start (%) */
+  socStart: decimal("socStart", { precision: 5, scale: 2 }),
+  /** Calculated SOC at end (%) */
+  socEnd: decimal("socEnd", { precision: 5, scale: 2 }),
+  /** Weather temperature during ride (°C) */
+  temperature: decimal("temperature", { precision: 4, scale: 1 }),
+  /** Energy consumed during ride (Wh) */
+  energyWh: decimal("energyWh", { precision: 8, scale: 2 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -105,6 +117,18 @@ export const scooters = mysqlTable("scooters", {
   lastMaintenanceDistance: int("lastMaintenanceDistance").default(0).notNull(),
   /** Last maintenance date */
   lastMaintenanceDate: timestamp("lastMaintenanceDate"),
+  /** Battery nominal voltage (V) - e.g., 48, 52, 60, 72 */
+  batteryVoltage: int("batteryVoltage"),
+  /** Battery capacity (Ah) - e.g., 20, 30, 40 */
+  batteryCapacity: decimal("batteryCapacity", { precision: 5, scale: 2 }),
+  /** Battery type: lithium_ion, lifepo4, lead_acid */
+  batteryType: varchar("batteryType", { length: 20 }).default("lithium_ion"),
+  /** Number of cells in series (for voltage calculation) */
+  batteryCellCount: int("batteryCellCount"),
+  /** Full charge voltage (V) - calculated or user-specified */
+  batteryFullVoltage: decimal("batteryFullVoltage", { precision: 5, scale: 2 }),
+  /** Empty voltage (V) - calculated or user-specified */
+  batteryEmptyVoltage: decimal("batteryEmptyVoltage", { precision: 5, scale: 2 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -734,3 +758,158 @@ export const adminLogs = mysqlTable("adminLogs", {
 
 export type AdminLog = typeof adminLogs.$inferSelect;
 export type InsertAdminLog = typeof adminLogs.$inferInsert;
+
+
+/**
+ * Battery riding logs - stores voltage data for each ride
+ */
+export const batteryRideLogs = mysqlTable("batteryRideLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User ID */
+  userId: int("userId").notNull(),
+  /** Scooter ID */
+  scooterId: int("scooterId").notNull(),
+  /** Riding record ID (optional, linked after ride completion) */
+  ridingRecordId: varchar("ridingRecordId", { length: 64 }),
+  /** Battery voltage before ride (V) */
+  voltageStart: decimal("voltageStart", { precision: 5, scale: 2 }),
+  /** Battery voltage after ride (V) */
+  voltageEnd: decimal("voltageEnd", { precision: 5, scale: 2 }),
+  /** Calculated SOC at start (%) */
+  socStart: decimal("socStart", { precision: 5, scale: 2 }),
+  /** Calculated SOC at end (%) */
+  socEnd: decimal("socEnd", { precision: 5, scale: 2 }),
+  /** Energy consumed (Wh) */
+  energyConsumed: decimal("energyConsumed", { precision: 8, scale: 2 }),
+  /** Distance traveled (meters) */
+  distance: int("distance"),
+  /** Calculated efficiency (Wh/km) */
+  efficiency: decimal("efficiency", { precision: 6, scale: 2 }),
+  /** Average speed during ride (km/h) */
+  avgSpeed: decimal("avgSpeed", { precision: 5, scale: 2 }),
+  /** Weather temperature at ride time (°C) */
+  temperature: decimal("temperature", { precision: 4, scale: 1 }),
+  /** Weather condition (sunny, cloudy, rainy, etc.) */
+  weatherCondition: varchar("weatherCondition", { length: 50 }),
+  /** Elevation gain (meters) */
+  elevationGain: int("elevationGain"),
+  /** Elevation loss (meters) */
+  elevationLoss: int("elevationLoss"),
+  /** Acceleration score (0-100, based on riding style) */
+  accelerationScore: int("accelerationScore"),
+  /** AI analysis notes (JSON) */
+  aiAnalysis: text("aiAnalysis"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BatteryRideLog = typeof batteryRideLogs.$inferSelect;
+export type InsertBatteryRideLog = typeof batteryRideLogs.$inferInsert;
+
+/**
+ * Battery analysis summary - aggregated stats per scooter
+ */
+export const batteryAnalysisSummary = mysqlTable("batteryAnalysisSummary", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User ID */
+  userId: int("userId").notNull(),
+  /** Scooter ID */
+  scooterId: int("scooterId").notNull(),
+  /** Total rides with battery data */
+  totalRides: int("totalRides").default(0).notNull(),
+  /** Average efficiency (Wh/km) */
+  avgEfficiency: decimal("avgEfficiency", { precision: 6, scale: 2 }),
+  /** Best efficiency (Wh/km) */
+  bestEfficiency: decimal("bestEfficiency", { precision: 6, scale: 2 }),
+  /** Worst efficiency (Wh/km) */
+  worstEfficiency: decimal("worstEfficiency", { precision: 6, scale: 2 }),
+  /** Estimated battery cycles used */
+  estimatedCycles: decimal("estimatedCycles", { precision: 6, scale: 2 }),
+  /** Battery health score (0-100) */
+  batteryHealthScore: int("batteryHealthScore"),
+  /** Total energy consumed (Wh) */
+  totalEnergyConsumed: decimal("totalEnergyConsumed", { precision: 12, scale: 2 }),
+  /** Average riding temperature (°C) */
+  avgTemperature: decimal("avgTemperature", { precision: 4, scale: 1 }),
+  /** Last AI analysis date */
+  lastAnalysisDate: timestamp("lastAnalysisDate"),
+  /** AI generated insights (JSON) */
+  aiInsights: text("aiInsights"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BatteryAnalysisSummary = typeof batteryAnalysisSummary.$inferSelect;
+export type InsertBatteryAnalysisSummary = typeof batteryAnalysisSummary.$inferInsert;
+
+/**
+ * AI chat usage tracking - for daily limit enforcement
+ */
+export const aiChatUsage = mysqlTable("aiChatUsage", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User ID */
+  userId: int("userId").notNull(),
+  /** Date (YYYY-MM-DD format for daily tracking) */
+  usageDate: varchar("usageDate", { length: 10 }).notNull(),
+  /** Number of chat messages sent today */
+  messageCount: int("messageCount").default(0).notNull(),
+  /** Last message timestamp */
+  lastMessageAt: timestamp("lastMessageAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AiChatUsage = typeof aiChatUsage.$inferSelect;
+export type InsertAiChatUsage = typeof aiChatUsage.$inferInsert;
+
+/**
+ * AI chat history - stores conversation history for context
+ */
+export const aiChatHistory = mysqlTable("aiChatHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User ID */
+  userId: int("userId").notNull(),
+  /** Message role: user or assistant */
+  role: mysqlEnum("role", ["user", "assistant"]).notNull(),
+  /** Message content */
+  content: text("content").notNull(),
+  /** Related scooter ID (if discussing specific scooter) */
+  scooterId: int("scooterId"),
+  /** Token count for this message */
+  tokenCount: int("tokenCount"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AiChatHistoryRecord = typeof aiChatHistory.$inferSelect;
+export type InsertAiChatHistoryRecord = typeof aiChatHistory.$inferInsert;
+
+/**
+ * Battery analysis data - stores aggregated battery/efficiency data per scooter
+ */
+export const batteryAnalysis = mysqlTable("batteryAnalysis", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User ID */
+  userId: int("userId").notNull(),
+  /** Scooter ID */
+  scooterId: int("scooterId").notNull(),
+  /** Total rides with voltage data */
+  totalRidesWithVoltage: int("totalRidesWithVoltage").default(0).notNull(),
+  /** Total distance with voltage data (meters) */
+  totalDistanceWithVoltage: int("totalDistanceWithVoltage").default(0).notNull(),
+  /** Total energy consumed (Wh * 10 for precision) */
+  totalEnergyConsumed: int("totalEnergyConsumed").default(0).notNull(),
+  /** Average efficiency (Wh/km * 100 for precision) */
+  avgEfficiency: int("avgEfficiency"),
+  /** Best efficiency (Wh/km * 100) */
+  bestEfficiency: int("bestEfficiency"),
+  /** Worst efficiency (Wh/km * 100) */
+  worstEfficiency: int("worstEfficiency"),
+  /** Estimated battery cycles */
+  estimatedCycles: int("estimatedCycles").default(0),
+  /** Estimated battery health (0-100) */
+  batteryHealth: int("batteryHealth").default(100),
+  /** Last analysis timestamp */
+  lastAnalyzedAt: timestamp("lastAnalyzedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BatteryAnalysisRecord = typeof batteryAnalysis.$inferSelect;
+export type InsertBatteryAnalysis = typeof batteryAnalysis.$inferInsert;

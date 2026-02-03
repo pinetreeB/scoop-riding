@@ -162,6 +162,27 @@
       "when": 1770019068677,
       "tag": "0022_wide_shinko_yamashiro",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1770102581651,
+      "tag": "0023_broken_patch",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1770103208526,
+      "tag": "0024_silly_mach_iv",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1770103557113,
+      "tag": "0025_loud_malcolm_colcord",
+      "breakpoints": true
     }
   ]
 }

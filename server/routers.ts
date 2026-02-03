@@ -304,6 +304,12 @@ export const appRouter = router({
           startTime: z.string().optional(),
           endTime: z.string().optional(),
           gpsPointsJson: z.string().optional(),
+          // Battery voltage fields
+          voltageStart: z.string().optional(),
+          voltageEnd: z.string().optional(),
+          socStart: z.string().optional(),
+          socEnd: z.string().optional(),
+          temperature: z.string().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -322,6 +328,11 @@ export const appRouter = router({
             startTime: input.startTime ? new Date(input.startTime) : undefined,
             endTime: input.endTime ? new Date(input.endTime) : undefined,
             gpsPointsJson: input.gpsPointsJson,
+            voltageStart: input.voltageStart,
+            voltageEnd: input.voltageEnd,
+            socStart: input.socStart,
+            socEnd: input.socEnd,
+            temperature: input.temperature,
           });
           console.log("[rides.create] Success, id:", result);
           return { success: true, id: result };
@@ -371,6 +382,13 @@ export const appRouter = router({
           initialOdometer: z.number().min(0).default(0),
           color: z.string().max(20).optional(),
           notes: z.string().optional(),
+          // Battery fields
+          batteryVoltage: z.number().min(0).optional(),
+          batteryCapacity: z.number().min(0).optional(),
+          batteryType: z.string().max(20).optional(),
+          batteryCellCount: z.number().min(0).optional(),
+          batteryFullVoltage: z.number().min(0).optional(),
+          batteryEmptyVoltage: z.number().min(0).optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -384,6 +402,12 @@ export const appRouter = router({
           initialOdometer: input.initialOdometer,
           color: input.color,
           notes: input.notes,
+          batteryVoltage: input.batteryVoltage,
+          batteryCapacity: input.batteryCapacity ? String(input.batteryCapacity) : undefined,
+          batteryType: input.batteryType,
+          batteryCellCount: input.batteryCellCount,
+          batteryFullVoltage: input.batteryFullVoltage ? String(input.batteryFullVoltage) : undefined,
+          batteryEmptyVoltage: input.batteryEmptyVoltage ? String(input.batteryEmptyVoltage) : undefined,
         });
         return { success: true, id: result };
       }),
@@ -403,6 +427,13 @@ export const appRouter = router({
           maintenanceInterval: z.number().min(0).optional(),
           lastMaintenanceDistance: z.number().min(0).optional(),
           lastMaintenanceDate: z.string().optional(),
+          // Battery fields
+          batteryVoltage: z.number().min(0).optional(),
+          batteryCapacity: z.number().min(0).optional(),
+          batteryType: z.string().max(20).optional(),
+          batteryCellCount: z.number().min(0).optional(),
+          batteryFullVoltage: z.number().min(0).optional(),
+          batteryEmptyVoltage: z.number().min(0).optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -420,6 +451,13 @@ export const appRouter = router({
         if (data.maintenanceInterval !== undefined) updateData.maintenanceInterval = data.maintenanceInterval;
         if (data.lastMaintenanceDistance !== undefined) updateData.lastMaintenanceDistance = data.lastMaintenanceDistance;
         if (data.lastMaintenanceDate !== undefined) updateData.lastMaintenanceDate = new Date(data.lastMaintenanceDate);
+        // Battery fields
+        if (data.batteryVoltage !== undefined) updateData.batteryVoltage = data.batteryVoltage;
+        if (data.batteryCapacity !== undefined) updateData.batteryCapacity = String(data.batteryCapacity);
+        if (data.batteryType !== undefined) updateData.batteryType = data.batteryType;
+        if (data.batteryCellCount !== undefined) updateData.batteryCellCount = data.batteryCellCount;
+        if (data.batteryFullVoltage !== undefined) updateData.batteryFullVoltage = String(data.batteryFullVoltage);
+        if (data.batteryEmptyVoltage !== undefined) updateData.batteryEmptyVoltage = String(data.batteryEmptyVoltage);
 
         const success = await db.updateScooter(id, ctx.user.id, updateData);
         return { success };
@@ -1578,6 +1616,237 @@ export const appRouter = router({
         const result = await storagePut(fileName, buffer, input.mimeType);
         
         return { url: result.url, key: result.key };
+      }),
+  }),
+
+  // AI Battery Analysis router
+  batteryAi: router({
+    // Check daily usage limit
+    checkLimit: protectedProcedure.query(async ({ ctx }) => {
+      const today = new Date().toISOString().split("T")[0];
+      const usage = await db.getAiChatUsage(ctx.user.id, today);
+      const DAILY_LIMIT = 10;
+      return {
+        used: usage?.messageCount || 0,
+        limit: DAILY_LIMIT,
+        remaining: DAILY_LIMIT - (usage?.messageCount || 0),
+        canChat: (usage?.messageCount || 0) < DAILY_LIMIT,
+      };
+    }),
+
+    // Get chat history
+    getHistory: protectedProcedure
+      .input(z.object({ scooterId: z.number().optional(), limit: z.number().default(20) }))
+      .query(async ({ ctx, input }) => {
+        return db.getAiChatHistory(ctx.user.id, input.scooterId, input.limit);
+      }),
+
+    // Clear chat history
+    clearHistory: protectedProcedure
+      .input(z.object({ scooterId: z.number().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.clearAiChatHistory(ctx.user.id, input.scooterId);
+        return { success: true };
+      }),
+
+    // Analyze battery with AI
+    analyze: protectedProcedure
+      .input(z.object({
+        scooterId: z.number(),
+        question: z.string().max(500),
+        temperature: z.number().optional(), // Current temperature in Celsius
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Check daily limit
+        const today = new Date().toISOString().split("T")[0];
+        const usage = await db.getAiChatUsage(ctx.user.id, today);
+        const DAILY_LIMIT = 10;
+        
+        if ((usage?.messageCount || 0) >= DAILY_LIMIT) {
+          return {
+            success: false,
+            error: "일일 AI 채팅 한도(10회)를 초과했습니다. 내일 다시 시도해주세요.",
+            remaining: 0,
+          };
+        }
+
+        // Get scooter info
+        const scooter = await db.getScooterById(input.scooterId, ctx.user.id);
+        if (!scooter) {
+          return { success: false, error: "기체를 찾을 수 없습니다." };
+        }
+
+        // Get battery analysis data
+        const batteryData = await db.getBatteryAnalysis(ctx.user.id, input.scooterId);
+        
+        // Get recent rides with voltage data
+        const recentRides = await db.getRecentRidesWithVoltage(ctx.user.id, input.scooterId, 10);
+
+        // Get chat history for context
+        const chatHistory = await db.getAiChatHistory(ctx.user.id, input.scooterId, 5);
+
+        // Build context for AI
+        const scooterInfo = `
+기체 정보:
+- 이름: ${scooter.name}
+- 브랜드/모델: ${scooter.brand || "미등록"} ${scooter.model || ""}
+- 배터리: ${scooter.batteryVoltage || 60}V ${scooter.batteryCapacity || 30}Ah (${scooter.batteryType || "리튬이온"})
+- 총 주행거리: ${((scooter.totalDistance || 0) / 1000).toFixed(1)}km
+- 총 주행횟수: ${scooter.totalRides || 0}회
+`;
+
+        const batteryInfo = batteryData ? `
+배터리 분석 데이터:
+- 전압 기록 주행: ${batteryData.totalRidesWithVoltage}회
+- 평균 연비: ${batteryData.avgEfficiency ? (batteryData.avgEfficiency / 100).toFixed(1) : "미측정"} Wh/km
+- 최고 연비: ${batteryData.bestEfficiency ? (batteryData.bestEfficiency / 100).toFixed(1) : "미측정"} Wh/km
+- 최저 연비: ${batteryData.worstEfficiency ? (batteryData.worstEfficiency / 100).toFixed(1) : "미측정"} Wh/km
+- 추정 사이클: ${batteryData.estimatedCycles || 0}회
+- 추정 배터리 건강도: ${batteryData.batteryHealth || 100}%
+` : "\n배터리 분석 데이터: 아직 충분한 데이터가 없습니다.\n";
+
+        const recentRidesInfo = recentRides.length > 0 ? `
+최근 주행 기록 (전압 데이터 포함):
+${recentRides.map((r, i) => `${i + 1}. ${r.date}: ${(r.distance / 1000).toFixed(1)}km, ${r.voltageStart}V→${r.voltageEnd}V (${r.socStart}%→${r.socEnd}%), 연비: ${r.energyWh ? (r.energyWh / (r.distance / 1000)).toFixed(1) : "미계산"}Wh/km`).join("\n")}
+` : "\n최근 전압 기록 주행: 없음\n";
+
+        const weatherInfo = input.temperature !== undefined ? `
+현재 기온: ${input.temperature}°C
+` : "";
+
+        // Build messages for LLM
+        const systemPrompt = `당신은 전동킥보드 배터리 전문가 AI입니다. 사용자의 기체 정보와 주행 데이터를 분석하여 배터리 관리, 연비 개선, 주행 가능 거리 예측 등에 대해 조언합니다.
+
+주요 역할:
+1. 배터리 SOC(충전 상태) 및 연비 분석
+2. 주행 습관에 따른 연비 영향 분석
+3. 배터리 수명 및 건강도 예측
+4. 날씨/온도에 따른 배터리 효율 변화 설명
+5. 목적지까지 주행 가능 여부 판단
+
+응답 시 주의사항:
+- 한국어로 친근하고 전문적으로 답변
+- 구체적인 수치와 함께 설명
+- 실용적인 조언 제공
+- 데이터가 부족하면 일반적인 조언 제공
+- 답변은 간결하게 (200자 이내 권장)`;
+
+        const userContext = `${scooterInfo}${batteryInfo}${recentRidesInfo}${weatherInfo}
+
+사용자 질문: ${input.question}`;
+
+        // Build messages with chat history
+        const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+          { role: "system", content: systemPrompt },
+        ];
+
+        // Add chat history
+        for (const msg of chatHistory.reverse()) {
+          messages.push({ role: msg.role as "user" | "assistant", content: msg.content });
+        }
+
+        // Add current question
+        messages.push({ role: "user", content: userContext });
+
+        try {
+          // Call LLM
+          const { invokeLLM } = await import("./_core/llm");
+          const response = await invokeLLM({ messages });
+          
+          const rawContent = response.choices[0]?.message?.content;
+          const aiResponse = typeof rawContent === 'string' ? rawContent : "죄송합니다. 응답을 생성할 수 없습니다.";
+
+          // Save chat history
+          await db.saveAiChatMessage(ctx.user.id, "user", input.question, input.scooterId);
+          await db.saveAiChatMessage(ctx.user.id, "assistant", aiResponse, input.scooterId);
+
+          // Update usage count
+          await db.incrementAiChatUsage(ctx.user.id, today);
+
+          return {
+            success: true,
+            response: aiResponse,
+            remaining: DAILY_LIMIT - (usage?.messageCount || 0) - 1,
+          };
+        } catch (error: any) {
+          console.error("[batteryAi.analyze] LLM error:", error);
+          return {
+            success: false,
+            error: "AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+            remaining: DAILY_LIMIT - (usage?.messageCount || 0),
+          };
+        }
+      }),
+
+    // Get battery analysis summary
+    getSummary: protectedProcedure
+      .input(z.object({ scooterId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const analysis = await db.getBatteryAnalysis(ctx.user.id, input.scooterId);
+        const scooter = await db.getScooterById(input.scooterId, ctx.user.id);
+        
+        if (!scooter) {
+          return null;
+        }
+
+        const totalCapacityWh = (scooter.batteryVoltage || 60) * parseFloat(scooter.batteryCapacity || "30");
+        const avgEfficiencyWhKm = analysis?.avgEfficiency ? analysis.avgEfficiency / 100 : null;
+        const estimatedRange = avgEfficiencyWhKm ? totalCapacityWh / avgEfficiencyWhKm : null;
+
+        return {
+          scooterName: scooter.name,
+          batterySpec: `${scooter.batteryVoltage || 60}V ${scooter.batteryCapacity || 30}Ah`,
+          totalCapacityWh,
+          totalRidesWithVoltage: analysis?.totalRidesWithVoltage || 0,
+          avgEfficiencyWhKm,
+          bestEfficiencyWhKm: analysis?.bestEfficiency ? analysis.bestEfficiency / 100 : null,
+          worstEfficiencyWhKm: analysis?.worstEfficiency ? analysis.worstEfficiency / 100 : null,
+          estimatedCycles: analysis?.estimatedCycles || 0,
+          batteryHealth: analysis?.batteryHealth || 100,
+          estimatedRangeKm: estimatedRange,
+        };
+      }),
+
+    // Update battery analysis after ride
+    updateAnalysis: protectedProcedure
+      .input(z.object({
+        scooterId: z.number(),
+        distanceMeters: z.number(),
+        voltageStart: z.number(),
+        voltageEnd: z.number(),
+        socStart: z.number(),
+        socEnd: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const scooter = await db.getScooterById(input.scooterId, ctx.user.id);
+        if (!scooter) {
+          return { success: false, error: "기체를 찾을 수 없습니다." };
+        }
+
+        // Calculate energy consumed
+        const nominalVoltage = scooter.batteryVoltage || 60;
+        const capacity = parseFloat(scooter.batteryCapacity || "30");
+        const totalCapacityWh = nominalVoltage * capacity;
+        const socConsumed = input.socStart - input.socEnd;
+        const energyWh = (totalCapacityWh * socConsumed) / 100;
+
+        // Calculate efficiency
+        const distanceKm = input.distanceMeters / 1000;
+        const efficiencyWhKm = distanceKm > 0 ? energyWh / distanceKm : 0;
+
+        // Update battery analysis
+        await db.updateBatteryAnalysis(ctx.user.id, input.scooterId, {
+          distanceMeters: input.distanceMeters,
+          energyWh,
+          efficiencyWhKm,
+          totalDistanceMeters: scooter.totalDistance || 0,
+        });
+
+        return {
+          success: true,
+          energyConsumedWh: energyWh,
+          efficiencyWhKm,
+        };
       }),
   }),
 });
