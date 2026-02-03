@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Keyboard,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
@@ -205,6 +206,7 @@ export default function BugReportScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         {/* Header */}
         <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
@@ -225,7 +227,12 @@ export default function BugReportScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          className="flex-1 p-4" 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 100 }}
+        >
           {/* Title */}
           <View className="mb-4">
             <Text className="text-sm font-semibold text-foreground mb-2">

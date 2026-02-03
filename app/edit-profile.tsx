@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Platform,
   Image,
+  ScrollView,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -191,9 +193,14 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <ScreenContainer className="px-5">
+    <ScreenContainer>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
       {/* Header */}
-      <View className="flex-row items-center justify-between py-4 border-b border-border">
+      <View className="flex-row items-center justify-between py-4 px-5 border-b border-border">
         <Pressable
           onPress={() => router.back()}
           style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
@@ -214,6 +221,11 @@ export default function EditProfileScreen() {
         </Pressable>
       </View>
 
+      <ScrollView 
+        className="flex-1 px-5" 
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
       {/* Profile Image */}
       <View className="items-center py-8">
         <Pressable
@@ -320,6 +332,9 @@ export default function EditProfileScreen() {
           선택한 색상은 프로필 사진이 없을 때 표시됩니다.
         </Text>
       </View>
+      <View className="h-20" />
+      </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenContainer>
   );
 }

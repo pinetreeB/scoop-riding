@@ -23,6 +23,7 @@ import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { useThemeContext } from "@/lib/theme-provider";
 import { trpc } from "@/lib/trpc";
+import { formatDateFull } from "@/lib/date-utils";
 import {
   getRidingRecords,
   clearAllRecords,
@@ -1171,12 +1172,7 @@ export default function ProfileScreen() {
                   <Text className="text-muted text-sm ml-2">기록 날짜</Text>
                 </View>
                 <Text className="text-foreground font-medium">
-                  {new Date(stats.maxSpeedRecordDate).toLocaleDateString("ko-KR", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    weekday: "long",
-                  })}
+                  {formatDateFull(stats.maxSpeedRecordDate)}
                 </Text>
               </View>
             )}

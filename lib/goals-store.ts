@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getRidingRecords, RidingRecord } from "./riding-store";
+import { parseDate } from "./date-utils";
 
 const GOALS_KEY = "@scoop_goals";
 
@@ -89,13 +90,15 @@ export async function calculateProgress(): Promise<GoalProgress> {
   
   // Filter records for today
   const todayRecords = records.filter((r) => {
-    const recordDate = new Date(r.date);
+    const recordDate = parseDate(r.date);
+    if (!recordDate) return false;
     return recordDate >= startOfToday;
   });
   
   // Filter records for this week
   const weekRecords = records.filter((r) => {
-    const recordDate = new Date(r.date);
+    const recordDate = parseDate(r.date);
+    if (!recordDate) return false;
     return recordDate >= startOfWeek;
   });
   

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   Text,
   View,
@@ -30,17 +30,42 @@ const POST_TYPE_LABELS: Record<string, { label: string; color: string; icon: str
   tip: { label: "팁", color: "#10B981", icon: "lightbulb-outline" },
 };
 
+type PostType = "all" | "general" | "ride_share" | "question" | "tip";
+
+const CATEGORY_TABS: { key: PostType; label: string; icon: string }[] = [
+  { key: "all", label: "전체", icon: "apps" },
+  { key: "general", label: "일반", icon: "chat-bubble-outline" },
+  { key: "ride_share", label: "주행기록", icon: "route" },
+  { key: "question", label: "질문", icon: "help-outline" },
+  { key: "tip", label: "팁", icon: "lightbulb-outline" },
+];
+
 export default function CommunityScreen() {
   const colors = useColors();
   const router = useRouter();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<PostType>("all");
 
   const trpcUtils = trpc.useUtils();
   const postsQuery = trpc.community.getPosts.useQuery(
     { limit: 50, offset: 0 },
     { enabled: isAuthenticated }
   );
+
+  // Filter posts by selected category
+  const filteredPosts = useMemo(() => {
+    if (!postsQuery.data) return [];
+    if (selectedCategory === "all") return postsQuery.data;
+    return postsQuery.data.filter((post) => post.postType === selectedCategory);
+  }, [postsQuery.data, selectedCategory]);
+
+  const handleCategoryChange = (category: PostType) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setSelectedCategory(category);
+  };
 
   const likeMutation = trpc.community.toggleLike.useMutation({
     onMutate: async ({ postId }) => {
@@ -398,9 +423,52 @@ export default function CommunityScreen() {
         </View>
       </View>
 
+      {/* Category Tabs */}
+      <View className="border-b border-border">
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={CATEGORY_TABS}
+          keyExtractor={(item) => item.key}
+          contentContainerStyle={{ paddingHorizontal: 12 }}
+          renderItem={({ item }) => {
+            const isSelected = selectedCategory === item.key;
+            const tabColor = item.key === "all" ? colors.primary : 
+              POST_TYPE_LABELS[item.key]?.color || colors.primary;
+            return (
+              <Pressable
+                onPress={() => handleCategoryChange(item.key)}
+                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                className="px-3 py-3 mr-1"
+              >
+                <View className="flex-row items-center">
+                  <MaterialIcons
+                    name={item.icon as any}
+                    size={18}
+                    color={isSelected ? tabColor : colors.muted}
+                  />
+                  <Text
+                    className="ml-1 font-medium"
+                    style={{ color: isSelected ? tabColor : colors.muted }}
+                  >
+                    {item.label}
+                  </Text>
+                </View>
+                {isSelected && (
+                  <View
+                    className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full"
+                    style={{ backgroundColor: tabColor }}
+                  />
+                )}
+              </Pressable>
+            );
+          }}
+        />
+      </View>
+
       {/* Posts List */}
       <FlatList
-        data={postsQuery.data || []}
+        data={filteredPosts}
         renderItem={renderPost}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ paddingBottom: 100 }}

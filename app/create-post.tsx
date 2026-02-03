@@ -230,6 +230,7 @@ export default function CreatePostScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         {/* Header */}
         <View className="flex-row items-center justify-between px-5 pt-4 pb-3 border-b border-border">
@@ -260,7 +261,11 @@ export default function CreatePostScreen() {
           </Pressable>
         </View>
 
-        <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
+        <ScrollView 
+          className="flex-1" 
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 100 }}
+        >
           {/* Post Type Selector */}
           <View className="px-5 py-4">
             <Text className="text-muted text-sm mb-2">카테고리</Text>

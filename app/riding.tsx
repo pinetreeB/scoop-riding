@@ -204,6 +204,7 @@ export default function RidingScreen() {
   
   // Server sync mutation for ranking
   const syncToServer = trpc.rides.create.useMutation();
+  const checkBadgesMutation = trpc.badges.check.useMutation();
   const trpcUtils = trpc.useUtils();
 
   const [isRunning, setIsRunning] = useState(true);
@@ -1148,10 +1149,35 @@ export default function RidingScreen() {
         });
         console.log("[Riding] Server sync result:", syncResult);
         
+        // Check and award badges based on cumulative stats
+        try {
+          const stats = await trpcUtils.friends.getMyStats.fetch();
+          if (stats) {
+            const badgeResult = await checkBadgesMutation.mutateAsync({
+              totalDistance: stats.totalDistance || 0,
+              totalRides: stats.totalRides || 0,
+            });
+            if (badgeResult.newBadges && badgeResult.newBadges.length > 0) {
+              console.log("[Riding] New badges earned:", badgeResult.newBadges);
+              // Show badge earned notification
+              for (const badge of badgeResult.newBadges) {
+                Alert.alert(
+                  "🏆 뱃지 획득!",
+                  `"${badge.name}" 뱃지를 획득했습니다!\n${badge.description}`,
+                  [{ text: "확인" }]
+                );
+              }
+            }
+          }
+        } catch (badgeError) {
+          console.log("[Riding] Badge check error:", badgeError);
+        }
+        
         // Invalidate ranking queries to reflect new data
         await trpcUtils.ranking.getWeekly.invalidate();
         await trpcUtils.ranking.getMonthly.invalidate();
         await trpcUtils.rides.list.invalidate();
+        await trpcUtils.badges.mine.invalidate();
       } catch (e) {
         console.error("[Riding] Server sync error:", e);
         Alert.alert(
