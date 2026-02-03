@@ -290,3 +290,93 @@ export async function scheduleRideReminder(
 
   return identifiers;
 }
+
+// Weather change notification during riding
+export async function notifyWeatherChange(
+  previousCondition: string,
+  newCondition: string,
+  temperature?: number
+): Promise<string> {
+  let title = "";
+  let body = "";
+  let emoji = "";
+
+  // Determine severity and message based on weather change
+  if (newCondition.includes("비") || newCondition.includes("소나기")) {
+    emoji = "🌧️";
+    title = "날씨 변화 알림";
+    body = `비가 오기 시작했습니다. 안전에 주의하세요!${temperature ? ` (현재 ${temperature}°C)` : ""}`;
+  } else if (newCondition.includes("눈")) {
+    emoji = "❄️";
+    title = "날씨 변화 알림";
+    body = `눈이 오기 시작했습니다. 미끄럼에 주의하세요!${temperature ? ` (현재 ${temperature}°C)` : ""}`;
+  } else if (newCondition.includes("흐림") && (previousCondition.includes("맑음") || previousCondition.includes("구름"))) {
+    emoji = "☁️";
+    title = "날씨 변화";
+    body = `날씨가 흐려지고 있습니다.${temperature ? ` (현재 ${temperature}°C)` : ""}`;
+  } else if (newCondition.includes("맑음") && previousCondition.includes("비")) {
+    emoji = "☀️";
+    title = "날씨 개선";
+    body = `비가 그쳤습니다! 노면이 젖어있을 수 있으니 주의하세요.${temperature ? ` (현재 ${temperature}°C)` : ""}`;
+  } else {
+    // Generic weather change
+    emoji = "🌤️";
+    title = "날씨 변화";
+    body = `날씨가 ${newCondition}(으)로 변했습니다.${temperature ? ` (현재 ${temperature}°C)` : ""}`;
+  }
+
+  return scheduleLocalNotification(
+    `${title} ${emoji}`,
+    body,
+    { 
+      type: "weather_change",
+      previousCondition,
+      newCondition,
+      temperature,
+    }
+  );
+}
+
+// Severe weather warning notification
+export async function notifyWeatherWarning(
+  warningType: "rain" | "snow" | "wind" | "cold" | "heat",
+  value?: number
+): Promise<string> {
+  let title = "";
+  let body = "";
+
+  switch (warningType) {
+    case "rain":
+      title = "강수 주의보 🌧️";
+      body = "비가 예상됩니다. 주행 시 미끄럼에 주의하세요!";
+      break;
+    case "snow":
+      title = "적설 주의보 ❄️";
+      body = "눈이 예상됩니다. 주행을 자제하시거나 각별히 주의하세요!";
+      break;
+    case "wind":
+      title = "강풍 주의보 💨";
+      body = value 
+        ? `풍속 ${value}m/s의 강한 바람이 불고 있습니다. 주행 시 주의하세요!`
+        : "강한 바람이 불고 있습니다. 주행 시 주의하세요!";
+      break;
+    case "cold":
+      title = "한파 주의보 🥶";
+      body = value
+        ? `현재 기온 ${value}°C로 매우 춥습니다. 방한에 유의하세요!`
+        : "매우 추운 날씨입니다. 방한에 유의하세요!";
+      break;
+    case "heat":
+      title = "폭염 주의보 🥵";
+      body = value
+        ? `현재 기온 ${value}°C로 매우 덥습니다. 수분 섭취에 유의하세요!`
+        : "매우 더운 날씨입니다. 수분 섭취에 유의하세요!";
+      break;
+  }
+
+  return scheduleLocalNotification(title, body, { 
+    type: "weather_warning",
+    warningType,
+    value,
+  });
+}

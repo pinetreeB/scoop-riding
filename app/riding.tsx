@@ -58,6 +58,7 @@ import { GpxRoute, GpxPoint as GpxRoutePoint } from "@/lib/gpx-parser";
 import { GroupChatWS, type ChatMessage as WsChatMessage } from "@/components/group-chat-ws";
 import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
 import { WeatherRidingTipCompact } from "@/components/weather-riding-tips";
+import { notifyWeatherChange, notifyWeatherWarning } from "@/lib/notifications";
 import { useAuth } from "@/hooks/use-auth";
 import { analyzeRideData, type RideAnalysisResult } from "@/lib/ride-analysis";
 import { useGroupWebSocket } from "@/hooks/use-group-websocket";
@@ -629,8 +630,8 @@ export default function RidingScreen() {
           durationRef.current = newDuration; // ref도 동기화
           return newDuration;
         });
-      } else if (isAutoPausedRef.current) {
-        // 자동 일시정지 중일 때 휴식 시간 카운트
+      } else if (isAutoPausedRef.current || !isRunningRef.current) {
+        // 자동 일시정지 또는 수동 일시정지 중일 때 휴식 시간 카운트
         setRestTime((prev) => prev + 1);
       }
     }, 1000);
@@ -938,6 +939,36 @@ export default function RidingScreen() {
           .then((result) => {
             if (result.success && result.weather) {
               console.log("[Riding] Weather checkpoint at", (currentDistance / 1000).toFixed(1), "km:", result.weather.weatherCondition);
+              
+              // 날씨 변화 감지 및 알림
+              const previousCondition = weatherInfo?.weatherCondition || weatherChanges[weatherChanges.length - 1]?.weatherCondition;
+              const newCondition = result.weather.weatherCondition;
+              
+              if (previousCondition && newCondition !== previousCondition) {
+                // 날씨가 변했을 때 알림
+                notifyWeatherChange(
+                  previousCondition,
+                  newCondition,
+                  result.weather.temperature ?? undefined
+                );
+                console.log("[Riding] Weather changed:", previousCondition, "->", newCondition);
+              }
+              
+              // 강풍 경고 (10m/s 이상)
+              if (result.weather.windSpeed && result.weather.windSpeed >= 10) {
+                notifyWeatherWarning("wind", result.weather.windSpeed);
+              }
+              
+              // 한파 경고 (-10도 이하)
+              if (result.weather.temperature && result.weather.temperature <= -10) {
+                notifyWeatherWarning("cold", result.weather.temperature);
+              }
+              
+              // 폭염 경고 (35도 이상)
+              if (result.weather.temperature && result.weather.temperature >= 35) {
+                notifyWeatherWarning("heat", result.weather.temperature);
+              }
+              
               setWeatherChanges((prev) => [
                 ...prev,
                 {
@@ -1428,10 +1459,19 @@ export default function RidingScreen() {
               const recordId = generateId();
               const now = new Date();
               
+              // 총 시간 계산 (startTime ~ endTime)
+              const totalElapsedTime = Math.floor((now.getTime() - startTimeRef.current.getTime()) / 1000);
+              // 실제 주행 시간 (duration state 사용)
+              const actualDuration = duration > 0 ? duration : totalElapsedTime;
+              // 휴식 시간 = 총 시간 - 주행 시간
+              const actualRestTime = Math.max(0, totalElapsedTime - actualDuration);
+              
               const record = {
                 id: recordId,
                 date: now.toLocaleDateString("ko-KR"),
-                duration: duration > 0 ? duration : Math.floor((now.getTime() - startTimeRef.current.getTime()) / 1000),
+                duration: actualDuration,
+                restTime: actualRestTime > 0 ? actualRestTime : (restTime > 0 ? restTime : undefined),
+                totalTime: totalElapsedTime,
                 distance: finalDist,
                 avgSpeed: finalAvg,
                 maxSpeed: finalMax,

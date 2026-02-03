@@ -149,11 +149,18 @@ export default function RideDetailScreen() {
   const gpsPoints = record.gpsPoints || [];
   const hasGpsData = gpsPoints.length > 0;
 
-  // Calculate rest time (duration - moving time based on GPS points)
-  const movingTime = gpsPoints.length > 1
-    ? Math.round((gpsPoints[gpsPoints.length - 1].timestamp - gpsPoints[0].timestamp) / 1000)
-    : record.duration;
-  const restTime = Math.max(0, record.duration - movingTime);
+  // 휴식 시간 계산: record에 저장된 값 우선, 없으면 총 시간에서 주행 시간을 뺄
+  let restTime = record.restTime || 0;
+  
+  // record.restTime이 없으면 totalTime 또는 startTime/endTime에서 계산
+  if (!record.restTime && record.startTime && record.endTime) {
+    const startMs = new Date(record.startTime).getTime();
+    const endMs = new Date(record.endTime).getTime();
+    const totalElapsed = Math.floor((endMs - startMs) / 1000);
+    restTime = Math.max(0, totalElapsed - record.duration);
+  } else if (!record.restTime && record.totalTime) {
+    restTime = Math.max(0, record.totalTime - record.duration);
+  }
 
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]}>

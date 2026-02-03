@@ -810,8 +810,28 @@ export default function HomeScreen() {
                 </View>
               </Pressable>
 
+              {/* Monthly Weather Report */}
+              <Pressable
+                onPress={() => {
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  router.push("/monthly-weather-report" as any);
+                }}
+                style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
+              >
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
+                  <View className="flex-row items-center mb-2">
+                    <View className="w-8 h-8 rounded-full bg-green-500/20 items-center justify-center">
+                      <MaterialIcons name="calendar-today" size={18} color="#22C55E" />
+                    </View>
+                  </View>
+                  <Text className="text-foreground font-bold">월간 리포트</Text>
+                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>월별 날씨{"\n"}주행 분석</Text>
+                </View>
+              </Pressable>
+
               {/* Placeholder for future feature */}
-              <View style={{ flex: 1 }} />
               <View style={{ flex: 1 }} />
             </View>
           </View>

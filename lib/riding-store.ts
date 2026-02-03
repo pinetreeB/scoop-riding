@@ -5,7 +5,9 @@ import { trpc } from "./trpc";
 export interface RidingRecord {
   id: string;
   date: string;
-  duration: number; // seconds
+  duration: number; // seconds (actual riding time, excluding rest)
+  restTime?: number; // seconds (rest/pause time)
+  totalTime?: number; // seconds (duration + restTime, should match startTime to endTime)
   distance: number; // meters
   avgSpeed: number; // km/h
   maxSpeed: number; // km/h
