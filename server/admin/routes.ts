@@ -922,6 +922,19 @@ router.get("/stats/user/:userId", verifyAdminToken, async (req: Request, res: Re
   }
 });
 
+// Get all riding records (paginated)
+router.get("/rides", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const result = await db.getAllRidingRecordsAdmin(page, limit);
+    res.json(result);
+  } catch (e) {
+    console.error("Admin all rides error:", e);
+    res.status(500).json({ error: "주행 기록을 불러오는데 실패했습니다." });
+  }
+});
+
 // Get user ride history
 router.get("/rides/user/:userId", verifyAdminToken, async (req: Request, res: Response) => {
   try {
