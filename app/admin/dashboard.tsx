@@ -21,7 +21,7 @@ import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 
-type TabType = "survey" | "bugs" | "announcements" | "users" | "posts";
+type TabType = "survey" | "bugs" | "announcements" | "users" | "posts" | "rides";
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
@@ -190,6 +190,7 @@ export default function AdminDashboardScreen() {
     { key: "announcements", label: "공지", icon: "campaign" },
     { key: "users", label: "사용자", icon: "people" },
     { key: "posts", label: "게시글", icon: "article" },
+    { key: "rides", label: "주행기록", icon: "directions-bike" },
   ];
 
   return (
@@ -269,6 +270,7 @@ export default function AdminDashboardScreen() {
         {activeTab === "announcements" && <AnnouncementsTab colors={colors} />}
         {activeTab === "users" && <UsersTab colors={colors} />}
         {activeTab === "posts" && <PostsTab colors={colors} />}
+        {activeTab === "rides" && <RidesTab colors={colors} />}
 
         <View className="h-8" />
       </ScrollView>
@@ -1027,6 +1029,146 @@ function PostsTab({ colors }: { colors: any }) {
             <View className="items-center py-12">
               <MaterialIcons name="article" size={48} color={colors.muted} />
               <Text className="text-muted mt-2">게시글이 없습니다</Text>
+            </View>
+          )}
+        </>
+      )}
+    </View>
+  );
+}
+
+// Rides Tab Component - 모든 유저 주행 기록
+function RidesTab({ colors }: { colors: any }) {
+  const [page, setPage] = useState(1);
+  const { data, refetch, isLoading } = trpc.admin.getAllRidingRecords.useQuery(
+    { page, limit: 50 }
+  );
+
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const formatDate = (date: Date | string): string => {
+    const d = new Date(date);
+    return d.toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const totalPages = data ? Math.ceil(data.total / 50) : 1;
+
+  return (
+    <View className="flex-1 p-4">
+      {/* Summary */}
+      <View className="bg-surface rounded-xl p-4 mb-4 border border-border">
+        <Text className="text-muted text-sm">전체 주행 기록</Text>
+        <Text className="text-2xl font-bold text-foreground">
+          {data?.total?.toLocaleString() || 0}건
+        </Text>
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator size="large" color={colors.primary} />
+      ) : (
+        <>
+          {data?.records?.map((record: any) => (
+            <View
+              key={record.id}
+              className="bg-surface rounded-xl p-4 mb-3 border border-border"
+            >
+              {/* User Info */}
+              <View className="flex-row items-center justify-between mb-2">
+                <View className="flex-row items-center gap-2">
+                  <MaterialIcons name="person" size={18} color={colors.primary} />
+                  <Text className="text-sm font-semibold text-foreground">
+                    {record.userName || "이름 없음"}
+                  </Text>
+                </View>
+                <Text className="text-xs text-muted">
+                  {formatDate(record.createdAt)}
+                </Text>
+              </View>
+
+              {/* Email */}
+              <Text className="text-xs text-muted mb-2">
+                {record.userEmail || "이메일 없음"}
+              </Text>
+
+              {/* Ride Stats */}
+              <View className="flex-row justify-between bg-background rounded-lg p-3">
+                <View className="items-center">
+                  <Text className="text-base font-bold text-primary">
+                    {(record.distance / 1000).toFixed(2)}km
+                  </Text>
+                  <Text className="text-xs text-muted">거리</Text>
+                </View>
+                <View className="items-center">
+                  <Text className="text-base font-bold text-foreground">
+                    {formatDuration(record.duration)}
+                  </Text>
+                  <Text className="text-xs text-muted">시간</Text>
+                </View>
+                <View className="items-center">
+                  <Text className="text-base font-bold text-foreground">
+                    {(record.avgSpeed / 10).toFixed(1)}
+                  </Text>
+                  <Text className="text-xs text-muted">평균(km/h)</Text>
+                </View>
+                <View className="items-center">
+                  <Text className="text-base font-bold text-warning">
+                    {(record.maxSpeed / 10).toFixed(1)}
+                  </Text>
+                  <Text className="text-xs text-muted">최고(km/h)</Text>
+                </View>
+              </View>
+
+              {/* Scooter Info */}
+              {record.scooterName && (
+                <View className="flex-row items-center gap-1 mt-2">
+                  <MaterialIcons name="electric-scooter" size={14} color={colors.muted} />
+                  <Text className="text-xs text-muted">{record.scooterName}</Text>
+                </View>
+              )}
+            </View>
+          ))}
+
+          {(!data?.records || data.records.length === 0) && (
+            <View className="items-center py-12">
+              <MaterialIcons name="directions-bike" size={48} color={colors.muted} />
+              <Text className="text-muted mt-2">주행 기록이 없습니다</Text>
+            </View>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <View className="flex-row items-center justify-center gap-4 mt-4 mb-8">
+              <Pressable
+                onPress={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className={`px-4 py-2 rounded-lg ${page === 1 ? "bg-gray-200" : "bg-primary"}`}
+              >
+                <Text className={page === 1 ? "text-gray-500" : "text-white"}>이전</Text>
+              </Pressable>
+              <Text className="text-foreground">
+                {page} / {totalPages}
+              </Text>
+              <Pressable
+                onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className={`px-4 py-2 rounded-lg ${page === totalPages ? "bg-gray-200" : "bg-primary"}`}
+              >
+                <Text className={page === totalPages ? "text-gray-500" : "text-white"}>다음</Text>
+              </Pressable>
             </View>
           )}
         </>

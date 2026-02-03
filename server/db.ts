@@ -5054,3 +5054,94 @@ export async function getBatteryHealthHistory(userId: number, scooterId: number,
     })),
   };
 }
+
+// ==================== Admin Riding Records Functions ====================
+
+export interface RidingRecordWithUser {
+  id: number;
+  recordId: string;
+  userId: number;
+  userName: string | null;
+  userEmail: string | null;
+  date: string;
+  distance: number;
+  duration: number;
+  avgSpeed: number;
+  maxSpeed: number;
+  scooterId: number | null;
+  scooterName: string | null;
+  createdAt: Date;
+}
+
+/**
+ * Get all riding records for admin (with user info)
+ */
+export async function getAllRidingRecordsAdmin(
+  page: number = 1,
+  limit: number = 50
+): Promise<{ records: RidingRecordWithUser[]; total: number }> {
+  const db = await getDb();
+  if (!db) return { records: [], total: 0 };
+
+  try {
+    const offset = (page - 1) * limit;
+
+    // Get total count
+    const countResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(ridingRecords);
+    const total = countResult[0]?.count ?? 0;
+
+    // Get records with user info
+    const result = await db
+      .select({
+        id: ridingRecords.id,
+        recordId: ridingRecords.recordId,
+        userId: ridingRecords.userId,
+        userName: users.name,
+        userEmail: users.email,
+        date: ridingRecords.date,
+        distance: ridingRecords.distance,
+        duration: ridingRecords.duration,
+        avgSpeed: ridingRecords.avgSpeed,
+        maxSpeed: ridingRecords.maxSpeed,
+        scooterId: ridingRecords.scooterId,
+        createdAt: ridingRecords.createdAt,
+      })
+      .from(ridingRecords)
+      .leftJoin(users, eq(ridingRecords.userId, users.id))
+      .orderBy(desc(ridingRecords.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    // Get scooter names for records that have scooterId
+    const recordsWithScooter = await Promise.all(
+      result.map(async (record) => {
+        let scooterName: string | null = null;
+        if (record.scooterId) {
+          const scooterResult = await db
+            .select({ name: scooters.name })
+            .from(scooters)
+            .where(eq(scooters.id, record.scooterId))
+            .limit(1);
+          scooterName = scooterResult[0]?.name ?? null;
+        }
+        return {
+          ...record,
+          date: record.date || "",
+          distance: record.distance || 0,
+          duration: record.duration || 0,
+          avgSpeed: record.avgSpeed || 0,
+          maxSpeed: record.maxSpeed || 0,
+          scooterName,
+          createdAt: record.createdAt || new Date(),
+        };
+      })
+    );
+
+    return { records: recordsWithScooter, total };
+  } catch (error) {
+    console.error("[Database] Failed to get all riding records:", error);
+    return { records: [], total: 0 };
+  }
+}

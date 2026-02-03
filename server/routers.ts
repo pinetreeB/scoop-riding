@@ -1642,6 +1642,17 @@ export const appRouter = router({
         const success = await db.deletePostAdmin(input.postId);
         return { success };
       }),
+
+    // Get all riding records (admin)
+    getAllRidingRecords: protectedProcedure
+      .input(z.object({
+        page: z.number().default(1),
+        limit: z.number().default(50),
+      }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new Error("관리자 권한이 필요합니다.");
+        return db.getAllRidingRecordsAdmin(input.page, input.limit);
+      }),
   }),
 
   // Badges router
