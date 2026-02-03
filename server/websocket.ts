@@ -115,14 +115,16 @@ interface ClientInfo {
     latitude: number;
     longitude: number;
   } | null;
+  lastBroadcastTime: number; // Time of last broadcast for this client
   lastHeartbeat: number;
   isAlive: boolean;
 }
 
 // Optimization constants
-const BROADCAST_INTERVAL_MS = 1000; // Base broadcast interval (1 second)
-const BROADCAST_INTERVAL_IDLE_MS = 3000; // Broadcast interval when group is idle (3 seconds)
-const LOCATION_CHANGE_THRESHOLD = 0.00005; // ~5.5 meters - minimum change to trigger broadcast
+const BROADCAST_INTERVAL_MS = 500; // Base broadcast interval (0.5 second) - faster for real-time feel
+const BROADCAST_INTERVAL_IDLE_MS = 1500; // Broadcast interval when group is idle (1.5 seconds)
+const LOCATION_CHANGE_THRESHOLD = 0.00002; // ~2.2 meters - lower threshold for more responsive updates
+const FORCE_BROADCAST_INTERVAL_MS = 2000; // Force broadcast every 2 seconds regardless of movement
 const HEARTBEAT_INTERVAL_MS = 30000; // 30 seconds heartbeat
 const HEARTBEAT_TIMEOUT_MS = 60000; // 60 seconds timeout for dead connections
 const MAX_BROADCAST_BATCH_SIZE = 50; // Maximum members per broadcast
@@ -133,11 +135,15 @@ const groupClients = new Map<number, Set<WebSocket>>(); // groupId -> Set of Web
 // Broadcast scheduling per group
 interface GroupBroadcastState {
   timer: ReturnType<typeof setTimeout> | null;
+  periodicTimer: ReturnType<typeof setInterval> | null; // Periodic broadcast timer
   lastBroadcastTime: number;
   pendingUpdate: boolean;
   isActive: boolean; // True if any member is actively riding
 }
 const groupBroadcastStates = new Map<number, GroupBroadcastState>();
+
+// Periodic broadcast interval (ensures all clients receive updates even if they're busy)
+const PERIODIC_BROADCAST_INTERVAL_MS = 500; // Force broadcast every 500ms regardless of updates
 
 // Heartbeat interval reference
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
@@ -165,6 +171,7 @@ export function setupWebSocket(server: Server): void {
       groupId: null,
       lastLocation: null,
       lastBroadcastLocation: null,
+      lastBroadcastTime: 0,
       lastHeartbeat: Date.now(),
       isAlive: true,
     });
@@ -290,12 +297,20 @@ async function handleJoinGroup(
 
     // Initialize broadcast state for group if not exists
     if (!groupBroadcastStates.has(message.groupId)) {
+      const groupId = message.groupId;
+      // Start periodic broadcast timer for this group
+      const periodicTimer = setInterval(() => {
+        doBroadcastGroupLocations(groupId);
+      }, PERIODIC_BROADCAST_INTERVAL_MS);
+      
       groupBroadcastStates.set(message.groupId, {
         timer: null,
+        periodicTimer,
         lastBroadcastTime: 0,
         pendingUpdate: false,
         isActive: false,
       });
+      console.log(`[WebSocket] Started periodic broadcast for group ${groupId}`);
     }
 
     console.log(`[WebSocket] User ${client.userId} (${client.userName}) joined group ${message.groupId}`);
@@ -325,6 +340,10 @@ function handleLeaveGroup(ws: WebSocket, client: ClientInfo, groupId: number): v
       const state = groupBroadcastStates.get(groupId);
       if (state?.timer) {
         clearTimeout(state.timer);
+      }
+      if (state?.periodicTimer) {
+        clearInterval(state.periodicTimer);
+        console.log(`[WebSocket] Stopped periodic broadcast for group ${groupId}`);
       }
       groupBroadcastStates.delete(groupId);
     }
@@ -365,11 +384,12 @@ function handleLocationUpdate(
   const shouldBroadcast = hasLocationChangedSignificantly(client);
   
   if (shouldBroadcast) {
-    // Update last broadcast location
+    // Update last broadcast location and time
     client.lastBroadcastLocation = {
       latitude: message.latitude,
       longitude: message.longitude,
     };
+    client.lastBroadcastTime = Date.now();
     
     // Update group activity state
     const state = groupBroadcastStates.get(message.groupId);
@@ -385,10 +405,18 @@ function handleLocationUpdate(
 /**
  * Check if location changed enough to warrant a broadcast
  * Uses delta compression to reduce unnecessary updates
+ * Also forces broadcast after FORCE_BROADCAST_INTERVAL_MS to ensure real-time feel
  */
 function hasLocationChangedSignificantly(client: ClientInfo): boolean {
   if (!client.lastLocation) return false;
   if (!client.lastBroadcastLocation) return true; // First location update
+  
+  // Force broadcast if too much time has passed (ensures real-time updates even when stationary)
+  const now = Date.now();
+  const timeSinceLastBroadcast = now - client.lastBroadcastTime;
+  if (timeSinceLastBroadcast >= FORCE_BROADCAST_INTERVAL_MS) {
+    return true;
+  }
   
   const latDiff = Math.abs(client.lastLocation.latitude - client.lastBroadcastLocation.latitude);
   const lngDiff = Math.abs(client.lastLocation.longitude - client.lastBroadcastLocation.longitude);

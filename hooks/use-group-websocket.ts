@@ -116,6 +116,16 @@ export function useGroupWebSocket({
   const reconnectAttemptsRef = useRef(0);
   const currentGroupIdRef = useRef<number | null>(null);
   const lastLocationSentRef = useRef<number>(0);
+  
+  // Use refs for callbacks to avoid stale closures
+  const onMembersUpdateRef = useRef(onMembersUpdate);
+  const onChatMessageRef = useRef(onChatMessage);
+  const onErrorRef = useRef(onError);
+  
+  // Keep refs updated
+  onMembersUpdateRef.current = onMembersUpdate;
+  onChatMessageRef.current = onChatMessage;
+  onErrorRef.current = onError;
   const pendingLocationRef = useRef<{
     latitude: number;
     longitude: number;
@@ -176,19 +186,19 @@ export function useGroupWebSocket({
               break;
               
             case "group_member_update":
-              console.log(`[WebSocket] Received ${message.members.length} member locations`);
+              // Use ref to get latest callback and avoid stale closure
               setMembers(message.members);
-              onMembersUpdate?.(message.members);
+              onMembersUpdateRef.current?.(message.members);
               break;
               
             case "error":
               console.error("[WebSocket] Server error:", message.message);
-              onError?.(message.message);
+              onErrorRef.current?.(message.message);
               break;
               
             case "chat_broadcast":
               console.log(`[WebSocket] Received chat message from ${message.chatMessage.userName}`);
-              onChatMessage?.(message.chatMessage);
+              onChatMessageRef.current?.(message.chatMessage);
               break;
           }
         } catch (error) {
@@ -218,9 +228,9 @@ export function useGroupWebSocket({
       };
     } catch (error) {
       console.error("[WebSocket] Failed to create connection:", error);
-      onError?.("Failed to connect to server");
+      onErrorRef.current?.("Failed to connect to server");
     }
-  }, [groupId, enabled, onMembersUpdate, onError]);
+  }, [groupId, enabled]); // Removed callback deps since we use refs
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -254,10 +264,10 @@ export function useGroupWebSocket({
   }, []);
 
   // Adaptive throttled location update
-  // - Fast updates when moving (1 second)
-  // - Slow updates when stationary (3 seconds)
-  const LOCATION_THROTTLE_FAST_MS = 1000; // When moving
-  const LOCATION_THROTTLE_SLOW_MS = 3000; // When stationary
+  // - Fast updates when moving (0.5 second)
+  // - Slow updates when stationary (1.5 seconds)
+  const LOCATION_THROTTLE_FAST_MS = 500; // When moving - faster for real-time feel
+  const LOCATION_THROTTLE_SLOW_MS = 1500; // When stationary - still responsive
   const SPEED_THRESHOLD = 2; // km/h - below this is considered stationary
   
   const sendLocationUpdate = useCallback((location: {
