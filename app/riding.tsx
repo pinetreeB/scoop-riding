@@ -205,6 +205,7 @@ export default function RidingScreen() {
   // Server sync mutation for ranking
   const syncToServer = trpc.rides.create.useMutation();
   const checkBadgesMutation = trpc.badges.check.useMutation();
+  const weatherQuery = trpc.weather.getCurrent.useQuery;
   const trpcUtils = trpc.useUtils();
 
   const [isRunning, setIsRunning] = useState(true);
@@ -225,6 +226,17 @@ export default function RidingScreen() {
   
   // Battery voltage tracking
   const [startVoltage, setStartVoltage] = useState<{ voltage: number; soc: number } | null>(null);
+  
+  // Weather info at ride start
+  const [weatherInfo, setWeatherInfo] = useState<{
+    temperature: number | null;
+    humidity: number | null;
+    windSpeed: number | null;
+    windDirection: number | null;
+    precipitationType: number;
+    weatherCondition: string;
+  } | null>(null);
+  const getWeather = trpc.weather.getCurrent.useQuery;
   const [showEndVoltageModal, setShowEndVoltageModal] = useState(false);
   const [pendingRideData, setPendingRideData] = useState<any>(null);
   
@@ -823,6 +835,28 @@ export default function RidingScreen() {
 
       // Update live location for friends to see
       const isStarting = isFirstLocationRef.current;
+      
+      // Fetch weather info on first valid location (ride start)
+      if (isStarting && !weatherInfo) {
+        trpcUtils.weather.getCurrent.fetch({ lat: latitude, lon: longitude })
+          .then((result) => {
+            if (result.success && result.weather) {
+              console.log("[Riding] Weather fetched:", result.weather);
+              setWeatherInfo({
+                temperature: result.weather.temperature,
+                humidity: result.weather.humidity,
+                windSpeed: result.weather.windSpeed,
+                windDirection: result.weather.windDirection,
+                precipitationType: result.weather.precipitationType,
+                weatherCondition: result.weather.weatherCondition,
+              });
+            }
+          })
+          .catch((err) => {
+            console.log("[Riding] Weather fetch failed:", err);
+          });
+      }
+      
       isFirstLocationRef.current = false;
       updateLiveLocation.mutate({
         latitude,
@@ -1146,6 +1180,13 @@ export default function RidingScreen() {
           voltageEnd: endVoltage ? String(endVoltage) : undefined,
           socStart: startVoltage?.soc ? String(startVoltage.soc) : undefined,
           socEnd: endSoc ? String(endSoc) : undefined,
+          // Include weather data from ride start
+          temperature: weatherInfo?.temperature !== null ? String(weatherInfo?.temperature) : undefined,
+          humidity: weatherInfo?.humidity ?? undefined,
+          windSpeed: weatherInfo?.windSpeed ?? undefined,
+          windDirection: weatherInfo?.windDirection ?? undefined,
+          precipitationType: weatherInfo?.precipitationType ?? undefined,
+          weatherCondition: weatherInfo?.weatherCondition ?? undefined,
         });
         console.log("[Riding] Server sync result:", syncResult);
         
@@ -1216,6 +1257,12 @@ export default function RidingScreen() {
           socEnd: endSoc,
           scooterId: selectedScooter?.id,
           gpsPointsCount: rideData.gpsPoints?.length || 0,
+          // Weather data for AI analysis
+          temperature: weatherInfo?.temperature ?? undefined,
+          humidity: weatherInfo?.humidity ?? undefined,
+          windSpeed: weatherInfo?.windSpeed ?? undefined,
+          precipitationType: weatherInfo?.precipitationType ?? undefined,
+          weatherCondition: weatherInfo?.weatherCondition ?? undefined,
         });
         
         if (analysisResult.success && analysisResult.analysis) {

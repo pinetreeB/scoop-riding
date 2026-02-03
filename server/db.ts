@@ -351,6 +351,22 @@ export async function createRidingRecord(data: InsertRidingRecord): Promise<numb
   if (data.temperature !== undefined && data.temperature !== null) {
     insertData.temperature = data.temperature;
   }
+  // Weather fields
+  if (data.humidity !== undefined && data.humidity !== null) {
+    insertData.humidity = data.humidity;
+  }
+  if (data.windSpeed !== undefined && data.windSpeed !== null) {
+    insertData.windSpeed = data.windSpeed;
+  }
+  if (data.windDirection !== undefined && data.windDirection !== null) {
+    insertData.windDirection = data.windDirection;
+  }
+  if (data.precipitationType !== undefined && data.precipitationType !== null) {
+    insertData.precipitationType = data.precipitationType;
+  }
+  if (data.weatherCondition !== undefined && data.weatherCondition !== null) {
+    insertData.weatherCondition = data.weatherCondition;
+  }
 
   const result = await db.insert(ridingRecords).values(insertData);
   return result[0].insertId;

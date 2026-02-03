@@ -204,6 +204,13 @@
       "when": 1770128374356,
       "tag": "0028_opposite_chimera",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "5",
+      "when": 1770133483659,
+      "tag": "0029_past_king_cobra",
+      "breakpoints": true
     }
   ]
 }

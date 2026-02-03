@@ -6,6 +6,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import * as jose from "jose";
 import { ENV } from "./_core/env";
+import { getWeatherInfo, type WeatherInfo } from "./weather";
 
 // JWT secret for session tokens - MUST match sdk.ts getSessionSecret()
 // Uses ENV.cookieSecret which comes from JWT_SECRET environment variable
@@ -338,6 +339,12 @@ export const appRouter = router({
           socStart: z.string().optional(),
           socEnd: z.string().optional(),
           temperature: z.string().optional(),
+          // Weather fields
+          humidity: z.number().optional(),
+          windSpeed: z.number().optional(),
+          windDirection: z.number().optional(),
+          precipitationType: z.number().optional(),
+          weatherCondition: z.string().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -362,6 +369,12 @@ export const appRouter = router({
             socStart: input.socStart,
             socEnd: input.socEnd,
             temperature: input.temperature,
+            // Weather fields
+            humidity: input.humidity,
+            windSpeed: input.windSpeed ? String(input.windSpeed) : undefined,
+            windDirection: input.windDirection,
+            precipitationType: input.precipitationType,
+            weatherCondition: input.weatherCondition,
           });
           console.log("[rides.create] Success, id:", result);
           
@@ -414,6 +427,11 @@ export const appRouter = router({
           scooterId: z.number().optional(),
           temperature: z.number().optional(),
           gpsPointsCount: z.number().optional(),
+          // Weather fields
+          humidity: z.number().optional(),
+          windSpeed: z.number().optional(),
+          precipitationType: z.number().optional(),
+          weatherCondition: z.string().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -453,7 +471,15 @@ export const appRouter = router({
           }
 
           // Weather info
-          const weatherInfo = input.temperature !== undefined ? `\n현재 기온: ${input.temperature}°C` : "";
+          let weatherInfo = "";
+          if (input.temperature !== undefined || input.weatherCondition) {
+            const parts = [];
+            if (input.temperature !== undefined) parts.push(`기온 ${input.temperature}°C`);
+            if (input.humidity !== undefined) parts.push(`습도 ${input.humidity}%`);
+            if (input.windSpeed !== undefined) parts.push(`풍속 ${input.windSpeed}m/s`);
+            if (input.weatherCondition) parts.push(`날씨 ${input.weatherCondition}`);
+            weatherInfo = `\n주행 당시 날씨: ${parts.join(", ")}`;
+          }
 
           // Build prompt for AI analysis
           const rideData = `
@@ -473,6 +499,7 @@ export const appRouter = router({
   "efficiency_score": "연비 평가 (좋음/보통/개선필요)",
   "riding_style": "주행 스타일 평가 (안정적/보통/공격적)",
   "battery_status": "배터리 상태 평가 (좋음/보통/주의필요) - 배터리 데이터 없으면 null",
+  "weather_impact": "날씨가 주행에 미친 영향 (1문장, 날씨 데이터 없으면 null)",
   "tips": ["개선 팁 1", "개선 팁 2"],
   "highlights": ["좋았던 점 1", "좋았던 점 2"]
 }
@@ -482,6 +509,8 @@ export const appRouter = router({
 - 각 항목은 간결하게 (20자 이내)
 - tips와 highlights는 각각 2개씩
 - 배터리 데이터가 없으면 battery_status는 null로
+- 날씨 데이터가 있으면 연비와 안전에 미치는 영향을 분석 (weather_impact)
+- 비/눈 오는 날씨는 안전 주의 강조, 강풍은 연비 영향 언급
 - 반드시 유효한 JSON만 출력`;
 
           // Call LLM
@@ -2192,6 +2221,33 @@ ${recentRides.map((r, i) => `${i + 1}. ${r.date}: ${(r.distance / 1000).toFixed(
       }))
       .query(async ({ ctx, input }) => {
         return db.getBatteryHealthHistory(ctx.user.id, input.scooterId, input.limit);
+      }),
+  }),
+
+  // Weather API router
+  weather: router({
+    // Get current weather by coordinates
+    getCurrent: protectedProcedure
+      .input(z.object({
+        lat: z.number(),
+        lon: z.number(),
+      }))
+      .query(async ({ input }) => {
+        const apiKey = process.env.KMA_API_KEY;
+        if (!apiKey) {
+          console.error("[Weather] KMA_API_KEY not configured");
+          return { success: false, error: "기상청 API 키가 설정되지 않았습니다." };
+        }
+
+        const weather = await getWeatherInfo(input.lat, input.lon, apiKey);
+        if (!weather) {
+          return { success: false, error: "날씨 정보를 가져올 수 없습니다." };
+        }
+
+        return {
+          success: true,
+          weather,
+        };
       }),
   }),
 });

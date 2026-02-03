@@ -76,6 +76,16 @@ export const ridingRecords = mysqlTable("ridingRecords", {
   socEnd: decimal("socEnd", { precision: 5, scale: 2 }),
   /** Weather temperature during ride (°C) */
   temperature: decimal("temperature", { precision: 4, scale: 1 }),
+  /** Weather humidity during ride (%) */
+  humidity: int("humidity"),
+  /** Wind speed during ride (m/s) */
+  windSpeed: decimal("windSpeed", { precision: 4, scale: 1 }),
+  /** Wind direction during ride (deg) */
+  windDirection: int("windDirection"),
+  /** Precipitation type (0:없음, 1:비, 2:비/눈, 3:눈, 5:빗방울, 6:빗방울눈날림, 7:눈날림) */
+  precipitationType: int("precipitationType"),
+  /** Weather condition text (맑음, 비, 눈 등) */
+  weatherCondition: varchar("weatherCondition", { length: 50 }),
   /** Energy consumed during ride (Wh) */
   energyWh: decimal("energyWh", { precision: 8, scale: 2 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
