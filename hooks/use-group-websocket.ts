@@ -186,8 +186,8 @@ export function useGroupWebSocket({
               break;
               
             case "group_member_update":
-              // Use ref to get latest callback and avoid stale closure
-              setMembers(message.members);
+              // Only call the callback - let the parent component handle state updates
+              // This prevents double state updates and reduces re-renders
               onMembersUpdateRef.current?.(message.members);
               break;
               
@@ -197,7 +197,6 @@ export function useGroupWebSocket({
               break;
               
             case "chat_broadcast":
-              console.log(`[WebSocket] Received chat message from ${message.chatMessage.userName}`);
               onChatMessageRef.current?.(message.chatMessage);
               break;
           }

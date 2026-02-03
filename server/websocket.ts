@@ -143,7 +143,8 @@ interface GroupBroadcastState {
 const groupBroadcastStates = new Map<number, GroupBroadcastState>();
 
 // Periodic broadcast interval (ensures all clients receive updates even if they're busy)
-const PERIODIC_BROADCAST_INTERVAL_MS = 500; // Force broadcast every 500ms regardless of updates
+// 1000ms is a good balance between real-time feel and client performance
+const PERIODIC_BROADCAST_INTERVAL_MS = 1000; // Force broadcast every 1 second regardless of updates
 
 // Heartbeat interval reference
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;

@@ -106,6 +106,12 @@ export default function RidingScreen() {
     createdAt: Date;
   }>>([]);
 
+  // Throttle member updates to prevent excessive re-renders
+  const lastMemberUpdateRef = useRef<number>(0);
+  const pendingMemberUpdateRef = useRef<typeof groupMembers | null>(null);
+  const memberUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const MEMBER_UPDATE_THROTTLE_MS = 500; // Update UI at most every 500ms
+  
   // WebSocket for real-time group location sharing and chat
   const { 
     isConnected: wsConnected, 
@@ -117,7 +123,7 @@ export default function RidingScreen() {
     enabled: !!groupId,
     onMembersUpdate: (members) => {
       // Convert WebSocket members to groupMembers format
-      setGroupMembers(members.map(m => ({
+      const newMembers = members.map(m => ({
         userId: m.userId,
         name: m.userName,
         profileImage: m.profileImage,
@@ -126,20 +132,63 @@ export default function RidingScreen() {
         distance: m.distance,
         currentSpeed: m.speed,
         isRiding: m.isRiding,
-      })));
+      }));
+      
+      // Throttle updates to prevent UI lag
+      const now = Date.now();
+      const timeSinceLastUpdate = now - lastMemberUpdateRef.current;
+      
+      if (timeSinceLastUpdate >= MEMBER_UPDATE_THROTTLE_MS) {
+        // Enough time passed, update immediately
+        lastMemberUpdateRef.current = now;
+        setGroupMembers(newMembers);
+        pendingMemberUpdateRef.current = null;
+        if (memberUpdateTimeoutRef.current) {
+          clearTimeout(memberUpdateTimeoutRef.current);
+          memberUpdateTimeoutRef.current = null;
+        }
+      } else {
+        // Store pending update and schedule delayed update
+        pendingMemberUpdateRef.current = newMembers;
+        if (!memberUpdateTimeoutRef.current) {
+          const delay = MEMBER_UPDATE_THROTTLE_MS - timeSinceLastUpdate;
+          memberUpdateTimeoutRef.current = setTimeout(() => {
+            if (pendingMemberUpdateRef.current) {
+              lastMemberUpdateRef.current = Date.now();
+              setGroupMembers(pendingMemberUpdateRef.current);
+              pendingMemberUpdateRef.current = null;
+            }
+            memberUpdateTimeoutRef.current = null;
+          }, delay);
+        }
+      }
     },
     onChatMessage: (message) => {
-      // Add new chat message from WebSocket
+      // Add new chat message from WebSocket with max limit
       setWsChatMessages(prev => {
         // 중복 체크
         if (prev.some(m => m.id === message.id)) return prev;
-        return [...prev, message];
+        // 최대 100개 메시지만 유지 (메모리 절약)
+        const newMessages = [...prev, message];
+        if (newMessages.length > 100) {
+          return newMessages.slice(-100);
+        }
+        return newMessages;
       });
     },
     onError: (error) => {
       console.error("[WebSocket] Error:", error);
     },
   });
+  
+  // Cleanup member update timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (memberUpdateTimeoutRef.current) {
+        clearTimeout(memberUpdateTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // HTTP polling fallback (only when WebSocket is not connected)
   const { data: groupMembersData, refetch: refetchGroupMembers } = trpc.groups.getMembersLocations.useQuery(
@@ -696,7 +745,6 @@ export default function RidingScreen() {
         wsSendLocation(locationData);
       } else {
         // WebSocket 연결 안되면 HTTP fallback
-        console.log(`[Riding] Updating group location via HTTP: groupId=${currentGroupId}`);
         updateGroupLocation.mutate({
           groupId: currentGroupId,
           ...locationData,
@@ -716,7 +764,6 @@ export default function RidingScreen() {
       if (stationaryCountRef.current >= AUTO_PAUSE_DELAY_SECONDS && !isAutoPausedRef.current) {
         setIsAutoPaused(true);
         isAutoPausedRef.current = true; // ref도 즉시 업데이트
-        console.log("[Riding] Auto-pause activated - stationary for", AUTO_PAUSE_DELAY_SECONDS, "seconds");
         if (Platform.OS !== "web") {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
@@ -727,7 +774,6 @@ export default function RidingScreen() {
       if (isAutoPausedRef.current) {
         setIsAutoPaused(false);
         isAutoPausedRef.current = false; // ref도 즉시 업데이트
-        console.log("[Riding] Auto-pause deactivated - movement detected, speed:", displaySpeed.toFixed(1), "km/h");
         if (Platform.OS !== "web") {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }
@@ -752,7 +798,6 @@ export default function RidingScreen() {
           index % 2 === 0
         );
         gpsPointsRef.current = downsampled;
-        console.log(`[Riding] Downsampled GPS points: ${gpsPointsRef.current.length}`);
       }
       
       // 최대 포인트 수 제한
@@ -763,7 +808,6 @@ export default function RidingScreen() {
         const middle = gpsPointsRef.current.slice(100, -100);
         const middleDownsampled = middle.filter((_, index) => index % 3 === 0);
         gpsPointsRef.current = [...first100, ...middleDownsampled, ...last100];
-        console.log(`[Riding] Limited GPS points to: ${gpsPointsRef.current.length}`);
       }
       
       // 상태 업데이트 빈도 줄이기 (메모리 절약)
