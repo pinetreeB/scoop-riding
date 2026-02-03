@@ -780,3 +780,11 @@
 - [x] 부관리자 계정 생성 (subadmin@scoop.app / scoop2024!sub)
 - [x] 권한별 UI 접근 제어 (활동 로그 탭 숨김)
 - [x] 주 관리자만 부관리자 활동 모니터링 가능
+
+## AI 챗봇 기능 구현 (2026-02-03)
+- [x] Gemini API 키 환경 변수 설정
+- [x] 서버 측 AI 챗봇 API 엔드포인트 구현 (/api/ai/chat, /api/ai/suggestions, /api/ai/health)
+- [x] 모빌리티 특화 시스템 프롬프트 설계 (전동킥보드 안전, 법규, 주행 팁 전문가)
+- [x] 모바일 앱 AI 챗봇 화면 구현 (AI 도우미 탭)
+- [x] 대화 기록 저장 기능 (로컬 상태 관리)
+- [x] Rate Limiting 및 오류 처리 (Gemini API 할당량 관리)

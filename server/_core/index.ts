@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import adminRoutes from "../admin/routes";
 import { setupWebSocket } from "../websocket";
+import aiRoutes from "../ai/routes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -65,6 +66,9 @@ async function startServer() {
   // Admin dashboard routes
   app.use("/api/admin", adminRoutes);
   app.use("/admin", adminRoutes);
+
+  // AI chatbot routes
+  app.use("/api/ai", aiRoutes);
 
   app.use(
     "/api/trpc",
