@@ -959,6 +959,7 @@ export const appRouter = router({
         z.object({
           name: z.string().min(1).max(50).optional(),
           profileImageUrl: z.string().url().optional().nullable(),
+          profileColor: z.string().max(20).optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {

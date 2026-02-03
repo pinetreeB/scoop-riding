@@ -10,6 +10,7 @@ export type User = {
   loginMethod: string | null;
   lastSignedIn: Date;
   profileImageUrl?: string | null;
+  profileColor?: string | null;
   role?: "user" | "admin";
 };
 

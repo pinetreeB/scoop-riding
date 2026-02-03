@@ -1366,7 +1366,7 @@ export async function getRanking(
 // Update user profile
 export async function updateUserProfile(
   userId: number,
-  data: { name?: string; profileImageUrl?: string | null }
+  data: { name?: string; profileImageUrl?: string | null; profileColor?: string }
 ): Promise<boolean> {
   try {
     const db = await getDb();

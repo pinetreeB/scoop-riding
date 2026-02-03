@@ -14,11 +14,14 @@ export interface GroupMember {
   id: number;
   name: string | null;
   profileImage: string | null;
+  profileColor?: string; // User's profile color
   isRiding: boolean; // true if actively riding
+  isOnline?: boolean; // true if connected to WebSocket (default: true if in members list)
   latitude?: number;
   longitude?: number;
   speed?: number; // km/h
   distance?: number; // km from current user
+  lastSeen?: number; // timestamp of last location update
 }
 
 interface GroupMembersOverlayProps {
@@ -81,6 +84,7 @@ export function GroupMembersOverlay({
                     source={{ uri: member.profileImage }}
                     style={[
                       styles.profileImage,
+                      { borderColor: member.isRiding ? "#4CAF50" : "#666" },
                       !member.isRiding && styles.profileImageInactive,
                     ]}
                   />
@@ -88,6 +92,7 @@ export function GroupMembersOverlay({
                   <View
                     style={[
                       styles.profilePlaceholder,
+                      { backgroundColor: member.profileColor || "#FF6B00" },
                       !member.isRiding && styles.profilePlaceholderInactive,
                     ]}
                   >
@@ -96,9 +101,11 @@ export function GroupMembersOverlay({
                     </Text>
                   </View>
                 )}
-                {member.isRiding && (
-                  <View style={styles.ridingIndicator} />
-                )}
+                {/* Online/Offline status indicator */}
+                <View style={[
+                  styles.statusIndicator,
+                  member.isRiding ? styles.statusOnline : styles.statusOffline,
+                ]} />
               </View>
               <Text
                 style={[
@@ -115,7 +122,9 @@ export function GroupMembersOverlay({
                 </Text>
               )}
               {!member.isRiding && (
-                <Text style={styles.memberStatus}>대기중</Text>
+                <Text style={styles.memberStatus}>
+                  {member.isOnline === false ? "오프라인" : "대기중"}
+                </Text>
               )}
             </TouchableOpacity>
           ))}
@@ -192,16 +201,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
-  ridingIndicator: {
+  statusIndicator: {
     position: "absolute",
     bottom: 0,
     right: 0,
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: "#4CAF50",
     borderWidth: 2,
     borderColor: "#fff",
+  },
+  statusOnline: {
+    backgroundColor: "#4CAF50", // Green for online/riding
+  },
+  statusOffline: {
+    backgroundColor: "#9E9E9E", // Gray for offline/not riding
   },
   memberName: {
     color: "#fff",

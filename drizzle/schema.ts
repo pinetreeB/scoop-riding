@@ -32,6 +32,8 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   /** Profile image URL (S3 or external) */
   profileImageUrl: varchar("profileImageUrl", { length: 500 }),
+  /** Profile color for avatar background */
+  profileColor: varchar("profileColor", { length: 20 }),
 });
 
 export type User = typeof users.$inferSelect;

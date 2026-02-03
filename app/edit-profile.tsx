@@ -30,8 +30,25 @@ export default function EditProfileScreen() {
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(
     user?.profileImageUrl || null
   );
+  const [profileColor, setProfileColor] = useState<string>(
+    user?.profileColor || "#FF6B00"
+  );
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Available profile colors
+  const PROFILE_COLORS = [
+    { name: "오렌지", color: "#FF6B00" },
+    { name: "블루", color: "#2196F3" },
+    { name: "그린", color: "#4CAF50" },
+    { name: "퍼플", color: "#9C27B0" },
+    { name: "레드", color: "#F44336" },
+    { name: "핑크", color: "#E91E63" },
+    { name: "시안", color: "#00BCD4" },
+    { name: "옆로우", color: "#FFEB3B" },
+    { name: "그레이", color: "#607D8B" },
+    { name: "네이비", color: "#3F51B5" },
+  ];
 
   // mutation 성공/실패 콜백은 handleSave에서 직접 처리
   const updateProfileMutation = trpc.profile.update.useMutation();
@@ -138,6 +155,7 @@ export default function EditProfileScreen() {
       const result = await updateProfileMutation.mutateAsync({
         name: name.trim(),
         profileImageUrl,
+        profileColor,
       });
       
       console.log("[EditProfile] Save result:", result);
@@ -219,7 +237,7 @@ export default function EditProfileScreen() {
             ) : (
               <View
                 className="w-24 h-24 rounded-full items-center justify-center"
-                style={{ backgroundColor: colors.primary }}
+                style={{ backgroundColor: profileColor }}
               >
                 <Text className="text-white text-3xl font-bold">
                   {name.charAt(0).toUpperCase() || "?"}
@@ -260,6 +278,47 @@ export default function EditProfileScreen() {
           <Text className="text-foreground">{user?.email || "이메일 없음"}</Text>
         </View>
         <Text className="text-muted text-xs mt-1">이메일은 변경할 수 없습니다.</Text>
+      </View>
+
+      {/* Profile Color */}
+      <View className="mb-6">
+        <Text className="text-muted text-sm mb-2">프로필 색상</Text>
+        <View className="flex-row flex-wrap gap-3">
+          {PROFILE_COLORS.map((item) => (
+            <Pressable
+              key={item.color}
+              onPress={() => {
+                setProfileColor(item.color);
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+            >
+              <View
+                style={[
+                  {
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: item.color,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: profileColor === item.color ? 3 : 0,
+                    borderColor: colors.foreground,
+                  },
+                ]}
+              >
+                {profileColor === item.color && (
+                  <MaterialIcons name="check" size={20} color="#fff" />
+                )}
+              </View>
+            </Pressable>
+          ))}
+        </View>
+        <Text className="text-muted text-xs mt-2">
+          선택한 색상은 프로필 사진이 없을 때 표시됩니다.
+        </Text>
       </View>
     </ScreenContainer>
   );
