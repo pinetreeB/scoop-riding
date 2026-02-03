@@ -453,13 +453,22 @@ export default function ScootersScreen() {
                   {/* Actions */}
                   <View className="flex-row items-center">
                     {scooter.batteryVoltage && scooter.batteryCapacity && (
-                      <Pressable
-                        onPress={() => router.push(`/battery-ai?scooterId=${scooter.id}&scooterName=${encodeURIComponent(scooter.name)}`)}
-                        style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
-                        className="p-2"
-                      >
-                        <MaterialIcons name="smart-toy" size={22} color={colors.primary} />
-                      </Pressable>
+                      <>
+                        <Pressable
+                          onPress={() => router.push(`/battery-dashboard?scooterId=${scooter.id}&scooterName=${encodeURIComponent(scooter.name)}`)}
+                          style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
+                          className="p-2"
+                        >
+                          <MaterialIcons name="analytics" size={22} color={colors.success} />
+                        </Pressable>
+                        <Pressable
+                          onPress={() => router.push(`/battery-ai?scooterId=${scooter.id}&scooterName=${encodeURIComponent(scooter.name)}`)}
+                          style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
+                          className="p-2"
+                        >
+                          <MaterialIcons name="smart-toy" size={22} color={colors.primary} />
+                        </Pressable>
+                      </>
                     )}
                     <Pressable
                       onPress={() => handleDeleteScooter(scooter)}

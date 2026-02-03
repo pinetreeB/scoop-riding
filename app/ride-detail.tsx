@@ -22,6 +22,7 @@ import {
 } from "@/lib/gps-utils";
 import { shareRideAsText } from "@/lib/share-utils";
 import { RideChart } from "@/components/ride-chart";
+import { RideAnalysisModal, type RideAnalysis } from "@/components/ride-analysis-modal";
 
 export default function RideDetailScreen() {
   const router = useRouter();
@@ -30,6 +31,11 @@ export default function RideDetailScreen() {
   const [record, setRecord] = useState<RidingRecord | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [rideAnalysis, setRideAnalysis] = useState<RideAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  const analyzeRide = trpc.rides.analyzeRide.useMutation();
 
   useEffect(() => {
     loadRecord();
@@ -365,8 +371,74 @@ export default function RideDetailScreen() {
               </Text>
             </Pressable>
           )}
+
+          {/* AI Analysis Button */}
+          <Pressable
+            onPress={async () => {
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              setShowAnalysisModal(true);
+              setIsAnalyzing(true);
+              try {
+                const result = await analyzeRide.mutateAsync({
+                  distance: record.distance,
+                  duration: record.duration,
+                  avgSpeed: record.avgSpeed,
+                  maxSpeed: record.maxSpeed,
+                  voltageStart: record.voltageStart,
+                  voltageEnd: record.voltageEnd,
+                  socStart: record.socStart,
+                  socEnd: record.socEnd,
+                  gpsPointsCount: gpsPoints.length,
+                });
+                if (result.success && result.analysis) {
+                  setRideAnalysis(result.analysis);
+                }
+              } catch (e) {
+                console.error("AI analysis error:", e);
+              } finally {
+                setIsAnalyzing(false);
+              }
+            }}
+            disabled={isAnalyzing}
+            style={({ pressed }) => [
+              {
+                borderColor: colors.success,
+                borderWidth: 1,
+                opacity: pressed || isAnalyzing ? 0.7 : 1,
+              },
+            ]}
+            className="flex-row items-center justify-center py-4 rounded-xl bg-surface"
+          >
+            <MaterialIcons name="smart-toy" size={20} color={colors.success} />
+            <Text style={{ color: colors.success }} className="font-semibold ml-2">
+              AI 분석 보기
+            </Text>
+          </Pressable>
         </View>
       </ScrollView>
+
+      {/* AI Analysis Modal */}
+      <RideAnalysisModal
+        visible={showAnalysisModal}
+        onClose={() => {
+          setShowAnalysisModal(false);
+          setRideAnalysis(null);
+        }}
+        analysis={rideAnalysis}
+        isLoading={isAnalyzing}
+        rideStats={{
+          distance: record.distance,
+          duration: record.duration,
+          avgSpeed: record.avgSpeed,
+          maxSpeed: record.maxSpeed,
+          voltageStart: record.voltageStart,
+          voltageEnd: record.voltageEnd,
+          socStart: record.socStart,
+          socEnd: record.socEnd,
+        }}
+      />
     </ScreenContainer>
   );
 }

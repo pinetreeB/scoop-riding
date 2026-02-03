@@ -19,6 +19,12 @@ export interface RidingRecord {
   groupId?: number; // Group session ID if this was a group ride
   groupName?: string; // Group name
   groupMembers?: { userId: number; name: string | null }[]; // Members who rode together
+  // Battery voltage tracking
+  voltageStart?: number; // Starting voltage
+  voltageEnd?: number; // Ending voltage
+  socStart?: number; // Starting SOC percentage
+  socEnd?: number; // Ending SOC percentage
+  energyWh?: number; // Energy consumed in Wh
 }
 
 export interface RidingStats {
