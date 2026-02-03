@@ -786,6 +786,34 @@ export default function HomeScreen() {
                 </View>
               </Pressable>
             </View>
+
+            {/* Second Row - Weather Stats */}
+            <View className="flex-row gap-2 mt-2">
+              {/* Weather Stats */}
+              <Pressable
+                onPress={() => {
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  router.push("/weather-stats" as any);
+                }}
+                style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
+              >
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
+                  <View className="flex-row items-center mb-2">
+                    <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#4A90D9' + '20' }}>
+                      <MaterialIcons name="wb-cloudy" size={20} color="#4A90D9" />
+                    </View>
+                  </View>
+                  <Text className="text-foreground font-bold">날씨별 통계</Text>
+                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>날씨에 따른{"\n"}주행 분석</Text>
+                </View>
+              </Pressable>
+
+              {/* Placeholder for future feature */}
+              <View style={{ flex: 1 }} />
+              <View style={{ flex: 1 }} />
+            </View>
           </View>
         )}
 

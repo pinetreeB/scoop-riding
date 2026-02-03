@@ -57,7 +57,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GpxRoute, GpxPoint as GpxRoutePoint } from "@/lib/gpx-parser";
 import { GroupChatWS, type ChatMessage as WsChatMessage } from "@/components/group-chat-ws";
 import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
+import { WeatherRidingTipCompact } from "@/components/weather-riding-tips";
 import { useAuth } from "@/hooks/use-auth";
+import { analyzeRideData, type RideAnalysisResult } from "@/lib/ride-analysis";
 import { useGroupWebSocket } from "@/hooks/use-group-websocket";
 import { GroupMembersOverlay, type GroupMember } from "@/components/group-members-overlay";
 
@@ -1116,13 +1118,18 @@ export default function RidingScreen() {
   // Function to save ride record (called after voltage input or skip)
   const saveRideRecord = async (rideData: any, endVoltage?: number, endSoc?: number) => {
     try {
-      // Add voltage data if available
+      // Add voltage data and weather info if available
       const recordWithVoltage = {
         ...rideData,
         voltageStart: startVoltage?.voltage,
         socStart: startVoltage?.soc,
         voltageEnd: endVoltage,
         socEnd: endSoc,
+        // Weather info from ride start
+        temperature: weatherInfo?.temperature ?? undefined,
+        humidity: weatherInfo?.humidity ?? undefined,
+        windSpeed: weatherInfo?.windSpeed ?? undefined,
+        weatherCondition: weatherInfo?.weatherCondition ?? undefined,
       };
 
       console.log("[Riding] Saving record with voltage data:", {
@@ -1246,6 +1253,9 @@ export default function RidingScreen() {
         setShowAnalysisModal(true);
         setIsAnalyzing(true);
         
+        // Analyze GPS data for advanced metrics
+        const rideAnalysis = analyzeRideData(rideData.gpsPoints || []);
+        
         const analysisResult = await analyzeRide.mutateAsync({
           distance: rideData.distance,
           duration: rideData.duration,
@@ -1263,6 +1273,15 @@ export default function RidingScreen() {
           windSpeed: weatherInfo?.windSpeed ?? undefined,
           precipitationType: weatherInfo?.precipitationType ?? undefined,
           weatherCondition: weatherInfo?.weatherCondition ?? undefined,
+          // Advanced analysis data
+          suddenAccelerations: rideAnalysis?.suddenAccelerations ?? undefined,
+          suddenDecelerations: rideAnalysis?.suddenDecelerations ?? undefined,
+          stopCount: rideAnalysis?.stopCount ?? undefined,
+          elevationGain: rideAnalysis?.elevationGain ?? undefined,
+          elevationLoss: rideAnalysis?.elevationLoss ?? undefined,
+          maxElevation: rideAnalysis?.maxElevation ?? undefined,
+          minElevation: rideAnalysis?.minElevation ?? undefined,
+          avgAcceleration: rideAnalysis?.avgAcceleration ?? undefined,
         });
         
         if (analysisResult.success && analysisResult.analysis) {
@@ -1763,6 +1782,13 @@ export default function RidingScreen() {
                 GPS 포인트: {gpsPointCount}개 기록됨
               </Text>
             </View>
+
+            {/* Weather Riding Tip */}
+            {weatherInfo && (
+              <View className="mx-4 mb-2">
+                <WeatherRidingTipCompact weather={weatherInfo} />
+              </View>
+            )}
           </>
         )}
 

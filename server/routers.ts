@@ -432,6 +432,15 @@ export const appRouter = router({
           windSpeed: z.number().optional(),
           precipitationType: z.number().optional(),
           weatherCondition: z.string().optional(),
+          // Advanced analysis fields
+          suddenAccelerations: z.number().optional(), // 급가속 횟수
+          suddenDecelerations: z.number().optional(), // 급감속 횟수
+          stopCount: z.number().optional(), // 정지 횟수
+          elevationGain: z.number().optional(), // 총 상승 고도 (m)
+          elevationLoss: z.number().optional(), // 총 하강 고도 (m)
+          maxElevation: z.number().optional(), // 최고 고도 (m)
+          minElevation: z.number().optional(), // 최저 고도 (m)
+          avgAcceleration: z.number().optional(), // 평균 가속도 (m/s²)
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -481,6 +490,29 @@ export const appRouter = router({
             weatherInfo = `\n주행 당시 날씨: ${parts.join(", ")}`;
           }
 
+          // Advanced driving analysis info
+          let drivingAnalysisInfo = "";
+          const drivingParts = [];
+          if (input.suddenAccelerations !== undefined) drivingParts.push(`급가속 ${input.suddenAccelerations}회`);
+          if (input.suddenDecelerations !== undefined) drivingParts.push(`급감속 ${input.suddenDecelerations}회`);
+          if (input.stopCount !== undefined) drivingParts.push(`정지 ${input.stopCount}회`);
+          if (input.avgAcceleration !== undefined) drivingParts.push(`평균가속도 ${input.avgAcceleration.toFixed(2)}m/s²`);
+          if (drivingParts.length > 0) {
+            drivingAnalysisInfo = `\n주행 패턴: ${drivingParts.join(", ")}`;
+          }
+
+          // Elevation info
+          let elevationInfo = "";
+          const elevationParts = [];
+          if (input.elevationGain !== undefined && input.elevationGain > 0) elevationParts.push(`상승 ${input.elevationGain.toFixed(0)}m`);
+          if (input.elevationLoss !== undefined && input.elevationLoss > 0) elevationParts.push(`하강 ${Math.abs(input.elevationLoss).toFixed(0)}m`);
+          if (input.maxElevation !== undefined && input.minElevation !== undefined) {
+            elevationParts.push(`고도범위 ${input.minElevation.toFixed(0)}m~${input.maxElevation.toFixed(0)}m`);
+          }
+          if (elevationParts.length > 0) {
+            elevationInfo = `\n경사도/고도: ${elevationParts.join(", ")}`;
+          }
+
           // Build prompt for AI analysis
           const rideData = `
 주행 기록 분석 요청:
@@ -488,7 +520,7 @@ export const appRouter = router({
 - 주행 시간: ${Math.floor(input.duration / 60)}분 ${input.duration % 60}초
 - 평균 속도: ${input.avgSpeed.toFixed(1)} km/h
 - 최고 속도: ${input.maxSpeed.toFixed(1)} km/h
-- GPS 포인트: ${input.gpsPointsCount || 0}개${scooterInfo}${energyInfo}${efficiencyInfo}${historyInfo}${weatherInfo}
+- GPS 포인트: ${input.gpsPointsCount || 0}개${scooterInfo}${energyInfo}${efficiencyInfo}${historyInfo}${weatherInfo}${drivingAnalysisInfo}${elevationInfo}
 `;
 
           const systemPrompt = `당신은 전동킥보드 주행 분석 AI입니다. 사용자의 주행 데이터를 분석하여 간결한 리포트를 제공합니다.
@@ -500,6 +532,8 @@ export const appRouter = router({
   "riding_style": "주행 스타일 평가 (안정적/보통/공격적)",
   "battery_status": "배터리 상태 평가 (좋음/보통/주의필요) - 배터리 데이터 없으면 null",
   "weather_impact": "날씨가 주행에 미친 영향 (1문장, 날씨 데이터 없으면 null)",
+  "driving_safety": "주행 안전성 평가 (좋음/보통/주의필요) - 급가속/급감속 기반",
+  "terrain_analysis": "지형 분석 (1문장, 고도 데이터 없으면 null)",
   "tips": ["개선 팁 1", "개선 팁 2"],
   "highlights": ["좋았던 점 1", "좋았던 점 2"]
 }
@@ -511,6 +545,8 @@ export const appRouter = router({
 - 배터리 데이터가 없으면 battery_status는 null로
 - 날씨 데이터가 있으면 연비와 안전에 미치는 영향을 분석 (weather_impact)
 - 비/눈 오는 날씨는 안전 주의 강조, 강풍은 연비 영향 언급
+- 급가속/급감속 횟수가 많으면 driving_safety를 '주의필요'로 평가
+- 고도 변화가 크면 terrain_analysis에 언덕 주행 언급, 연비 영향 분석
 - 반드시 유효한 JSON만 출력`;
 
           // Call LLM

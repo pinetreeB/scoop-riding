@@ -25,6 +25,11 @@ export interface RidingRecord {
   socStart?: number; // Starting SOC percentage
   socEnd?: number; // Ending SOC percentage
   energyWh?: number; // Energy consumed in Wh
+  // Weather info at ride start
+  temperature?: number; // 온도 (°C)
+  humidity?: number; // 습도 (%)
+  windSpeed?: number; // 풍속 (m/s)
+  weatherCondition?: string; // 날씨 상태 (맑음/흐림/비/눈 등)
 }
 
 export interface RidingStats {

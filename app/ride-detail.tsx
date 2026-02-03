@@ -23,6 +23,7 @@ import {
 import { shareRideAsText } from "@/lib/share-utils";
 import { RideChart } from "@/components/ride-chart";
 import { RideAnalysisModal, type RideAnalysis } from "@/components/ride-analysis-modal";
+import { WeatherInfoCard } from "@/components/weather-icon";
 
 export default function RideDetailScreen() {
   const router = useRouter();
@@ -281,6 +282,18 @@ export default function RideDetailScreen() {
         {/* Altitude/Speed Chart (Samsung Health Style) */}
         {hasGpsData && (
           <RideChart gpsPoints={gpsPoints} duration={record.duration} />
+        )}
+
+        {/* Weather Info */}
+        {(record.temperature !== undefined || record.weatherCondition) && (
+          <View className="mx-4 mb-4">
+            <WeatherInfoCard
+              temperature={record.temperature}
+              humidity={record.humidity}
+              windSpeed={record.windSpeed}
+              weatherCondition={record.weatherCondition}
+            />
+          </View>
         )}
 
         {/* Stats Grid */}
