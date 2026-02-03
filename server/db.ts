@@ -1,6 +1,6 @@
 import { eq, and, desc, sql, gt, lt, isNotNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage, announcements, InsertAnnouncement, Announcement, userAnnouncementReads, InsertUserAnnouncementRead, UserAnnouncementRead, userBans, InsertUserBan, UserBan, surveyResponses, InsertSurveyResponse, SurveyResponse, bugReports, InsertBugReport, BugReport, userActivityLogs, InsertUserActivityLog, UserActivityLog, suspiciousUserReports, InsertSuspiciousUserReport, SuspiciousUserReport, aiChatUsage, AiChatUsage, aiChatHistory, AiChatHistoryRecord, batteryAnalysis, BatteryAnalysisRecord, chargingRecords, ChargingRecord, InsertChargingRecord } from "../drizzle/schema";
+import { InsertUser, users, ridingRecords, InsertRidingRecord, RidingRecord, scooters, InsertScooter, Scooter, posts, InsertPost, Post, comments, InsertComment, Comment, postLikes, InsertPostLike, PostLike, friendRequests, InsertFriendRequest, FriendRequest, friends, InsertFriend, Friend, follows, InsertFollow, Follow, postImages, InsertPostImage, PostImage, postViews, InsertPostView, PostView, notifications, InsertNotification, Notification, challenges, InsertChallenge, Challenge, challengeParticipants, InsertChallengeParticipant, ChallengeParticipant, liveLocations, InsertLiveLocation, LiveLocation, badges, InsertBadge, Badge, userBadges, InsertUserBadge, UserBadge, challengeInvitations, InsertChallengeInvitation, ChallengeInvitation, appVersions, InsertAppVersion, AppVersion, groupSessions, InsertGroupSession, GroupSession, groupMembers, InsertGroupMember, GroupMember, groupMessages, InsertGroupMessage, GroupMessage, announcements, InsertAnnouncement, Announcement, userAnnouncementReads, InsertUserAnnouncementRead, UserAnnouncementRead, userBans, InsertUserBan, UserBan, surveyResponses, InsertSurveyResponse, SurveyResponse, bugReports, InsertBugReport, BugReport, userActivityLogs, InsertUserActivityLog, UserActivityLog, suspiciousUserReports, InsertSuspiciousUserReport, SuspiciousUserReport, aiChatUsage, AiChatUsage, aiChatHistory, AiChatHistoryRecord, batteryAnalysis, BatteryAnalysisRecord, chargingRecords, ChargingRecord, InsertChargingRecord, maintenanceItems, MaintenanceItem, InsertMaintenanceItem, maintenanceRecords, MaintenanceRecord, InsertMaintenanceRecord, batteryHealthReports, BatteryHealthReport, InsertBatteryHealthReport } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import * as crypto from "crypto";
 
@@ -4654,4 +4654,342 @@ export async function deleteUserAccount(userId: number, reason?: string): Promis
     console.error("[Database] Failed to delete user account:", error);
     throw error;
   }
+}
+
+
+// ==================== Maintenance Management Functions ====================
+
+/**
+ * Get maintenance items for a scooter
+ */
+export async function getMaintenanceItems(userId: number, scooterId: number) {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  
+  const items = await database
+    .select()
+    .from(maintenanceItems)
+    .where(
+      and(
+        eq(maintenanceItems.userId, userId),
+        eq(maintenanceItems.scooterId, scooterId)
+      )
+    )
+    .orderBy(maintenanceItems.createdAt);
+  
+  return { items };
+}
+
+/**
+ * Add a new maintenance item
+ */
+export async function addMaintenanceItem(
+  userId: number,
+  input: {
+    scooterId: number;
+    name: string;
+    intervalKm: number;
+    notes?: string;
+  }
+) {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  
+  const [result] = await database.insert(maintenanceItems).values({
+    userId,
+    scooterId: input.scooterId,
+    name: input.name,
+    intervalKm: input.intervalKm,
+    notes: input.notes || null,
+  });
+  
+  return { success: true, id: result.insertId };
+}
+
+/**
+ * Record maintenance completion
+ */
+export async function recordMaintenance(
+  userId: number,
+  input: {
+    maintenanceItemId: number;
+    scooterId: number;
+    distanceKm: number;
+    cost?: number;
+    location?: string;
+    notes?: string;
+  }
+) {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  
+  // Insert maintenance record
+  await database.insert(maintenanceRecords).values({
+    maintenanceItemId: input.maintenanceItemId,
+    scooterId: input.scooterId,
+    userId,
+    distanceKm: String(input.distanceKm),
+    cost: input.cost ? String(input.cost) : null,
+    location: input.location || null,
+    notes: input.notes || null,
+  });
+  
+  // Update maintenance item with last maintenance info
+  await database
+    .update(maintenanceItems)
+    .set({
+      lastMaintenanceKm: String(input.distanceKm),
+      lastMaintenanceDate: new Date(),
+    })
+    .where(eq(maintenanceItems.id, input.maintenanceItemId));
+  
+  return { success: true };
+}
+
+/**
+ * Delete maintenance item
+ */
+export async function deleteMaintenanceItem(userId: number, itemId: number) {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  
+  // First delete related records
+  await database.delete(maintenanceRecords).where(eq(maintenanceRecords.maintenanceItemId, itemId));
+  
+  // Then delete the item
+  await database
+    .delete(maintenanceItems)
+    .where(
+      and(
+        eq(maintenanceItems.id, itemId),
+        eq(maintenanceItems.userId, userId)
+      )
+    );
+  
+  return { success: true };
+}
+
+/**
+ * Get maintenance history
+ */
+export async function getMaintenanceHistory(userId: number, scooterId: number, limit: number) {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  
+  const records = await database
+    .select({
+      id: maintenanceRecords.id,
+      itemName: maintenanceItems.name,
+      distanceKm: maintenanceRecords.distanceKm,
+      cost: maintenanceRecords.cost,
+      location: maintenanceRecords.location,
+      notes: maintenanceRecords.notes,
+      maintenanceDate: maintenanceRecords.maintenanceDate,
+    })
+    .from(maintenanceRecords)
+    .innerJoin(maintenanceItems, eq(maintenanceRecords.maintenanceItemId, maintenanceItems.id))
+    .where(
+      and(
+        eq(maintenanceRecords.userId, userId),
+        eq(maintenanceRecords.scooterId, scooterId)
+      )
+    )
+    .orderBy(desc(maintenanceRecords.maintenanceDate))
+    .limit(limit);
+  
+  return { records };
+}
+
+// ==================== Battery Health Report Functions ====================
+
+/**
+ * Generate battery health report using AI analysis
+ */
+export async function generateBatteryHealthReport(userId: number, scooterId: number) {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  
+  // Get scooter info
+  const [scooter] = await database
+    .select()
+    .from(scooters)
+    .where(and(eq(scooters.id, scooterId), eq(scooters.userId, userId)));
+  
+  if (!scooter) {
+    throw new Error("Scooter not found");
+  }
+  
+  // Get riding records with battery data
+  const rides = await database
+    .select()
+    .from(ridingRecords)
+    .where(
+      and(
+        eq(ridingRecords.userId, userId),
+        eq(ridingRecords.scooterId, scooterId),
+        isNotNull(ridingRecords.voltageStart),
+        isNotNull(ridingRecords.voltageEnd)
+      )
+    )
+    .orderBy(desc(ridingRecords.createdAt))
+    .limit(50);
+  
+  // Get charging records
+  const charges = await database
+    .select()
+    .from(chargingRecords)
+    .where(
+      and(
+        eq(chargingRecords.userId, userId),
+        eq(chargingRecords.scooterId, scooterId)
+      )
+    )
+    .orderBy(desc(chargingRecords.createdAt))
+    .limit(30);
+  
+  // Calculate metrics
+  const totalDistance = Number(scooter.totalDistance || 0) / 1000; // Convert to km
+  const batteryCapacity = Number(scooter.batteryCapacity || 30);
+  const batteryVoltage = Number(scooter.batteryVoltage || 60);
+  const totalEnergyCapacity = batteryVoltage * batteryCapacity; // Wh
+  
+  // Estimate cycles based on total distance and average range
+  const avgRangePerCycle = 50; // Assume 50km per full cycle
+  const estimatedCycles = Math.floor(totalDistance / avgRangePerCycle);
+  
+  // Calculate average efficiency from rides
+  let totalEfficiency = 0;
+  let efficiencyCount = 0;
+  
+  for (const ride of rides) {
+    if (ride.energyWh && Number(ride.distance) > 0) {
+      const efficiency = Number(ride.energyWh) / (Number(ride.distance) / 1000);
+      totalEfficiency += efficiency;
+      efficiencyCount++;
+    }
+  }
+  
+  const avgEfficiency = efficiencyCount > 0 ? totalEfficiency / efficiencyCount : 30; // Default 30 Wh/km
+  
+  // Estimate battery health based on cycles and efficiency degradation
+  // Typical Li-ion battery: 80% capacity after 500-1000 cycles
+  const maxCycles = 800; // Conservative estimate
+  const cycleBasedHealth = Math.max(0, 100 - (estimatedCycles / maxCycles) * 20);
+  
+  // Efficiency-based health (compare to expected)
+  const expectedEfficiency = 25; // Expected Wh/km for a healthy battery
+  const efficiencyRatio = expectedEfficiency / avgEfficiency;
+  const efficiencyBasedHealth = Math.min(100, efficiencyRatio * 100);
+  
+  // Combined health estimate
+  const healthPercent = Math.round((cycleBasedHealth * 0.6 + efficiencyBasedHealth * 0.4));
+  
+  // Estimate remaining cycles
+  const remainingCycles = Math.max(0, maxCycles - estimatedCycles);
+  
+  // Capacity degradation estimate
+  const capacityDegradation = Math.max(0, 100 - healthPercent);
+  
+  // Generate AI analysis
+  let aiAnalysis = "";
+  let recommendations = "";
+  
+  if (healthPercent >= 80) {
+    aiAnalysis = `배터리 상태가 양호합니다. 현재 추정 건강도는 ${healthPercent}%이며, 약 ${estimatedCycles}회의 충전 사이클을 사용했습니다. 평균 효율은 ${avgEfficiency.toFixed(1)} Wh/km로 정상 범위입니다.`;
+    recommendations = "현재 사용 패턴을 유지하세요. 완전 방전을 피하고 20-80% 범위에서 충전하면 배터리 수명을 더 연장할 수 있습니다.";
+  } else if (healthPercent >= 60) {
+    aiAnalysis = `배터리가 중간 수준의 노화를 보이고 있습니다. 건강도 ${healthPercent}%, 약 ${estimatedCycles}회 사이클 사용. 효율이 ${avgEfficiency.toFixed(1)} Wh/km로 다소 높아졌습니다.`;
+    recommendations = "배터리 교체를 6개월~1년 내로 계획하세요. 장거리 주행 전 충전 상태를 확인하고, 급속 충전보다 완속 충전을 권장합니다.";
+  } else {
+    aiAnalysis = `배터리 교체가 필요한 시점입니다. 건강도 ${healthPercent}%, 약 ${estimatedCycles}회 사이클 사용. 효율이 ${avgEfficiency.toFixed(1)} Wh/km로 상당히 저하되었습니다.`;
+    recommendations = "가능한 빨리 배터리 교체를 권장합니다. 현재 배터리로는 주행 거리가 크게 감소했을 수 있습니다. 장거리 주행을 피하고 충전기를 항상 휴대하세요.";
+  }
+  
+  // Save report to database
+  const [result] = await database.insert(batteryHealthReports).values({
+    scooterId,
+    userId,
+    healthPercent: String(healthPercent),
+    estimatedCyclesRemaining: remainingCycles,
+    totalCycles: estimatedCycles,
+    totalDistanceKm: String(totalDistance),
+    avgEfficiency: String(avgEfficiency.toFixed(2)),
+    capacityDegradation: String(capacityDegradation),
+    aiAnalysis,
+    recommendations,
+  });
+  
+  return {
+    id: result.insertId,
+    healthPercent,
+    estimatedCyclesRemaining: remainingCycles,
+    totalCycles: estimatedCycles,
+    totalDistanceKm: totalDistance,
+    avgEfficiency,
+    capacityDegradation,
+    aiAnalysis,
+    recommendations,
+  };
+}
+
+/**
+ * Get latest battery health report
+ */
+export async function getLatestBatteryHealthReport(userId: number, scooterId: number) {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  
+  const [report] = await database
+    .select()
+    .from(batteryHealthReports)
+    .where(
+      and(
+        eq(batteryHealthReports.userId, userId),
+        eq(batteryHealthReports.scooterId, scooterId)
+      )
+    )
+    .orderBy(desc(batteryHealthReports.reportDate))
+    .limit(1);
+  
+  if (!report) {
+    return null;
+  }
+  
+  return {
+    ...report,
+    healthPercent: Number(report.healthPercent),
+    totalDistanceKm: Number(report.totalDistanceKm),
+    avgEfficiency: Number(report.avgEfficiency),
+    capacityDegradation: Number(report.capacityDegradation),
+  };
+}
+
+/**
+ * Get battery health history
+ */
+export async function getBatteryHealthHistory(userId: number, scooterId: number, limit: number) {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  
+  const reports = await database
+    .select()
+    .from(batteryHealthReports)
+    .where(
+      and(
+        eq(batteryHealthReports.userId, userId),
+        eq(batteryHealthReports.scooterId, scooterId)
+      )
+    )
+    .orderBy(desc(batteryHealthReports.reportDate))
+    .limit(limit);
+  
+  return {
+    reports: reports.map((r: BatteryHealthReport) => ({
+      ...r,
+      healthPercent: Number(r.healthPercent),
+      totalDistanceKm: Number(r.totalDistanceKm),
+      avgEfficiency: Number(r.avgEfficiency),
+      capacityDegradation: Number(r.capacityDegradation),
+    })),
+  };
 }

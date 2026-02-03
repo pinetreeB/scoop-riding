@@ -944,3 +944,92 @@ export const chargingRecords = mysqlTable("chargingRecords", {
 
 export type ChargingRecord = typeof chargingRecords.$inferSelect;
 export type InsertChargingRecord = typeof chargingRecords.$inferInsert;
+
+
+/**
+ * Maintenance items table - 정비 항목 정의
+ */
+export const maintenanceItems = mysqlTable("maintenanceItems", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Scooter ID */
+  scooterId: int("scooterId").notNull(),
+  /** User ID */
+  userId: int("userId").notNull(),
+  /** Item name (e.g., 타이어 교체, 브레이크 점검) */
+  name: varchar("name", { length: 100 }).notNull(),
+  /** Maintenance interval in km */
+  intervalKm: int("intervalKm").notNull(),
+  /** Last maintenance distance (km) */
+  lastMaintenanceKm: decimal("lastMaintenanceKm", { precision: 10, scale: 2 }).default("0"),
+  /** Last maintenance date */
+  lastMaintenanceDate: timestamp("lastMaintenanceDate"),
+  /** Is this item enabled for notifications */
+  isEnabled: boolean("isEnabled").default(true).notNull(),
+  /** Custom notes */
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type MaintenanceItem = typeof maintenanceItems.$inferSelect;
+export type InsertMaintenanceItem = typeof maintenanceItems.$inferInsert;
+
+/**
+ * Maintenance records table - 정비 이력
+ */
+export const maintenanceRecords = mysqlTable("maintenanceRecords", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Maintenance item ID */
+  maintenanceItemId: int("maintenanceItemId").notNull(),
+  /** Scooter ID */
+  scooterId: int("scooterId").notNull(),
+  /** User ID */
+  userId: int("userId").notNull(),
+  /** Distance at maintenance (km) */
+  distanceKm: decimal("distanceKm", { precision: 10, scale: 2 }).notNull(),
+  /** Cost of maintenance */
+  cost: decimal("cost", { precision: 10, scale: 0 }),
+  /** Maintenance location/shop */
+  location: varchar("location", { length: 200 }),
+  /** Notes about the maintenance */
+  notes: text("notes"),
+  /** Maintenance date */
+  maintenanceDate: timestamp("maintenanceDate").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MaintenanceRecord = typeof maintenanceRecords.$inferSelect;
+export type InsertMaintenanceRecord = typeof maintenanceRecords.$inferInsert;
+
+/**
+ * Battery health reports table - 배터리 건강도 리포트
+ */
+export const batteryHealthReports = mysqlTable("batteryHealthReports", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Scooter ID */
+  scooterId: int("scooterId").notNull(),
+  /** User ID */
+  userId: int("userId").notNull(),
+  /** Report date */
+  reportDate: timestamp("reportDate").defaultNow().notNull(),
+  /** Estimated health percentage (0-100) */
+  healthPercent: decimal("healthPercent", { precision: 5, scale: 2 }).notNull(),
+  /** Estimated remaining cycles */
+  estimatedCyclesRemaining: int("estimatedCyclesRemaining"),
+  /** Total charge cycles used */
+  totalCycles: int("totalCycles"),
+  /** Total distance on this battery (km) */
+  totalDistanceKm: decimal("totalDistanceKm", { precision: 10, scale: 2 }),
+  /** Average efficiency (Wh/km) */
+  avgEfficiency: decimal("avgEfficiency", { precision: 6, scale: 2 }),
+  /** Capacity degradation percentage */
+  capacityDegradation: decimal("capacityDegradation", { precision: 5, scale: 2 }),
+  /** AI analysis summary */
+  aiAnalysis: text("aiAnalysis"),
+  /** Recommendations */
+  recommendations: text("recommendations"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BatteryHealthReport = typeof batteryHealthReports.$inferSelect;
+export type InsertBatteryHealthReport = typeof batteryHealthReports.$inferInsert;

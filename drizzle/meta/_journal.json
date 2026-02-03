@@ -190,6 +190,13 @@
       "when": 1770105794844,
       "tag": "0026_bouncy_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "5",
+      "when": 1770107252534,
+      "tag": "0027_curious_ego",
+      "breakpoints": true
     }
   ]
 }

@@ -35,9 +35,9 @@ const SCOOTER_COLORS = [
 
 // Battery type options
 const BATTERY_TYPES = [
-  { value: "lithium_ion", label: "리튬이온 (Li-ion)", cellVoltage: { full: 4.2, empty: 3.0 } },
-  { value: "lifepo4", label: "리튬인산철 (LiFePO4)", cellVoltage: { full: 3.65, empty: 2.5 } },
-  { value: "lead_acid", label: "납축전지", cellVoltage: { full: 2.4, empty: 1.75 } },
+  { value: "lithium_ion", label: "리튜이온 (Li-ion)", cellVoltage: { full: 4.2, empty: 3.0 } },
+  { value: "lifepo4", label: "리튜인산철 (LiFePO4)", cellVoltage: { full: 3.65, empty: 2.5 } },
+  { value: "lipo", label: "리튜폴리머 (Li-Po)", cellVoltage: { full: 4.2, empty: 3.0 } },
 ];
 
 // Common voltage presets
@@ -460,6 +460,13 @@ export default function ScootersScreen() {
                           className="p-2"
                         >
                           <MaterialIcons name="analytics" size={22} color={colors.success} />
+                        </Pressable>
+                        <Pressable
+                          onPress={() => router.push(`/battery-health?scooterId=${scooter.id}&scooterName=${encodeURIComponent(scooter.name)}`)}
+                          style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
+                          className="p-2"
+                        >
+                          <MaterialIcons name="health-and-safety" size={22} color={colors.warning} />
                         </Pressable>
                         <Pressable
                           onPress={() => router.push(`/battery-ai?scooterId=${scooter.id}&scooterName=${encodeURIComponent(scooter.name)}`)}

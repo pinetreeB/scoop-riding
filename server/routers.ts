@@ -2065,6 +2065,86 @@ ${recentRides.map((r, i) => `${i + 1}. ${r.date}: ${(r.distance / 1000).toFixed(
         return db.getChargingStats(ctx.user.id, input.scooterId);
       }),
   }),
+
+  // Maintenance management router
+  maintenance: router({
+    // Get maintenance items for a scooter
+    getItems: protectedProcedure
+      .input(z.object({ scooterId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return db.getMaintenanceItems(ctx.user.id, input.scooterId);
+      }),
+
+    // Add a new maintenance item
+    addItem: protectedProcedure
+      .input(z.object({
+        scooterId: z.number(),
+        name: z.string(),
+        intervalKm: z.number(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return db.addMaintenanceItem(ctx.user.id, input);
+      }),
+
+    // Record maintenance completion
+    recordMaintenance: protectedProcedure
+      .input(z.object({
+        maintenanceItemId: z.number(),
+        scooterId: z.number(),
+        distanceKm: z.number(),
+        cost: z.number().optional(),
+        location: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return db.recordMaintenance(ctx.user.id, input);
+      }),
+
+    // Delete maintenance item
+    deleteItem: protectedProcedure
+      .input(z.object({ itemId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        return db.deleteMaintenanceItem(ctx.user.id, input.itemId);
+      }),
+
+    // Get maintenance history
+    getHistory: protectedProcedure
+      .input(z.object({
+        scooterId: z.number(),
+        limit: z.number().default(20),
+      }))
+      .query(async ({ ctx, input }) => {
+        return db.getMaintenanceHistory(ctx.user.id, input.scooterId, input.limit);
+      }),
+  }),
+
+  // Battery health report router
+  batteryHealth: router({
+    // Generate battery health report
+    generateReport: protectedProcedure
+      .input(z.object({ scooterId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        return db.generateBatteryHealthReport(ctx.user.id, input.scooterId);
+      }),
+
+    // Get latest battery health report
+    getLatestReport: protectedProcedure
+      .input(z.object({ scooterId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return db.getLatestBatteryHealthReport(ctx.user.id, input.scooterId);
+      }),
+
+    // Get battery health history
+    getHistory: protectedProcedure
+      .input(z.object({
+        scooterId: z.number(),
+        limit: z.number().default(10),
+      }))
+      .query(async ({ ctx, input }) => {
+        return db.getBatteryHealthHistory(ctx.user.id, input.scooterId, input.limit);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
