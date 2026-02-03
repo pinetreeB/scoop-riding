@@ -353,6 +353,148 @@ export const appRouter = router({
         const success = await db.deleteRidingRecord(input.recordId, ctx.user.id);
         return { success };
       }),
+
+    // AI-powered ride analysis report
+    analyzeRide: protectedProcedure
+      .input(
+        z.object({
+          distance: z.number(), // meters
+          duration: z.number(), // seconds
+          avgSpeed: z.number(), // km/h
+          maxSpeed: z.number(), // km/h
+          voltageStart: z.number().optional(),
+          voltageEnd: z.number().optional(),
+          socStart: z.number().optional(),
+          socEnd: z.number().optional(),
+          scooterId: z.number().optional(),
+          temperature: z.number().optional(),
+          gpsPointsCount: z.number().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        try {
+          // Get scooter info if available
+          let scooterInfo = "";
+          let batteryAnalysis = null;
+          
+          if (input.scooterId) {
+            const scooter = await db.getScooterById(input.scooterId, ctx.user.id);
+            if (scooter) {
+              scooterInfo = `\n기체 정보: ${scooter.name} (${scooter.brand || ""} ${scooter.model || ""})\n배터리: ${scooter.batteryVoltage || 60}V ${scooter.batteryCapacity || 30}Ah`;
+              batteryAnalysis = await db.getBatteryAnalysis(ctx.user.id, input.scooterId);
+            }
+          }
+
+          // Calculate energy consumption if voltage data available
+          let energyInfo = "";
+          let efficiencyInfo = "";
+          if (input.voltageStart && input.voltageEnd && input.socStart !== undefined && input.socEnd !== undefined) {
+            const socConsumed = input.socStart - input.socEnd;
+            // Assume 60V 30Ah = 1800Wh if no scooter info
+            const totalCapacityWh = 1800;
+            const energyWh = (totalCapacityWh * socConsumed) / 100;
+            const distanceKm = input.distance / 1000;
+            const efficiencyWhKm = distanceKm > 0 ? energyWh / distanceKm : 0;
+            
+            energyInfo = `\n배터리 사용량: ${input.voltageStart}V → ${input.voltageEnd}V (${input.socStart}% → ${input.socEnd}%)\n에너지 소모: ${energyWh.toFixed(1)}Wh`;
+            efficiencyInfo = `\n연비: ${efficiencyWhKm.toFixed(1)} Wh/km`;
+          }
+
+          // Historical efficiency data
+          let historyInfo = "";
+          if (batteryAnalysis) {
+            const avgEff = batteryAnalysis.avgEfficiency ? (batteryAnalysis.avgEfficiency / 100).toFixed(1) : null;
+            historyInfo = avgEff ? `\n평균 연비 (과거 데이터): ${avgEff} Wh/km` : "";
+          }
+
+          // Weather info
+          const weatherInfo = input.temperature !== undefined ? `\n현재 기온: ${input.temperature}°C` : "";
+
+          // Build prompt for AI analysis
+          const rideData = `
+주행 기록 분석 요청:
+- 주행 거리: ${(input.distance / 1000).toFixed(2)} km
+- 주행 시간: ${Math.floor(input.duration / 60)}분 ${input.duration % 60}초
+- 평균 속도: ${input.avgSpeed.toFixed(1)} km/h
+- 최고 속도: ${input.maxSpeed.toFixed(1)} km/h
+- GPS 포인트: ${input.gpsPointsCount || 0}개${scooterInfo}${energyInfo}${efficiencyInfo}${historyInfo}${weatherInfo}
+`;
+
+          const systemPrompt = `당신은 전동킥보드 주행 분석 AI입니다. 사용자의 주행 데이터를 분석하여 간결한 리포트를 제공합니다.
+
+응답 형식 (JSON):
+{
+  "summary": "주행 요약 (1-2문장)",
+  "efficiency_score": "연비 평가 (좋음/보통/개선필요)",
+  "riding_style": "주행 스타일 평가 (안정적/보통/공격적)",
+  "battery_status": "배터리 상태 평가 (좋음/보통/주의필요) - 배터리 데이터 없으면 null",
+  "tips": ["개선 팁 1", "개선 팁 2"],
+  "highlights": ["좋았던 점 1", "좋았던 점 2"]
+}
+
+주의사항:
+- 한국어로 친근하게 작성
+- 각 항목은 간결하게 (20자 이내)
+- tips와 highlights는 각각 2개씩
+- 배터리 데이터가 없으면 battery_status는 null로
+- 반드시 유효한 JSON만 출력`;
+
+          // Call LLM
+          const { invokeLLM } = await import("./_core/llm");
+          const response = await invokeLLM({
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: rideData },
+            ],
+          });
+
+          const rawContent = response.choices[0]?.message?.content;
+          const aiResponse = typeof rawContent === "string" ? rawContent : "{}";
+
+          // Parse JSON response
+          try {
+            // Extract JSON from response (handle markdown code blocks)
+            let jsonStr = aiResponse;
+            const jsonMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)```/);
+            if (jsonMatch) {
+              jsonStr = jsonMatch[1].trim();
+            }
+            
+            const analysis = JSON.parse(jsonStr);
+            return {
+              success: true,
+              analysis: {
+                summary: analysis.summary || "주행이 완료되었습니다.",
+                efficiencyScore: analysis.efficiency_score || "보통",
+                ridingStyle: analysis.riding_style || "보통",
+                batteryStatus: analysis.battery_status || null,
+                tips: analysis.tips || [],
+                highlights: analysis.highlights || [],
+              },
+            };
+          } catch (parseError) {
+            console.error("[rides.analyzeRide] JSON parse error:", parseError);
+            // Return default analysis on parse error
+            return {
+              success: true,
+              analysis: {
+                summary: `${(input.distance / 1000).toFixed(1)}km 주행 완료! 평균 ${input.avgSpeed.toFixed(1)}km/h로 달렸습니다.`,
+                efficiencyScore: "보통",
+                ridingStyle: input.maxSpeed > 40 ? "공격적" : input.avgSpeed < 15 ? "안정적" : "보통",
+                batteryStatus: input.socStart !== undefined ? "보통" : null,
+                tips: ["꿈차적인 주행으로 연비를 높여보세요", "안전 장비를 착용해주세요"],
+                highlights: ["오늘도 안전하게 주행했어요", "꾸준한 라이딩 습관 좋아요"],
+              },
+            };
+          }
+        } catch (error: any) {
+          console.error("[rides.analyzeRide] Error:", error);
+          return {
+            success: false,
+            error: "AI 분석 중 오류가 발생했습니다.",
+          };
+        }
+      }),
   }),
 
   // Scooter (기체) management (protected - requires login)

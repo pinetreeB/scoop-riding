@@ -38,6 +38,7 @@ import {
 } from "@/lib/background-location";
 import { getSelectedScooter, getStartVoltage, clearStartVoltage, type SelectedScooter } from "@/app/select-scooter";
 import { VoltageInputModal } from "@/components/voltage-input-modal";
+import { RideAnalysisModal, type RideAnalysis } from "@/components/ride-analysis-modal";
 import {
   getVoiceSettings,
   announceRidingStatus,
@@ -174,6 +175,13 @@ export default function RidingScreen() {
   const [startVoltage, setStartVoltage] = useState<{ voltage: number; soc: number } | null>(null);
   const [showEndVoltageModal, setShowEndVoltageModal] = useState(false);
   const [pendingRideData, setPendingRideData] = useState<any>(null);
+  
+  // AI Ride Analysis
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [rideAnalysis, setRideAnalysis] = useState<RideAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisRideStats, setAnalysisRideStats] = useState<any>(null);
+  const analyzeRide = trpc.rides.analyzeRide.useMutation();
   
   // Auto-pause when stationary
   const [isAutoPaused, setIsAutoPaused] = useState(false);
@@ -1107,8 +1115,42 @@ export default function RidingScreen() {
       // Clear start voltage data
       await clearStartVoltage();
 
-      // Navigate to home screen
-      router.replace("/(tabs)");
+      // Trigger AI analysis (non-blocking)
+      try {
+        setAnalysisRideStats({
+          distance: rideData.distance,
+          duration: rideData.duration,
+          avgSpeed: rideData.avgSpeed,
+          maxSpeed: rideData.maxSpeed,
+          voltageStart: startVoltage?.voltage,
+          voltageEnd: endVoltage,
+          socStart: startVoltage?.soc,
+          socEnd: endSoc,
+        });
+        setShowAnalysisModal(true);
+        setIsAnalyzing(true);
+        
+        const analysisResult = await analyzeRide.mutateAsync({
+          distance: rideData.distance,
+          duration: rideData.duration,
+          avgSpeed: rideData.avgSpeed,
+          maxSpeed: rideData.maxSpeed,
+          voltageStart: startVoltage?.voltage,
+          voltageEnd: endVoltage,
+          socStart: startVoltage?.soc,
+          socEnd: endSoc,
+          scooterId: selectedScooter?.id,
+          gpsPointsCount: rideData.gpsPoints?.length || 0,
+        });
+        
+        if (analysisResult.success && analysisResult.analysis) {
+          setRideAnalysis(analysisResult.analysis);
+        }
+        setIsAnalyzing(false);
+      } catch (e) {
+        console.log("[Riding] AI analysis error:", e);
+        setIsAnalyzing(false);
+      }
     } catch (error) {
       console.error("[Riding] Critical error during save:", error);
       Alert.alert(
@@ -1729,6 +1771,22 @@ export default function RidingScreen() {
           setPendingRideData(null);
         }}
       />
+
+      {/* AI Ride Analysis Modal */}
+      {analysisRideStats && (
+        <RideAnalysisModal
+          visible={showAnalysisModal}
+          onClose={() => {
+            setShowAnalysisModal(false);
+            setRideAnalysis(null);
+            setAnalysisRideStats(null);
+            router.replace("/(tabs)");
+          }}
+          analysis={rideAnalysis}
+          isLoading={isAnalyzing}
+          rideStats={analysisRideStats}
+        />
+      )}
     </ScreenContainer>
   );
 }
