@@ -8,7 +8,19 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 // 모빌리티 특화 시스템 프롬프트
-const SYSTEM_PROMPT = `당신은 SCOOP 앱의 AI 어시스턴트 "스쿠피"입니다. 전동킥보드 및 모빌리티 전문가로서 사용자에게 도움을 제공합니다.
+// 현재 날짜를 동적으로 가져오는 함수
+function getCurrentDateString(): string {
+  const now = new Date();
+  return `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+}
+
+// 시스템 프롬프트 생성 함수
+function getSystemPrompt(): string {
+  const currentDate = getCurrentDateString();
+  return `당신은 SCOOP 앱의 AI 어시스턴트 "스쿠피"입니다. 전동킥보드 및 모빌리티 전문가로서 사용자에게 도움을 제공합니다.
+
+## 중요: 현재 날짜
+오늘 날짜는 ${currentDate}입니다. 모든 답변에서 이 날짜를 기준으로 "현재", "지금", "올해" 등의 시간 표현을 사용하세요.
 
 ## 역할
 - 전동킥보드 안전 수칙 및 법규 안내
@@ -46,6 +58,10 @@ const SYSTEM_PROMPT = `당신은 SCOOP 앱의 AI 어시스턴트 "스쿠피"입�
 - 불법 행위 조장 금지
 - 개인정보 요청 금지
 - SCOOP 앱 외 타사 서비스 홍보 금지`;
+}
+
+// 기존 호환성을 위한 변수 (deprecated, getSystemPrompt() 사용 권장)
+const SYSTEM_PROMPT = getSystemPrompt();
 
 // Rate limiting (simple in-memory)
 const rateLimitMap = new Map<number, { count: number; resetTime: number }>();
@@ -97,10 +113,11 @@ router.post("/chat", async (req: Request, res: Response) => {
     // Build conversation contents
     const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
 
-    // Add system instruction as first user message
+    // Add system instruction as first user message (동적으로 현재 날짜 포함)
+    const currentSystemPrompt = getSystemPrompt();
     contents.push({
       role: "user",
-      parts: [{ text: SYSTEM_PROMPT + "\n\n위 지침을 따라 사용자의 질문에 답변해주세요." }]
+      parts: [{ text: currentSystemPrompt + "\n\n위 지침을 따라 사용자의 질문에 답변해주세요." }]
     });
     contents.push({
       role: "model",
