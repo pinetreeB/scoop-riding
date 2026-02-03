@@ -330,6 +330,8 @@ export const appRouter = router({
           startTime: z.string().optional(),
           endTime: z.string().optional(),
           gpsPointsJson: z.string().optional(),
+          // Scooter ID for stats update
+          scooterId: z.number().optional(),
           // Battery voltage fields
           voltageStart: z.string().optional(),
           voltageEnd: z.string().optional(),
@@ -340,7 +342,7 @@ export const appRouter = router({
       )
       .mutation(async ({ ctx, input }) => {
         console.log("[rides.create] Called by user:", ctx.user.id, ctx.user.email);
-        console.log("[rides.create] Input:", { recordId: input.recordId, date: input.date, duration: input.duration, distance: input.distance });
+        console.log("[rides.create] Input:", { recordId: input.recordId, date: input.date, duration: input.duration, distance: input.distance, scooterId: input.scooterId });
         
         try {
           const result = await db.createRidingRecord({
@@ -354,6 +356,7 @@ export const appRouter = router({
             startTime: input.startTime ? new Date(input.startTime) : undefined,
             endTime: input.endTime ? new Date(input.endTime) : undefined,
             gpsPointsJson: input.gpsPointsJson,
+            scooterId: input.scooterId,
             voltageStart: input.voltageStart,
             voltageEnd: input.voltageEnd,
             socStart: input.socStart,
@@ -361,6 +364,22 @@ export const appRouter = router({
             temperature: input.temperature,
           });
           console.log("[rides.create] Success, id:", result);
+          
+          // Update scooter stats if scooterId is provided
+          if (input.scooterId) {
+            try {
+              const statsUpdated = await db.updateScooterStats(
+                input.scooterId,
+                ctx.user.id,
+                Math.round(input.distance)
+              );
+              console.log("[rides.create] Scooter stats updated:", statsUpdated);
+            } catch (statsError) {
+              console.error("[rides.create] Failed to update scooter stats:", statsError);
+              // Don't fail the ride creation if stats update fails
+            }
+          }
+          
           return { success: true, id: result };
         } catch (error: any) {
           console.error("[rides.create] Error:", error?.message || error);

@@ -1091,6 +1091,8 @@ export default function RidingScreen() {
           gpsPointsJson: rideData.gpsPoints?.length > 0 
             ? JSON.stringify(rideData.gpsPoints) 
             : undefined,
+          // Include scooter ID for stats update
+          scooterId: rideData.scooterId,
           // Include voltage data for server
           voltageStart: startVoltage?.voltage ? String(startVoltage.voltage) : undefined,
           voltageEnd: endVoltage ? String(endVoltage) : undefined,

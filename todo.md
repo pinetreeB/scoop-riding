@@ -871,3 +871,7 @@
 - [x] 배터리 건강도 리포트 화면 구현 (battery-health.tsx)
 - [x] 배터리 건강도 리포트 API 구현 (batteryHealth.generateReport, getLatestReport, getHistory)
 - [x] 충전 기록 기반 배터리 수명 예측 및 교체 시기 안내
+
+## 버그 수정 (2026-02-03 추가)
+- [x] 주행 횟수가 0으로 표시되는 버그 수정 (주행 기록은 있지만 통계에 반영 안됨)
+- [ ] 리튜 → 리튬 오타 수정 (리튬이온, 리튬인산철, 리튬폴리머)
