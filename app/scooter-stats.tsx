@@ -27,8 +27,22 @@ export default function ScooterStatsScreen() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [localRides, setLocalRides] = useState<RidingRecord[]>([]);
 
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const trpcUtils = trpc.useUtils();
+
   const scootersQuery = trpc.scooters.list.useQuery(undefined, {
     enabled: isAuthenticated,
+  });
+
+  const recalculateStatsMutation = trpc.scooters.recalculateStats.useMutation({
+    onSuccess: async (data) => {
+      if (data.success) {
+        await trpcUtils.scooters.list.invalidate();
+        if (Platform.OS !== "web") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      }
+    },
   });
 
   const scooter = useMemo(() => {
@@ -131,6 +145,30 @@ export default function ScooterStatsScreen() {
           <Text className="text-2xl font-bold text-foreground flex-1" numberOfLines={1}>
             {scooter.name}
           </Text>
+          <Pressable
+            onPress={async () => {
+              if (isRecalculating) return;
+              setIsRecalculating(true);
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              try {
+                await recalculateStatsMutation.mutateAsync({ id: scooter.id });
+              } catch (error) {
+                console.error("Recalculate stats error:", error);
+              } finally {
+                setIsRecalculating(false);
+              }
+            }}
+            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+            className="p-2"
+          >
+            {isRecalculating ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <MaterialIcons name="refresh" size={24} color={colors.primary} />
+            )}
+          </Pressable>
         </View>
 
         {/* Scooter Info Card */}

@@ -26,7 +26,7 @@ type TabType = "survey" | "bugs" | "announcements" | "users" | "posts";
 export default function AdminDashboardScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("survey");
 
@@ -157,10 +157,29 @@ export default function AdminDashboardScreen() {
     </View>
   );
 
-  if (user?.role !== "admin") {
+  // Show loading while auth is loading
+  if (authLoading) {
     return (
       <ScreenContainer className="items-center justify-center">
         <ActivityIndicator size="large" color={colors.primary} />
+        <Text className="text-muted mt-4">로딩 중...</Text>
+      </ScreenContainer>
+    );
+  }
+
+  // Show access denied if not admin
+  if (!user || user.role !== "admin") {
+    return (
+      <ScreenContainer className="items-center justify-center p-6">
+        <MaterialIcons name="admin-panel-settings" size={64} color={colors.muted} />
+        <Text className="text-xl font-bold text-foreground mt-4">접근 불가</Text>
+        <Text className="text-muted text-center mt-2">관리자 권한이 필요합니다.</Text>
+        <TouchableOpacity 
+          className="mt-6 bg-primary px-6 py-3 rounded-xl"
+          onPress={() => router.back()}
+        >
+          <Text className="text-white font-semibold">돌아가기</Text>
+        </TouchableOpacity>
       </ScreenContainer>
     );
   }

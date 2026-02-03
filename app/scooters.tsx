@@ -35,9 +35,9 @@ const SCOOTER_COLORS = [
 
 // Battery type options
 const BATTERY_TYPES = [
-  { value: "lithium_ion", label: "리튜이온 (Li-ion)", cellVoltage: { full: 4.2, empty: 3.0 } },
-  { value: "lifepo4", label: "리튜인산철 (LiFePO4)", cellVoltage: { full: 3.65, empty: 2.5 } },
-  { value: "lipo", label: "리튜폴리머 (Li-Po)", cellVoltage: { full: 4.2, empty: 3.0 } },
+  { value: "lithium_ion", label: "리튬이온 (Li-ion)", cellVoltage: { full: 4.2, empty: 3.0 } },
+  { value: "lifepo4", label: "리튬인산철 (LiFePO4)", cellVoltage: { full: 3.65, empty: 2.5 } },
+  { value: "lipo", label: "리튬폴리머 (Li-Po)", cellVoltage: { full: 4.2, empty: 3.0 } },
 ];
 
 // Common voltage presets

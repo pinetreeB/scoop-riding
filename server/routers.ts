@@ -675,6 +675,24 @@ export const appRouter = router({
         const success = await db.updateScooterStats(input.id, ctx.user.id, input.distanceToAdd);
         return { success };
       }),
+
+    // Recalculate stats for a specific scooter from riding records
+    recalculateStats: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const result = await db.recalculateScooterStats(input.id, ctx.user.id);
+        if (!result) {
+          return { success: false, totalRides: 0, totalDistance: 0 };
+        }
+        return { success: true, ...result };
+      }),
+
+    // Recalculate stats for all scooters of the user
+    recalculateAllStats: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const results = await db.recalculateAllScooterStats(ctx.user.id);
+        return { success: true, results };
+      }),
   }),
 
   // Community (posts and comments)

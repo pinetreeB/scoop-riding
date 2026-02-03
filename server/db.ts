@@ -478,6 +478,67 @@ export async function updateScooterStats(
   return true;
 }
 
+/**
+ * Recalculate scooter stats from riding records
+ * This is used to fix stats for rides that were recorded before the stats update was implemented
+ */
+export async function recalculateScooterStats(
+  scooterId: number,
+  userId: number
+): Promise<{ totalRides: number; totalDistance: number } | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Get all riding records for this scooter
+  const records = await db.select({
+    distance: ridingRecords.distance,
+  }).from(ridingRecords)
+    .where(and(
+      eq(ridingRecords.userId, userId),
+      eq(ridingRecords.scooterId, scooterId)
+    ));
+
+  const totalRides = records.length;
+  const totalDistance = records.reduce((sum, r) => sum + (r.distance || 0), 0);
+
+  // Update scooter with recalculated stats
+  await db.update(scooters)
+    .set({
+      totalRides,
+      totalDistance,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(scooters.id, scooterId), eq(scooters.userId, userId)));
+
+  console.log(`[DB] Recalculated stats for scooter ${scooterId}: ${totalRides} rides, ${totalDistance}m`);
+  return { totalRides, totalDistance };
+}
+
+/**
+ * Recalculate stats for all scooters of a user
+ */
+export async function recalculateAllScooterStats(
+  userId: number
+): Promise<{ scooterId: number; totalRides: number; totalDistance: number }[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get all scooters for this user
+  const userScooters = await db.select().from(scooters)
+    .where(eq(scooters.userId, userId));
+
+  const results: { scooterId: number; totalRides: number; totalDistance: number }[] = [];
+
+  for (const scooter of userScooters) {
+    const stats = await recalculateScooterStats(scooter.id, userId);
+    if (stats) {
+      results.push({ scooterId: scooter.id, ...stats });
+    }
+  }
+
+  return results;
+}
+
 export async function getDefaultScooter(userId: number): Promise<Scooter | undefined> {
   const db = await getDb();
   if (!db) return undefined;
