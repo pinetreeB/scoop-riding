@@ -35,6 +35,7 @@ import {
 import { LEVEL_DEFINITIONS, calculateLevel, getLevelTitle, formatLevelDistance } from "@/lib/level-system";
 import { AnnouncementPopup } from "@/components/announcement-popup";
 import { AlphaTestBanner } from "@/components/alpha-test-survey";
+import { WeatherWidget } from "@/components/weather-widget";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -358,6 +359,9 @@ export default function HomeScreen() {
 
         {/* Alpha Test Banner */}
         <AlphaTestBanner />
+
+        {/* Weather Widget */}
+        <WeatherWidget />
 
         {/* Sync Status Bar */}
         {isAuthenticated && (syncStatus?.pendingCount ?? 0) > 0 && (

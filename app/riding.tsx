@@ -738,16 +738,24 @@ export default function RidingScreen() {
   };
 
   const handleLocationUpdate = (location: Location.LocationObject) => {
-    if (!isRunningRef.current) return;
+    // 전체 함수를 try-catch로 감싸서 예상치 못한 에러로 인한 크래시 방지
+    try {
+      if (!isRunningRef.current) return;
 
-    const { latitude, longitude, altitude, speed, accuracy: locAccuracy } = location.coords;
-    const timestamp = location.timestamp;
+      const { latitude, longitude, altitude, speed, accuracy: locAccuracy } = location.coords;
+      const timestamp = location.timestamp;
 
-    setAccuracy(locAccuracy);
-    
-    // Calculate heading from bearing if available
-    const heading = lastBearingRef.current ?? (location.coords.heading ?? 0);
-    setCurrentLocation({ latitude, longitude, heading });
+      // 유효하지 않은 좌표 필터링
+      if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) {
+        console.log("[Riding] Invalid coordinates received, skipping");
+        return;
+      }
+
+      setAccuracy(locAccuracy);
+      
+      // Calculate heading from bearing if available
+      const heading = lastBearingRef.current ?? (location.coords.heading ?? 0);
+      setCurrentLocation({ latitude, longitude, heading });
 
     const gpsPoint: GpsPoint = {
       latitude,
@@ -763,32 +771,40 @@ export default function RidingScreen() {
     setCurrentSpeed(displaySpeed);
 
     // 그룹 라이딩 위치 업데이트 - WebSocket 우선, HTTP fallback
-    const currentGroupId = groupIdRef.current;
-    if (currentGroupId) {
-      const locationData = {
-        latitude,
-        longitude,
-        distance: distanceRef.current,
-        duration: durationRef.current,
-        speed: displaySpeed,
-        isRiding: true,
-      };
-      
-      // WebSocket이 연결되어 있으면 WebSocket으로 전송 (실시간)
-      if (wsConnected) {
-        wsSendLocation(locationData);
-      } else {
-        // WebSocket 연결 안되면 HTTP fallback
-        updateGroupLocation.mutate({
-          groupId: currentGroupId,
-          ...locationData,
-          currentSpeed: displaySpeed,
-        }, {
-          onError: (error) => {
-            console.error("[Riding] Failed to update group location:", error);
-          },
-        });
+    try {
+      const currentGroupId = groupIdRef.current;
+      if (currentGroupId) {
+        const locationData = {
+          latitude,
+          longitude,
+          distance: distanceRef.current,
+          duration: durationRef.current,
+          speed: displaySpeed,
+          isRiding: true,
+        };
+        
+        // WebSocket이 연결되어 있으면 WebSocket으로 전송 (실시간)
+        if (wsConnected) {
+          try {
+            wsSendLocation(locationData);
+          } catch (wsError) {
+            console.log("[Riding] WebSocket send failed (non-critical):", wsError);
+          }
+        } else {
+          // WebSocket 연결 안되면 HTTP fallback
+          updateGroupLocation.mutate({
+            groupId: currentGroupId,
+            ...locationData,
+            currentSpeed: displaySpeed,
+          }, {
+            onError: (error) => {
+              console.log("[Riding] Failed to update group location (non-critical):", error);
+            },
+          });
+        }
       }
+    } catch (groupUpdateError) {
+      console.log("[Riding] Group location update error (non-critical):", groupUpdateError);
     }
 
     // 자동 일시정지 로직: 속도가 임계값 이하면 정지 카운터 증가
@@ -798,8 +814,13 @@ export default function RidingScreen() {
       if (stationaryCountRef.current >= AUTO_PAUSE_DELAY_SECONDS && !isAutoPausedRef.current) {
         setIsAutoPaused(true);
         isAutoPausedRef.current = true; // ref도 즉시 업데이트
+        // Haptics 안전하게 호출
         if (Platform.OS !== "web") {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          } catch (e) {
+            console.log("[Riding] Haptics error (non-critical):", e);
+          }
         }
       }
     } else {
@@ -808,8 +829,13 @@ export default function RidingScreen() {
       if (isAutoPausedRef.current) {
         setIsAutoPaused(false);
         isAutoPausedRef.current = false; // ref도 즉시 업데이트
+        // Haptics 안전하게 호출
         if (Platform.OS !== "web") {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          } catch (e) {
+            console.log("[Riding] Haptics error (non-critical):", e);
+          }
         }
       }
     }
@@ -856,34 +882,46 @@ export default function RidingScreen() {
       
       // Fetch weather info on first valid location (ride start)
       if (isStarting && !weatherInfo) {
-        trpcUtils.weather.getCurrent.fetch({ lat: latitude, lon: longitude })
-          .then((result) => {
-            if (result.success && result.weather) {
+        // 비동기 작업을 안전하게 처리 (앱 크래시 방지)
+        (async () => {
+          try {
+            const result = await trpcUtils.weather.getCurrent.fetch({ lat: latitude, lon: longitude });
+            if (result?.success && result?.weather) {
               console.log("[Riding] Weather fetched:", result.weather);
               setWeatherInfo({
-                temperature: result.weather.temperature,
-                humidity: result.weather.humidity,
-                windSpeed: result.weather.windSpeed,
-                windDirection: result.weather.windDirection,
-                precipitationType: result.weather.precipitationType,
-                weatherCondition: result.weather.weatherCondition,
+                temperature: result.weather.temperature ?? null,
+                humidity: result.weather.humidity ?? null,
+                windSpeed: result.weather.windSpeed ?? null,
+                windDirection: result.weather.windDirection ?? null,
+                precipitationType: result.weather.precipitationType ?? 0,
+                weatherCondition: result.weather.weatherCondition ?? '맑음',
               });
             }
-          })
-          .catch((err) => {
-            console.log("[Riding] Weather fetch failed:", err);
-          });
+          } catch (err) {
+            // 날씨 정보 가져오기 실패해도 주행은 계속
+            console.log("[Riding] Weather fetch failed (non-critical):", err);
+          }
+        })();
       }
       
       isFirstLocationRef.current = false;
-      updateLiveLocation.mutate({
-        latitude,
-        longitude,
-        heading: heading ?? null,
-        speed: speed ?? null,
-        isRiding: true,
-        isStarting,
-      });
+      // 실시간 위치 공유 - 실패해도 주행에 영향 없음
+      try {
+        updateLiveLocation.mutate({
+          latitude,
+          longitude,
+          heading: heading ?? null,
+          speed: speed ?? null,
+          isRiding: true,
+          isStarting,
+        }, {
+          onError: (error) => {
+            console.log("[Riding] Live location update failed (non-critical):", error);
+          },
+        });
+      } catch (liveLocationError) {
+        console.log("[Riding] Live location error (non-critical):", liveLocationError);
+      }
 
       // Group location update moved to before validation (line 564)
 
@@ -920,79 +958,98 @@ export default function RidingScreen() {
       }
 
       // 경로별 날씨 변화 체크 (5km마다 또는 30분마다)
-      const currentDistance = distance + (lastValidPointRef.current ? calculateDistance(
-        lastValidPointRef.current.latitude,
-        lastValidPointRef.current.longitude,
-        latitude,
-        longitude
-      ) : 0);
-      const now = Date.now();
-      const distanceSinceLastCheck = currentDistance - lastWeatherCheckRef.current.distance;
-      const timeSinceLastCheck = now - lastWeatherCheckRef.current.time;
-      
-      if (distanceSinceLastCheck >= WEATHER_CHECK_DISTANCE_INTERVAL || 
-          (timeSinceLastCheck >= WEATHER_CHECK_TIME_INTERVAL && currentDistance > 1000)) {
-        // 날씨 체크포인트 추가
-        lastWeatherCheckRef.current = { distance: currentDistance, time: now };
+      try {
+        const currentDistance = distance + (lastValidPointRef.current ? calculateDistance(
+          lastValidPointRef.current.latitude,
+          lastValidPointRef.current.longitude,
+          latitude,
+          longitude
+        ) : 0);
+        const now = Date.now();
+        const distanceSinceLastCheck = currentDistance - lastWeatherCheckRef.current.distance;
+        const timeSinceLastCheck = now - lastWeatherCheckRef.current.time;
         
-        trpcUtils.weather.getCurrent.fetch({ lat: latitude, lon: longitude })
-          .then((result) => {
-            if (result.success && result.weather) {
-              console.log("[Riding] Weather checkpoint at", (currentDistance / 1000).toFixed(1), "km:", result.weather.weatherCondition);
-              
-              // 날씨 변화 감지 및 알림
-              const previousCondition = weatherInfo?.weatherCondition || weatherChanges[weatherChanges.length - 1]?.weatherCondition;
-              const newCondition = result.weather.weatherCondition;
-              
-              if (previousCondition && newCondition !== previousCondition) {
-                // 날씨가 변했을 때 알림
-                notifyWeatherChange(
-                  previousCondition,
-                  newCondition,
-                  result.weather.temperature ?? undefined
-                );
-                console.log("[Riding] Weather changed:", previousCondition, "->", newCondition);
+        if (distanceSinceLastCheck >= WEATHER_CHECK_DISTANCE_INTERVAL || 
+            (timeSinceLastCheck >= WEATHER_CHECK_TIME_INTERVAL && currentDistance > 1000)) {
+          // 날씨 체크포인트 추가
+          lastWeatherCheckRef.current = { distance: currentDistance, time: now };
+          
+          // 비동기 날씨 체크 - 실패해도 주행에 영향 없음
+          (async () => {
+            try {
+              const result = await trpcUtils.weather.getCurrent.fetch({ lat: latitude, lon: longitude });
+              if (result?.success && result?.weather) {
+                console.log("[Riding] Weather checkpoint at", (currentDistance / 1000).toFixed(1), "km:", result.weather.weatherCondition);
+                
+                // 날씨 변화 감지 및 알림
+                const previousCondition = weatherInfo?.weatherCondition || weatherChanges[weatherChanges.length - 1]?.weatherCondition;
+                const newCondition = result.weather.weatherCondition;
+                
+                if (previousCondition && newCondition !== previousCondition) {
+                  // 날씨가 변했을 때 알림 (안전하게 호출)
+                  try {
+                    notifyWeatherChange(
+                      previousCondition,
+                      newCondition,
+                      result.weather.temperature ?? undefined
+                    );
+                  } catch (e) {
+                    console.log("[Riding] Weather change notification failed:", e);
+                  }
+                  console.log("[Riding] Weather changed:", previousCondition, "->", newCondition);
+                }
+                
+                // 경고 알림 (안전하게 호출)
+                try {
+                  // 강풍 경고 (10m/s 이상)
+                  if (result.weather.windSpeed && result.weather.windSpeed >= 10) {
+                    notifyWeatherWarning("wind", result.weather.windSpeed);
+                  }
+                  
+                  // 한파 경고 (-10도 이하)
+                  if (result.weather.temperature && result.weather.temperature <= -10) {
+                    notifyWeatherWarning("cold", result.weather.temperature);
+                  }
+                  
+                  // 폭염 경고 (35도 이상)
+                  if (result.weather.temperature && result.weather.temperature >= 35) {
+                    notifyWeatherWarning("heat", result.weather.temperature);
+                  }
+                } catch (e) {
+                  console.log("[Riding] Weather warning notification failed:", e);
+                }
+                
+                setWeatherChanges((prev) => [
+                  ...prev,
+                  {
+                    timestamp: new Date().toISOString(),
+                    latitude,
+                    longitude,
+                    distanceFromStart: currentDistance,
+                    temperature: result.weather.temperature ?? undefined,
+                    humidity: result.weather.humidity ?? undefined,
+                    windSpeed: result.weather.windSpeed ?? undefined,
+                    weatherCondition: result.weather.weatherCondition,
+                  },
+                ]);
               }
-              
-              // 강풍 경고 (10m/s 이상)
-              if (result.weather.windSpeed && result.weather.windSpeed >= 10) {
-                notifyWeatherWarning("wind", result.weather.windSpeed);
-              }
-              
-              // 한파 경고 (-10도 이하)
-              if (result.weather.temperature && result.weather.temperature <= -10) {
-                notifyWeatherWarning("cold", result.weather.temperature);
-              }
-              
-              // 폭염 경고 (35도 이상)
-              if (result.weather.temperature && result.weather.temperature >= 35) {
-                notifyWeatherWarning("heat", result.weather.temperature);
-              }
-              
-              setWeatherChanges((prev) => [
-                ...prev,
-                {
-                  timestamp: new Date().toISOString(),
-                  latitude,
-                  longitude,
-                  distanceFromStart: currentDistance,
-                  temperature: result.weather.temperature ?? undefined,
-                  humidity: result.weather.humidity ?? undefined,
-                  windSpeed: result.weather.windSpeed ?? undefined,
-                  weatherCondition: result.weather.weatherCondition,
-                },
-              ]);
+            } catch (err) {
+              console.log("[Riding] Weather checkpoint fetch failed (non-critical):", err);
             }
-          })
-          .catch((err) => {
-            console.log("[Riding] Weather checkpoint fetch failed:", err);
-          });
+          })();
+        }
+      } catch (weatherCheckError) {
+        console.log("[Riding] Weather check calculation error (non-critical):", weatherCheckError);
       }
 
       // Update navigation step if navigation is active
       if (hasNavigation && navigationRoute.length > 0) {
         updateNavigationProgress(latitude, longitude);
       }
+    }
+    } catch (locationUpdateError) {
+      // 위치 업데이트 중 에러 발생 시 로그만 남기고 계속 진행
+      console.error("[Riding] Location update error (recovered):", locationUpdateError);
     }
   };
 
