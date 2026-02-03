@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO appVersions (version, versionCode, downloadUrl, releaseNotes, forceUpdate, platform, isActive, createdAt)\nVALUES ('0.1.4', 14, \n'https://expo.dev/artifacts/eas/vHXrXnJXz9ENTh5nyTUujC.apk',\n'📱 SCOOP v0.1.4 업데이트\n\n🔋 배터리 관리 기능\n- 기체별 배터리 정보 등록 (전압, 용량)\n- 주행 전/후 전압 입력으로 연비 분석\n- 충전 기록 및 패턴 분석\n- AI 기반 배터리 건강도 리포트\n- 배터리 대시보드 추가\n\n🔧 정비 관리\n- 정비 항목 등록 및 주기 설정\n- 누적 주행거리 기반 정비 알림\n\n✨ 개선사항\n- 그룹 주행 실시간 동기화 성능 개선\n- 메인 화면 레이아웃 개선\n- 회원탈퇴 기능 추가\n\n🐛 버그 수정\n- 특정 기기에서 흰 화면이 나오는 버그 수정\n- 백그라운드 주행 안정성 개선', \n0, 'android', 1, NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO appVersions (version, versionCode, downloadUrl, releaseNotes, forceUpdate, platform, isActive, createdAt)\nVALUES ('0.1.4', 14, \n'https://expo.dev/artifacts/eas/vHXrXnJXz9ENTh5nyTUujC.apk',\n'📱 SCOOP v0.1.4 업데이트\n\n🔋 배터리 관리 기능\n- 기체별 배터리 정보 등록 (전압, 용량)\n- 주행 전/후 전압 입력으로 연비 분석\n- 충전 기록 및 패턴 분석\n- AI 기반 배터리 건강도 리포트\n- 배터리 대시보드 추가\n\n🔧 정비 관리\n- 정비 항목 등록 및 주기 설정\n- 누적 주행거리 기반 정비 알림\n\n✨ 개선사항\n- 그룹 주행 실시간 동기화 성능 개선\n- 메인 화면 레이아웃 개선\n- 회원탈퇴 기능 추가\n\n🐛 버그 수정\n- 특정 기기에서 흰 화면이 나오는 버그 수정\n- 백그라운드 주행 안정성 개선', \n0, 'android', 1, NOW());",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1575
+}

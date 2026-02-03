@@ -1,0 +1,40 @@
+{
+  "query": "SELECT version, versionCode, isActive, downloadUrl FROM appVersions ORDER BY versionCode DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT version, versionCode, isActive, downloadUrl FROM appVersions ORDER BY versionCode DESC LIMIT 5;",
+  "rows": [
+    {
+      "version": "0.0.22",
+      "versionCode": "22",
+      "isActive": "1",
+      "downloadUrl": "https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/d9b93035-a35f-4744-8906-937c75950b77"
+    },
+    {
+      "version": "0.0.20",
+      "versionCode": "20",
+      "isActive": "1",
+      "downloadUrl": "https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/98f398a8-62c9-4f7c-aeb5-d618d3bc6273"
+    },
+    {
+      "version": "0.0.18",
+      "versionCode": "18",
+      "isActive": "1",
+      "downloadUrl": "https://expo.dev/artifacts/eas/vzbyU9moyVrsmkHVvwf8JS.apk"
+    },
+    {
+      "version": "0.1.4",
+      "versionCode": "14",
+      "isActive": "1",
+      "downloadUrl": "https://expo.dev/artifacts/eas/vHXrXnJXz9ENTh5nyTUujC.apk"
+    },
+    {
+      "version": "0.0.13",
+      "versionCode": "13",
+      "isActive": "0",
+      "downloadUrl": "https://expo.dev/artifacts/eas/iZYCpftVkBfwWDa8KYYz4L.apk"
+    }
+  ],
+  "messages": [],
+  "stdout": "version\tversionCode\tisActive\tdownloadUrl\n0.0.22\t22\t1\thttps://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/d9b93035-a35f-4744-8906-937c75950b77\n0.0.20\t20\t1\thttps://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/98f398a8-62c9-4f7c-aeb5-d618d3bc6273\n0.0.18\t18\t1\thttps://expo.dev/artifacts/eas/vzbyU9moyVrsmkHVvwf8JS.apk\n0.1.4\t14\t1\thttps://expo.dev/artifacts/eas/vHXrXnJXz9ENTh5nyTUujC.apk\n0.0.13\t13\t0\thttps://expo.dev/artifacts/eas/iZYCpftVkBfwWDa8KYYz4L.apk\n",
+  "stderr": "",
+  "execution_time_ms": 1592
+}

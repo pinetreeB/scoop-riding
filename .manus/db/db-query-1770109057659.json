@@ -1,0 +1,14 @@
+{
+  "query": "SELECT id, title FROM announcements WHERE title LIKE '%0.1.4%' ORDER BY id DESC LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, title FROM announcements WHERE title LIKE '%0.1.4%' ORDER BY id DESC LIMIT 1;",
+  "rows": [
+    {
+      "id": "60001",
+      "title": "📱 SCOOP v0.1.4 업데이트"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\n60001\t📱 SCOOP v0.1.4 업데이트\n",
+  "stderr": "",
+  "execution_time_ms": 1622
+}
