@@ -85,6 +85,7 @@ export default function RidingScreen() {
     userId: number;
     name: string | null;
     profileImage: string | null;
+    profileColor: string | null;
     latitude: number | null;
     longitude: number | null;
     distance: number;
@@ -127,6 +128,7 @@ export default function RidingScreen() {
         userId: m.userId,
         name: m.userName,
         profileImage: m.profileImage,
+        profileColor: m.profileColor,
         latitude: m.latitude,
         longitude: m.longitude,
         distance: m.distance,
@@ -436,6 +438,7 @@ export default function RidingScreen() {
         userId: m.userId,
         name: m.name,
         profileImage: m.profileImageUrl || null,
+        profileColor: (m as any).profileColor || null,
         latitude: m.latitude,
         longitude: m.longitude,
         distance: m.distance,
@@ -1612,6 +1615,7 @@ export default function RidingScreen() {
                   id: m.userId,
                   name: m.name,
                   profileImage: m.profileImage,
+                  profileColor: m.profileColor ?? undefined,
                   isRiding: m.isRiding,
                   latitude: m.latitude ?? undefined,
                   longitude: m.longitude ?? undefined,

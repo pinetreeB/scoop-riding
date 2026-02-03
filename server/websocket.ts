@@ -68,6 +68,7 @@ interface GroupMemberUpdate {
     userId: number;
     userName: string;
     profileImage: string | null;
+    profileColor: string | null;
     latitude: number;
     longitude: number;
     speed: number;
@@ -101,6 +102,7 @@ interface ClientInfo {
   userId: number;
   userName: string;
   profileImage: string | null;
+  profileColor: string | null;
   groupId: number | null;
   lastLocation: {
     latitude: number;
@@ -169,6 +171,7 @@ export function setupWebSocket(server: Server): void {
       userId: 0,
       userName: "",
       profileImage: null,
+      profileColor: null,
       groupId: null,
       lastLocation: null,
       lastBroadcastLocation: null,
@@ -288,6 +291,7 @@ async function handleJoinGroup(
     client.userId = user.id;
     client.userName = user.name || `User ${user.id}`;
     client.profileImage = user.profileImageUrl || null;
+    client.profileColor = user.profileColor || null;
     client.groupId = message.groupId;
 
     // Add to group clients
@@ -510,6 +514,7 @@ function doBroadcastGroupLocations(groupId: number): void {
         userId: client.userId,
         userName: client.userName,
         profileImage: client.profileImage,
+        profileColor: client.profileColor,
         ...client.lastLocation,
       });
     }

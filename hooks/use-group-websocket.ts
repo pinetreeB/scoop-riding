@@ -11,6 +11,7 @@ interface GroupMember {
   userId: number;
   userName: string;
   profileImage: string | null;
+  profileColor: string | null;
   latitude: number;
   longitude: number;
   speed: number;
