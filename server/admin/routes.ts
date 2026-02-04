@@ -818,11 +818,16 @@ router.put("/bugs/:id/status", verifyAdminToken, async (req: Request, res: Respo
     if (!dbInstance) return res.status(500).json({ error: "DB 연결 실패" });
     
     const id = parseInt(req.params.id);
-    const { status } = req.body;
+    const { status, adminNotes } = req.body;
+    
+    const updateData: any = { status, updatedAt: new Date() };
+    if (adminNotes !== undefined) {
+      updateData.adminNotes = adminNotes;
+    }
     
     await dbInstance
       .update(bugReports)
-      .set({ status, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(bugReports.id, id));
     
     // Send notification to user
@@ -834,11 +839,15 @@ router.put("/bugs/:id/status", verifyAdminToken, async (req: Request, res: Respo
     
     if (report.length > 0 && report[0].userId) {
       const statusText = status === "resolved" ? "해결됨" : status === "in_progress" ? "처리 중" : "확인됨";
+      let notificationBody = `"${report[0].title}" 버그 리포트가 "${statusText}" 상태로 변경되었습니다.`;
+      if (adminNotes) {
+        notificationBody += `\n\n관리자 답변: ${adminNotes}`;
+      }
       await db.createNotification({
         userId: report[0].userId,
         type: "bug_report_update",
         title: "버그 리포트 상태 변경",
-        body: `"${report[0].title}" 버그 리포트가 "${statusText}" 상태로 변경되었습니다.`,
+        body: notificationBody,
         entityType: "bug_report",
         entityId: id
       });
@@ -848,6 +857,60 @@ router.put("/bugs/:id/status", verifyAdminToken, async (req: Request, res: Respo
   } catch (e) {
     console.error("Admin update bug status error:", e);
     res.status(500).json({ error: "버그 상태 변경에 실패했습니다." });
+  }
+});
+
+// Reply to bug report (add admin notes)
+router.post("/bugs/:id/reply", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const dbInstance = await db.getDb();
+    if (!dbInstance) return res.status(500).json({ error: "DB 연결 실패" });
+    
+    const id = parseInt(req.params.id);
+    const { message } = req.body;
+    
+    if (!message || message.trim() === "") {
+      return res.status(400).json({ error: "답변 내용을 입력해주세요." });
+    }
+    
+    // Get current report
+    const report = await dbInstance
+      .select({ userId: bugReports.userId, title: bugReports.title, adminNotes: bugReports.adminNotes })
+      .from(bugReports)
+      .where(eq(bugReports.id, id))
+      .limit(1);
+    
+    if (report.length === 0) {
+      return res.status(404).json({ error: "버그 리포트를 찾을 수 없습니다." });
+    }
+    
+    // Append new message to admin notes with timestamp
+    const timestamp = new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+    const newNote = `[${timestamp}] ${message}`;
+    const existingNotes = report[0].adminNotes || "";
+    const updatedNotes = existingNotes ? `${existingNotes}\n\n${newNote}` : newNote;
+    
+    await dbInstance
+      .update(bugReports)
+      .set({ adminNotes: updatedNotes, updatedAt: new Date() })
+      .where(eq(bugReports.id, id));
+    
+    // Send notification to user
+    if (report[0].userId) {
+      await db.createNotification({
+        userId: report[0].userId,
+        type: "bug_report_update",
+        title: "버그 리포트 답변",
+        body: `"${report[0].title}" 버그 리포트에 관리자 답변이 등록되었습니다.\n\n${message}`,
+        entityType: "bug_report",
+        entityId: id
+      });
+    }
+    
+    res.json({ success: true, adminNotes: updatedNotes });
+  } catch (e) {
+    console.error("Admin reply bug report error:", e);
+    res.status(500).json({ error: "답변 등록에 실패했습니다." });
   }
 });
 

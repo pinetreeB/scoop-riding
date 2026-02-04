@@ -1,0 +1,48 @@
+{
+  "query": "SELECT * FROM bugReports ORDER BY createdAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT * FROM bugReports ORDER BY createdAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "30001",
+      "userId": "3571703",
+      "title": "화면꺼징",
+      "description": "화면이 꺼지면 작동이 안되서 실행이안됩니다 이점 보안되면 좋을듯합니다",
+      "stepsToReproduce": "1",
+      "expectedBehavior": "1",
+      "actualBehavior": "1",
+      "screenshotUrls": "NULL",
+      "severity": "high",
+      "status": "in_progress",
+      "appVersion": "0.1.0",
+      "deviceInfo": "samsung / SM-S938N / samsung/pa3qksx/pa3q:16/BP2A.250605.031.A3/S938NKSU5BYI3_OKR5BYI3:user/release-keys / 16",
+      "adminNotes": "NULL",
+      "resolvedBy": "NULL",
+      "resolvedAt": "NULL",
+      "createdAt": "2026-02-04 03:59:55",
+      "updatedAt": "2026-02-04 04:08:50"
+    },
+    {
+      "id": "1",
+      "userId": "120152",
+      "title": "주행을했는데",
+      "description": "주행을 하고나서 주행횟수가 안올라가요.",
+      "stepsToReproduce": "NULL",
+      "expectedBehavior": "NULL",
+      "actualBehavior": "NULL",
+      "screenshotUrls": "[\"https://d2xsxph8kpxj0f.cloudfront.net/108097790/XQsH52MNZAyXrU9qYq4MDw/bug-reports/120152-1770116797801-vdmz5w.jpg\"]",
+      "severity": "medium",
+      "status": "resolved",
+      "appVersion": "0.1.4",
+      "deviceInfo": "samsung / SM-S938N / samsung/pa3qksx/pa3q:16/BP2A.250605.031.A3/S938NKSU5BYI3_OKR5BYI3:user/release-keys / 16",
+      "adminNotes": "NULL",
+      "resolvedBy": "NULL",
+      "resolvedAt": "NULL",
+      "createdAt": "2026-02-03 11:06:39",
+      "updatedAt": "2026-02-03 12:17:18"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\ttitle\tdescription\tstepsToReproduce\texpectedBehavior\tactualBehavior\tscreenshotUrls\tseverity\tstatus\tappVersion\tdeviceInfo\tadminNotes\tresolvedBy\tresolvedAt\tcreatedAt\tupdatedAt\n30001\t3571703\t화면꺼징\t화면이 꺼지면 작동이 안되서 실행이안됩니다 이점 보안되면 좋을듯합니다\t1\t1\t1\tNULL\thigh\tin_progress\t0.1.0\tsamsung / SM-S938N / samsung/pa3qksx/pa3q:16/BP2A.250605.031.A3/S938NKSU5BYI3_OKR5BYI3:user/release-keys / 16\tNULL\tNULL\tNULL\t2026-02-04 03:59:55\t2026-02-04 04:08:50\n1\t120152\t주행을했는데\t주행을 하고나서 주행횟수가 안올라가요.\tNULL\tNULL\tNULL\t[\"https://d2xsxph8kpxj0f.cloudfront.net/108097790/XQsH52MNZAyXrU9qYq4MDw/bug-reports/120152-1770116797801-vdmz5w.jpg\"]\tmedium\tresolved\t0.1.4\tsamsung / SM-S938N / samsung/pa3qksx/pa3q:16/BP2A.250605.031.A3/S938NKSU5BYI3_OKR5BYI3:user/release-keys / 16\tNULL\tNULL\tNULL\t2026-02-03 11:06:39\t2026-02-03 12:17:18\n",
+  "stderr": "",
+  "execution_time_ms": 1536
+}

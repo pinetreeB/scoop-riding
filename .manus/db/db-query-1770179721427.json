@@ -1,0 +1,32 @@
+{
+  "query": "SELECT id, userId, title, description, stepsToReproduce, deviceInfo, status, adminNotes, createdAt FROM bugReports ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, userId, title, description, stepsToReproduce, deviceInfo, status, adminNotes, createdAt FROM bugReports ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "30001",
+      "userId": "3571703",
+      "title": "화면꺼징",
+      "description": "화면이 꺼지면 작동이 안되서 실행이안됩니다 이점 보안되면 좋을듯합니다",
+      "stepsToReproduce": "1",
+      "deviceInfo": "samsung / SM-S938N / samsung/pa3qksx/pa3q:16/BP2A.250605.031.A3/S938NKSU5BYI3_OKR5BYI3:user/release-keys / 16",
+      "status": "in_progress",
+      "adminNotes": "NULL",
+      "createdAt": "2026-02-04 03:59:55"
+    },
+    {
+      "id": "1",
+      "userId": "120152",
+      "title": "주행을했는데",
+      "description": "주행을 하고나서 주행횟수가 안올라가요.",
+      "stepsToReproduce": "NULL",
+      "deviceInfo": "samsung / SM-S938N / samsung/pa3qksx/pa3q:16/BP2A.250605.031.A3/S938NKSU5BYI3_OKR5BYI3:user/release-keys / 16",
+      "status": "resolved",
+      "adminNotes": "NULL",
+      "createdAt": "2026-02-03 11:06:39"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\ttitle\tdescription\tstepsToReproduce\tdeviceInfo\tstatus\tadminNotes\tcreatedAt\n30001\t3571703\t화면꺼징\t화면이 꺼지면 작동이 안되서 실행이안됩니다 이점 보안되면 좋을듯합니다\t1\tsamsung / SM-S938N / samsung/pa3qksx/pa3q:16/BP2A.250605.031.A3/S938NKSU5BYI3_OKR5BYI3:user/release-keys / 16\tin_progress\tNULL\t2026-02-04 03:59:55\n1\t120152\t주행을했는데\t주행을 하고나서 주행횟수가 안올라가요.\tNULL\tsamsung / SM-S938N / samsung/pa3qksx/pa3q:16/BP2A.250605.031.A3/S938NKSU5BYI3_OKR5BYI3:user/release-keys / 16\tresolved\tNULL\t2026-02-03 11:06:39\n",
+  "stderr": "",
+  "execution_time_ms": 1580
+}
