@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Component, ErrorInfo, ReactNode } from "react";
 import {
   View,
   Text,
@@ -23,6 +23,49 @@ import { trpc } from "@/lib/trpc";
 
 type TabType = "survey" | "bugs" | "announcements" | "users" | "posts" | "rides";
 
+// Error Boundary for Admin Dashboard
+class AdminErrorBoundary extends Component<
+  { children: ReactNode; colors: any; onRetry: () => void },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("[AdminDashboard] Error caught:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View className="flex-1 items-center justify-center p-6">
+          <MaterialIcons name="error-outline" size={64} color={this.props.colors.error} />
+          <Text className="text-xl font-bold text-foreground mt-4">오류가 발생했습니다</Text>
+          <Text className="text-muted text-center mt-2">
+            {this.state.error?.message || "알 수 없는 오류"}
+          </Text>
+          <TouchableOpacity
+            className="mt-6 bg-primary px-6 py-3 rounded-xl"
+            onPress={() => {
+              this.setState({ hasError: false, error: null });
+              this.props.onRetry();
+            }}
+          >
+            <Text className="text-white font-semibold">다시 시도</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function AdminDashboardScreen() {
   const router = useRouter();
   const colors = useColors();
@@ -38,6 +81,9 @@ export default function AdminDashboardScreen() {
       ]);
     }
   }, [user]);
+
+  // Global error state
+  const [globalError, setGlobalError] = useState<string | null>(null);
 
   // Survey statistics
   const { data: surveyStats, refetch: refetchSurveyStats, isLoading: loadingSurveyStats, error: surveyStatsError } = 
@@ -67,11 +113,17 @@ export default function AdminDashboardScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([
-      refetchSurveyStats(),
-      refetchSurveyResponses(),
-      refetchBugReports(),
-    ]);
+    setGlobalError(null);
+    try {
+      await Promise.all([
+        refetchSurveyStats(),
+        refetchSurveyResponses(),
+        refetchBugReports(),
+      ]);
+    } catch (error) {
+      console.error("[AdminDashboard] Refresh error:", error);
+      setGlobalError("데이터를 새로고침하는 중 오류가 발생했습니다.");
+    }
     setRefreshing(false);
   };
 
@@ -205,8 +257,12 @@ export default function AdminDashboardScreen() {
     { key: "rides", label: "주행기록", icon: "directions-bike" },
   ];
 
+  // Check for any critical errors
+  const hasCriticalError = surveyStatsError || surveyResponsesError || bugReportsError;
+
   return (
     <ScreenContainer>
+      <AdminErrorBoundary colors={colors} onRetry={handleRefresh}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
         <TouchableOpacity onPress={() => router.back()}>
@@ -286,6 +342,7 @@ export default function AdminDashboardScreen() {
 
         <View className="h-8" />
       </ScrollView>
+      </AdminErrorBoundary>
     </ScreenContainer>
   );
 }
@@ -301,11 +358,11 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
           <View className="flex-row gap-3 mb-4">
             <View className="flex-1 bg-surface rounded-xl p-4 border border-border">
               <Text className="text-muted text-sm">총 응답</Text>
-              <Text className="text-2xl font-bold text-foreground">{surveyStats.totalResponses}</Text>
+              <Text className="text-2xl font-bold text-foreground">{surveyStats.totalResponses ?? 0}</Text>
             </View>
             <View className="flex-1 bg-surface rounded-xl p-4 border border-border">
               <Text className="text-muted text-sm">추천율</Text>
-              <Text className="text-2xl font-bold text-success">{surveyStats.recommendRate.toFixed(0)}%</Text>
+              <Text className="text-2xl font-bold text-success">{(surveyStats.recommendRate ?? 0).toFixed(0)}%</Text>
             </View>
           </View>
 
@@ -315,22 +372,22 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
               <View className="flex-row items-center justify-between">
                 <Text className="text-muted">전반적 만족도</Text>
                 <View className="flex-row items-center">
-                  {renderStars(Math.round(surveyStats.avgOverall))}
-                  <Text className="text-foreground font-semibold ml-2">{surveyStats.avgOverall.toFixed(1)}</Text>
+                  {renderStars(Math.round(surveyStats.avgOverall ?? 0))}
+                  <Text className="text-foreground font-semibold ml-2">{(surveyStats.avgOverall ?? 0).toFixed(1)}</Text>
                 </View>
               </View>
               <View className="flex-row items-center justify-between">
                 <Text className="text-muted">사용 편의성</Text>
                 <View className="flex-row items-center">
-                  {renderStars(Math.round(surveyStats.avgUsability))}
-                  <Text className="text-foreground font-semibold ml-2">{surveyStats.avgUsability.toFixed(1)}</Text>
+                  {renderStars(Math.round(surveyStats.avgUsability ?? 0))}
+                  <Text className="text-foreground font-semibold ml-2">{(surveyStats.avgUsability ?? 0).toFixed(1)}</Text>
                 </View>
               </View>
               <View className="flex-row items-center justify-between">
                 <Text className="text-muted">기능 완성도</Text>
                 <View className="flex-row items-center">
-                  {renderStars(Math.round(surveyStats.avgFeature))}
-                  <Text className="text-foreground font-semibold ml-2">{surveyStats.avgFeature.toFixed(1)}</Text>
+                  {renderStars(Math.round(surveyStats.avgFeature ?? 0))}
+                  <Text className="text-foreground font-semibold ml-2">{(surveyStats.avgFeature ?? 0).toFixed(1)}</Text>
                 </View>
               </View>
             </View>
@@ -338,7 +395,7 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
 
           <View className="bg-surface rounded-xl p-4 border border-border mb-4">
             <Text className="text-base font-semibold text-foreground mb-3">가장 많이 사용한 기능</Text>
-            {surveyStats.featureUsage.map((item: any, index: number) => (
+            {(surveyStats.featureUsage || []).map((item: any, index: number) => (
               <View key={item.feature} className="flex-row items-center justify-between py-2">
                 <View className="flex-row items-center">
                   <Text className="text-muted w-6">{index + 1}.</Text>
@@ -350,7 +407,7 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
           </View>
 
           <Text className="text-base font-semibold text-foreground mb-3">최근 응답</Text>
-          {surveyResponses?.responses.map((response: any) => (
+          {(surveyResponses?.responses || []).map((response: any) => (
             <View key={response.id} className="bg-surface rounded-xl p-4 border border-border mb-3">
               <View className="flex-row items-center justify-between mb-2">
                 <Text className="text-foreground font-medium">{response.userName || "익명"}</Text>
@@ -397,19 +454,19 @@ function BugsTab({ bugReports, loadingBugReports, showStatusOptions, getStatusCo
           <View className="flex-row gap-3 mb-4">
             <View className="flex-1 bg-error/10 rounded-xl p-3 border border-error/30">
               <Text className="text-error text-xs">열림</Text>
-              <Text className="text-xl font-bold text-error">{bugReports.openCount}</Text>
+              <Text className="text-xl font-bold text-error">{bugReports.openCount ?? 0}</Text>
             </View>
             <View className="flex-1 bg-warning/10 rounded-xl p-3 border border-warning/30">
               <Text className="text-warning text-xs">진행 중</Text>
-              <Text className="text-xl font-bold text-warning">{bugReports.inProgressCount}</Text>
+              <Text className="text-xl font-bold text-warning">{bugReports.inProgressCount ?? 0}</Text>
             </View>
             <View className="flex-1 bg-success/10 rounded-xl p-3 border border-success/30">
               <Text className="text-success text-xs">해결됨</Text>
-              <Text className="text-xl font-bold text-success">{bugReports.resolvedCount}</Text>
+              <Text className="text-xl font-bold text-success">{bugReports.resolvedCount ?? 0}</Text>
             </View>
           </View>
 
-          {bugReports.reports.map((bug: any) => (
+          {(bugReports.reports || []).map((bug: any) => (
             <TouchableOpacity
               key={bug.id}
               className="bg-surface rounded-xl p-4 border border-border mb-3"
@@ -460,7 +517,7 @@ function BugsTab({ bugReports, loadingBugReports, showStatusOptions, getStatusCo
             </TouchableOpacity>
           ))}
 
-          {bugReports.reports.length === 0 && (
+          {(bugReports.reports || []).length === 0 && (
             <View className="items-center py-12">
               <Ionicons name="checkmark-circle" size={48} color={colors.success} />
               <Text className="text-muted mt-2">버그 리포트가 없습니다</Text>
