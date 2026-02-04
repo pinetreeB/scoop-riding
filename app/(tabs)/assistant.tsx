@@ -214,7 +214,7 @@ export default function AssistantScreen() {
             marginBottom: 8,
           }}
         >
-          {language === "en" ? "Try asking these" : "이런 것들을 물어보세요"}
+          {t("aiHelper.trySuggestions")}
         </Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {suggestions.map((suggestion, index) => (
@@ -280,10 +280,10 @@ export default function AssistantScreen() {
                 color: colors.foreground,
               }}
             >
-              {language === "en" ? "Scoopy" : "스쿠피"}
+              {t("aiHelper.scoopyName")}
             </Text>
             <Text style={{ fontSize: 13, color: colors.muted }}>
-              {language === "en" ? "SCOOP AI Assistant" : "SCOOP AI 어시스턴트"}
+              {t("aiHelper.scoopyTitle")}
             </Text>
           </View>
         </View>
@@ -364,7 +364,7 @@ export default function AssistantScreen() {
               color: colors.foreground,
               maxHeight: 100,
             }}
-            placeholder={language === "en" ? "Type a message..." : "메시지를 입력하세요..."}
+            placeholder={t("aiHelper.placeholder")}
             placeholderTextColor={colors.muted}
             value={inputText}
             onChangeText={setInputText}

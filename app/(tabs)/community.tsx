@@ -20,30 +20,34 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
+import { useTranslation } from "@/hooks/use-translation";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const POST_TYPE_LABELS: Record<string, { label: string; color: string; icon: string }> = {
-  general: { label: "일반", color: "#6B7280", icon: "chat-bubble-outline" },
-  ride_share: { label: "주행기록", color: "#3B82F6", icon: "route" },
-  question: { label: "질문", color: "#F59E0B", icon: "help-outline" },
-  tip: { label: "팁", color: "#10B981", icon: "lightbulb-outline" },
-};
+const getPostTypeLabels = (t: (key: string) => string): Record<string, { label: string; color: string; icon: string }> => ({
+  general: { label: t("community.categories.general"), color: "#6B7280", icon: "chat-bubble-outline" },
+  ride_share: { label: t("community.categories.rideShare"), color: "#3B82F6", icon: "route" },
+  question: { label: t("community.categories.question"), color: "#F59E0B", icon: "help-outline" },
+  tip: { label: t("community.categories.tip"), color: "#10B981", icon: "lightbulb-outline" },
+});
 
 type PostType = "all" | "general" | "ride_share" | "question" | "tip";
 
-const CATEGORY_TABS: { key: PostType; label: string; icon: string }[] = [
-  { key: "all", label: "전체", icon: "apps" },
-  { key: "general", label: "일반", icon: "chat-bubble-outline" },
-  { key: "ride_share", label: "주행기록", icon: "route" },
-  { key: "question", label: "질문", icon: "help-outline" },
-  { key: "tip", label: "팁", icon: "lightbulb-outline" },
+const getCategoryTabs = (t: (key: string) => string): { key: PostType; label: string; icon: string }[] => [
+  { key: "all", label: t("community.categories.all"), icon: "apps" },
+  { key: "general", label: t("community.categories.general"), icon: "chat-bubble-outline" },
+  { key: "ride_share", label: t("community.categories.rideShare"), icon: "route" },
+  { key: "question", label: t("community.categories.question"), icon: "help-outline" },
+  { key: "tip", label: t("community.categories.tip"), icon: "lightbulb-outline" },
 ];
 
 export default function CommunityScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { t } = useTranslation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const POST_TYPE_LABELS = getPostTypeLabels(t);
+  const CATEGORY_TABS = getCategoryTabs(t);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<PostType>("all");
 
@@ -147,7 +151,7 @@ export default function CommunityScreen() {
   const getAuthorName = (post: any) => {
     if (post.authorName) return post.authorName;
     if (post.authorEmail) return post.authorEmail.split("@")[0];
-    return "익명";
+    return t("community.anonymous");
   };
 
   const getAuthorInitial = (post: any) => {
@@ -243,24 +247,24 @@ export default function CommunityScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }
               Alert.alert(
-                "게시글 옵션",
+                t("community.postOptions"),
                 "",
                 [
                   {
-                    text: "사용자 프로필 보기",
+                    text: t("community.viewProfile"),
                     onPress: () => router.push(`/user-profile?id=${item.userId}&name=${encodeURIComponent(item.authorName || "")}&email=${encodeURIComponent(item.authorEmail || "")}` as any),
                   },
                   item.userId === user?.id ? {
-                    text: "삭제하기",
+                    text: t("community.deletePost"),
                     style: "destructive",
                     onPress: () => {
-                      Alert.alert("삭제 확인", "이 게시글을 삭제하시겠습니까?", [
-                        { text: "취소", style: "cancel" },
-                        { text: "삭제", style: "destructive", onPress: () => {} },
+                      Alert.alert(t("community.confirmDeleteTitle"), t("community.confirmDeleteMessage"), [
+                        { text: t("community.cancel"), style: "cancel" },
+                        { text: t("community.delete"), style: "destructive", onPress: () => {} },
                       ]);
                     },
                   } : null,
-                  { text: "취소", style: "cancel" },
+                  { text: t("community.cancel"), style: "cancel" },
                 ].filter(Boolean) as any
               );
             }}
@@ -358,7 +362,7 @@ export default function CommunityScreen() {
         {item.likeCount > 0 && (
           <View className="px-4 pb-1">
             <Text className="text-foreground font-semibold text-sm">
-              좋아요 {item.likeCount}개
+              {t("community.likesCount", { count: item.likeCount })}
             </Text>
           </View>
         )}
@@ -375,7 +379,7 @@ export default function CommunityScreen() {
             {item.content}
           </Text>
           {item.content.length > 150 && (
-            <Text className="text-muted text-sm mt-1">더 보기</Text>
+            <Text className="text-muted text-sm mt-1">{t("community.seeMore")}</Text>
           )}
         </Pressable>
 
@@ -386,7 +390,7 @@ export default function CommunityScreen() {
             className="px-4 pb-3"
           >
             <Text className="text-muted text-sm">
-              댓글 {item.commentCount}개 모두 보기
+              {t("community.commentsCount", { count: item.commentCount })}
             </Text>
           </Pressable>
         )}
@@ -401,7 +405,7 @@ export default function CommunityScreen() {
     <ScreenContainer>
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 pt-4 pb-3 border-b border-border">
-        <Text className="text-2xl font-bold text-foreground">커뮤니티</Text>
+        <Text className="text-2xl font-bold text-foreground">{t("community.title")}</Text>
         <View className="flex-row items-center">
           <Pressable
             onPress={() => router.push("/friends" as any)}
@@ -418,7 +422,7 @@ export default function CommunityScreen() {
             className="flex-row items-center px-4 py-2 rounded-full"
           >
             <MaterialIcons name="add" size={20} color="#FFFFFF" />
-            <Text className="text-white font-medium ml-1">글쓰기</Text>
+            <Text className="text-white font-medium ml-1">{t("community.writePost")}</Text>
           </Pressable>
         </View>
       </View>
@@ -486,8 +490,8 @@ export default function CommunityScreen() {
             ) : (
               <>
                 <MaterialIcons name="forum" size={48} color={colors.muted} />
-                <Text className="text-muted mt-4">아직 게시글이 없습니다</Text>
-                <Text className="text-muted text-sm mt-1">첫 번째 글을 작성해보세요!</Text>
+                <Text className="text-muted mt-4">{t("community.noPosts")}</Text>
+                <Text className="text-muted text-sm mt-1">{t("community.firstPost")}</Text>
               </>
             )}
           </View>

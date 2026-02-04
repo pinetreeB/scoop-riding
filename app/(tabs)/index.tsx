@@ -36,11 +36,13 @@ import { LEVEL_DEFINITIONS, calculateLevel, getLevelTitle, formatLevelDistance }
 import { AnnouncementPopup } from "@/components/announcement-popup";
 import { AlphaTestBanner } from "@/components/alpha-test-survey";
 import { WeatherWidget } from "@/components/weather-widget";
+import { useTranslation } from "@/hooks/use-translation";
 
 export default function HomeScreen() {
   const router = useRouter();
   const colors = useColors();
   const { user, isAuthenticated } = useAuth();
+  const { t } = useTranslation();
   const [stats, setStats] = useState({
     totalDistance: 0,
     totalDuration: 0,
@@ -403,8 +405,8 @@ export default function HomeScreen() {
         >
           <View className="bg-[#1A1A1A] rounded-2xl p-5 flex-row items-center justify-between">
             <View>
-              <Text className="text-white text-xl font-bold mb-1">라이딩 시작</Text>
-              <Text className="text-gray-400 text-sm">안전하고 재밌는 라이딩되세요.</Text>
+              <Text className="text-white text-xl font-bold mb-1">{t('home.startRiding')}</Text>
+              <Text className="text-gray-400 text-sm">{t('home.startRidingDesc')}</Text>
             </View>
             <View 
               className="w-14 h-14 rounded-full items-center justify-center"
@@ -441,8 +443,8 @@ export default function HomeScreen() {
                   <MaterialIcons name="groups" size={24} color="#6366F1" />
                 </View>
                 <View>
-                  <Text className="text-foreground font-bold">그룹 라이딩</Text>
-                  <Text className="text-muted text-xs">친구들과 함께 실시간 그룹 주행</Text>
+                  <Text className="text-foreground font-bold">{t('home.groupRiding')}</Text>
+                  <Text className="text-muted text-xs">{t('home.groupRidingDesc')}</Text>
                 </View>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
@@ -460,7 +462,7 @@ export default function HomeScreen() {
             >
               <View className="flex-row items-center">
                 <MaterialIcons name="date-range" size={16} color="#FFFFFF" />
-                <Text className="text-white font-semibold ml-1">이번 주</Text>
+                <Text className="text-white font-semibold ml-1">{t('home.stats.thisWeek')}</Text>
               </View>
               <View>
                 <Text className="text-white text-2xl font-bold">
@@ -481,7 +483,7 @@ export default function HomeScreen() {
             >
               <View className="flex-row items-center">
                 <MaterialIcons name="calendar-month" size={16} color={colors.primary} />
-                <Text className="text-foreground font-semibold ml-1">이번 달</Text>
+                <Text className="text-foreground font-semibold ml-1">{t('home.stats.thisMonth')}</Text>
               </View>
               <View>
                 <Text className="text-foreground text-2xl font-bold">
@@ -515,7 +517,7 @@ export default function HomeScreen() {
             >
               <View className="flex-row items-center">
                 <MaterialIcons name="analytics" size={18} color={colors.primary} />
-                <Text className="text-foreground font-semibold ml-2">내 트래킹 보고서</Text>
+                <Text className="text-foreground font-semibold ml-2">{t('home.trackingReport')}</Text>
               </View>
               <View className="flex-row items-end justify-between">
                 <View className="flex-row items-end">
@@ -536,7 +538,7 @@ export default function HomeScreen() {
             >
               <View className="flex-row items-center">
                 <MaterialIcons name="speed" size={18} color={colors.success} />
-                <Text className="text-foreground font-semibold ml-2">전체 통계</Text>
+                <Text className="text-foreground font-semibold ml-2">{t('home.stats.totalStats')}</Text>
               </View>
               <View>
                 <Text className="text-foreground text-lg font-bold">
@@ -564,7 +566,7 @@ export default function HomeScreen() {
                     selectedPeriod === period ? "text-background" : "text-muted"
                   }`}
                 >
-                  {period === "week" ? "주간" : period === "month" ? "월간" : "전체"}
+                  {period === "week" ? t('home.stats.weekly') : period === "month" ? t('home.stats.monthly') : t('home.stats.all')}
                 </Text>
               </Pressable>
             ))}
@@ -578,7 +580,7 @@ export default function HomeScreen() {
             <Text className="text-4xl font-bold text-foreground">
               {displayStats.avgSpeed.toFixed(1)}
             </Text>
-            <Text className="text-muted text-sm">평균속도(km/h)</Text>
+            <Text className="text-muted text-sm">{t('home.avgSpeed')}(km/h)</Text>
           </View>
 
           {/* Time and Distance */}
@@ -587,13 +589,13 @@ export default function HomeScreen() {
               <Text className="text-xl font-bold text-foreground">
                 {formatDuration(displayStats.duration)}
               </Text>
-              <Text className="text-muted text-sm">시간</Text>
+              <Text className="text-muted text-sm">{t('home.time')}</Text>
             </View>
             <View className="flex-1 pl-4">
               <Text className="text-xl font-bold text-foreground">
                 {(displayStats.distance / 1000).toFixed(1)}
               </Text>
-              <Text className="text-muted text-sm">거리(km)</Text>
+              <Text className="text-muted text-sm">{t('home.distance')}(km)</Text>
             </View>
           </View>
 
@@ -640,10 +642,10 @@ export default function HomeScreen() {
             <View className="flex-row justify-between items-center mb-3">
               <View className="flex-row items-center">
                 <MaterialIcons name="emoji-events" size={20} color="#FFD700" />
-                <Text className="text-lg font-bold text-foreground ml-1">주간 랭킹</Text>
+                <Text className="text-lg font-bold text-foreground ml-1">{t('home.weeklyRanking')}</Text>
               </View>
               <Pressable onPress={handleViewRanking}>
-                <Text className="text-primary text-sm">전체보기</Text>
+                <Text className="text-primary text-sm">{t('home.viewAll')}</Text>
               </Pressable>
             </View>
 
@@ -689,14 +691,14 @@ export default function HomeScreen() {
                               className="font-semibold"
                               style={{ color: isCurrentUser ? colors.primary : colors.foreground }}
                             >
-                              {item.name || "익명 라이더"}
+                              {item.name || t('home.anonymousRider')}
                             </Text>
                             {isCurrentUser && (
                               <View
                                 className="ml-2 px-1.5 py-0.5 rounded"
                                 style={{ backgroundColor: colors.primary }}
                               >
-                                <Text className="text-white text-xs font-medium">나</Text>
+                                <Text className="text-white text-xs font-medium">{t('home.me')}</Text>
                               </View>
                             )}
                           </View>
@@ -716,7 +718,7 @@ export default function HomeScreen() {
                 })
               ) : (
                 <View className="py-6 items-center">
-                  <Text className="text-muted text-sm">아직 랭킹 데이터가 없습니다</Text>
+                  <Text className="text-muted text-sm">{t('home.noRankingData')}</Text>
                 </View>
               )}
             </View>
@@ -743,8 +745,8 @@ export default function HomeScreen() {
                       <MaterialIcons name="flag" size={20} color={colors.primary} />
                     </View>
                   </View>
-                  <Text className="text-foreground font-bold">챌린지</Text>
-                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>친구들과{"\n"}경쟁하기</Text>
+                  <Text className="text-foreground font-bold">{t('home.quickActions.challenges')}</Text>
+                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.competeFriends')}</Text>
                 </View>
               </Pressable>
 
@@ -764,8 +766,8 @@ export default function HomeScreen() {
                       <MaterialIcons name="track-changes" size={20} color={colors.success} />
                     </View>
                   </View>
-                  <Text className="text-foreground font-bold">나의 목표</Text>
-                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>주간/월간{"\n"}목표 설정</Text>
+                  <Text className="text-foreground font-bold">{t('home.quickActions.goals')}</Text>
+                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.setGoals')}</Text>
                 </View>
               </Pressable>
 
@@ -785,8 +787,8 @@ export default function HomeScreen() {
                       <MaterialIcons name="military-tech" size={20} color="#F59E0B" />
                     </View>
                   </View>
-                  <Text className="text-foreground font-bold">배지</Text>
-                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>업적{"\n"}확인하기</Text>
+                  <Text className="text-foreground font-bold">{t('home.quickActions.badges')}</Text>
+                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.checkAchievements')}</Text>
                 </View>
               </Pressable>
             </View>
@@ -809,8 +811,8 @@ export default function HomeScreen() {
                       <MaterialIcons name="wb-cloudy" size={20} color="#4A90D9" />
                     </View>
                   </View>
-                  <Text className="text-foreground font-bold">날씨별 통계</Text>
-                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>날씨에 따른{"\n"}주행 분석</Text>
+                  <Text className="text-foreground font-bold">{t('home.quickActions.weatherStats')}</Text>
+                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.weatherAnalysis')}</Text>
                 </View>
               </Pressable>
 
@@ -830,8 +832,8 @@ export default function HomeScreen() {
                       <MaterialIcons name="calendar-today" size={18} color="#22C55E" />
                     </View>
                   </View>
-                  <Text className="text-foreground font-bold">월간 리포트</Text>
-                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>월별 날씨{"\n"}주행 분석</Text>
+                  <Text className="text-foreground font-bold">{t('home.quickActions.monthlyReport')}</Text>
+                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.monthlyWeatherAnalysis')}</Text>
                 </View>
               </Pressable>
 
@@ -851,8 +853,8 @@ export default function HomeScreen() {
                       <MaterialIcons name="eco" size={20} color="#10B981" />
                     </View>
                   </View>
-                  <Text className="text-foreground font-bold">에코 리더보드</Text>
-                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>친환경 주행{"\n"}랭킹</Text>
+                  <Text className="text-foreground font-bold">{t('home.quickActions.ecoLeaderboard')}</Text>
+                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.ecoRanking')}</Text>
                 </View>
               </Pressable>
             </View>
@@ -863,9 +865,9 @@ export default function HomeScreen() {
         {recentRides.length > 0 && (
           <View className="mx-5 mb-4">
             <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-lg font-bold text-foreground">최근 주행</Text>
+              <Text className="text-lg font-bold text-foreground">{t('home.recentRides')}</Text>
               <Pressable onPress={handleViewHistory}>
-                <Text className="text-primary text-sm">전체보기</Text>
+                <Text className="text-primary text-sm">{t('home.viewAll')}</Text>
               </Pressable>
             </View>
 
