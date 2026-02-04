@@ -17,6 +17,7 @@ import Constants from "expo-constants";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import { trpc } from "@/lib/trpc";
 import {
   registerForPushNotificationsAsync,
   cancelAllNotifications,
@@ -58,6 +59,9 @@ export default function NotificationsScreen() {
   const [settings, setSettings] = useState<NotificationSettings>(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
   const [permissionStatus, setPermissionStatus] = useState<string | null>(null);
+  
+  // Register push token mutation
+  const registerPushTokenMutation = trpc.notifications.registerPushToken.useMutation();
 
   const loadSettings = useCallback(async () => {
     try {
@@ -149,6 +153,14 @@ export default function NotificationsScreen() {
         if (status === "granted") {
           const newSettings = { ...settings, enabled: true };
           saveSettings(newSettings);
+          
+          // Save push token to server for remote notifications
+          try {
+            await registerPushTokenMutation.mutateAsync({ token });
+            console.log("[Notifications] Push token saved to server");
+          } catch (e) {
+            console.log("[Notifications] Failed to save push token to server:", e);
+          }
           
           if (Platform.OS !== "web") {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

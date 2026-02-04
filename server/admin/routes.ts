@@ -896,7 +896,7 @@ router.post("/bugs/:id/reply", verifyAdminToken, async (req: Request, res: Respo
       .set({ adminNotes: updatedNotes, updatedAt: new Date() })
       .where(eq(bugReports.id, id));
     
-    // Send notification to user
+    // Send notification to user (in-app)
     if (report[0].userId) {
       await db.createNotification({
         userId: report[0].userId,
@@ -906,6 +906,14 @@ router.post("/bugs/:id/reply", verifyAdminToken, async (req: Request, res: Respo
         entityType: "bug_report",
         entityId: id
       });
+      
+      // Send push notification
+      await db.sendPushNotification(
+        report[0].userId,
+        "버그 리포트 답변 📩",
+        `"${report[0].title}" 버그 리포트에 관리자 답변이 등록되었습니다.`,
+        { type: "bug_report_reply", bugReportId: id }
+      );
     }
     
     res.json({ success: true, adminNotes: updatedNotes });

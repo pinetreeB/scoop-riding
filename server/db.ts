@@ -5337,3 +5337,117 @@ export async function getUserEcoRank(
   const userEntry = leaderboard.find(entry => entry.userId === userId);
   return userEntry || null;
 }
+
+
+// ==================== Push Notification Functions ====================
+
+/**
+ * Save user's Expo Push Token
+ */
+export async function saveExpoPushToken(userId: number, token: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.update(users)
+      .set({ expoPushToken: token })
+      .where(eq(users.id, userId));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to save push token:", error);
+    return false;
+  }
+}
+
+/**
+ * Get user's Expo Push Token
+ */
+export async function getUserPushToken(userId: number): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db
+      .select({ expoPushToken: users.expoPushToken })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    return result[0]?.expoPushToken || null;
+  } catch (error) {
+    console.error("[Database] Failed to get push token:", error);
+    return null;
+  }
+}
+
+/**
+ * Send push notification to a user via Expo Push API
+ */
+export async function sendPushNotification(
+  userId: number,
+  title: string,
+  body: string,
+  data?: Record<string, unknown>
+): Promise<boolean> {
+  const token = await getUserPushToken(userId);
+  if (!token) {
+    console.log(`[Push] No push token for user ${userId}`);
+    return false;
+  }
+
+  try {
+    const message = {
+      to: token,
+      sound: "default",
+      title,
+      body,
+      data: data || {},
+    };
+
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Accept-encoding": "gzip, deflate",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(message),
+    });
+
+    const result = await response.json();
+    
+    if (result.data?.status === "ok") {
+      console.log(`[Push] Notification sent to user ${userId}`);
+      return true;
+    } else {
+      console.error(`[Push] Failed to send notification:`, result);
+      return false;
+    }
+  } catch (error) {
+    console.error("[Push] Error sending notification:", error);
+    return false;
+  }
+}
+
+/**
+ * Send push notification to multiple users
+ */
+export async function sendPushNotificationToUsers(
+  userIds: number[],
+  title: string,
+  body: string,
+  data?: Record<string, unknown>
+): Promise<{ success: number; failed: number }> {
+  let success = 0;
+  let failed = 0;
+
+  for (const userId of userIds) {
+    const sent = await sendPushNotification(userId, title, body, data);
+    if (sent) {
+      success++;
+    } else {
+      failed++;
+    }
+  }
+
+  return { success, failed };
+}

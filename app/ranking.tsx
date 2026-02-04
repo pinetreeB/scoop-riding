@@ -33,12 +33,12 @@ export default function RankingScreen() {
   const [period, setPeriod] = useState<RankingPeriod>("weekly");
 
   const weeklyQuery = trpc.ranking.getWeekly.useQuery(
-    { limit: 50 },
+    { limit: 30 },
     { enabled: isAuthenticated && period === "weekly" }
   );
 
   const monthlyQuery = trpc.ranking.getMonthly.useQuery(
-    { limit: 50 },
+    { limit: 30 },
     { enabled: isAuthenticated && period === "monthly" }
   );
 

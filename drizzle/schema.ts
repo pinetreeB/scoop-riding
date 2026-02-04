@@ -34,6 +34,8 @@ export const users = mysqlTable("users", {
   profileImageUrl: varchar("profileImageUrl", { length: 500 }),
   /** Profile color for avatar background */
   profileColor: varchar("profileColor", { length: 20 }),
+  /** Expo Push Token for push notifications */
+  expoPushToken: varchar("expoPushToken", { length: 200 }),
 });
 
 export type User = typeof users.$inferSelect;

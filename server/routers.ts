@@ -1173,6 +1173,14 @@ export const appRouter = router({
     unreadCount: protectedProcedure.query(async ({ ctx }) => {
       return db.getUnreadNotificationCount(ctx.user.id);
     }),
+
+    // Register push token
+    registerPushToken: protectedProcedure
+      .input(z.object({ token: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await db.saveExpoPushToken(ctx.user.id, input.token);
+        return { success };
+      }),
   }),
 
   // Challenges
