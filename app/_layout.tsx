@@ -35,6 +35,7 @@ import { AlphaTestSurvey, incrementAppUsageCount } from "@/components/alpha-test
 import { BadgeEarnedPopup } from "@/components/badge-earned-popup";
 import { AppLoading } from "@/components/app-loading";
 import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -135,6 +136,7 @@ function RootLayoutContent() {
         <Stack.Screen name="create-challenge" options={{ presentation: "modal" }} />
         <Stack.Screen name="admin" options={{ presentation: "card" }} />
         <Stack.Screen name="bug-report" options={{ presentation: "modal" }} />
+        <Stack.Screen name="eco-leaderboard" options={{ presentation: "card" }} />
       </Stack>
       <StatusBar style="auto" />
     </>
@@ -197,23 +199,30 @@ export default function RootLayout() {
 
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <NotificationProvider>
-              <AuthGuard>
-                <PermissionRequest />
-                <BatteryOptimizationGuideWrapper />
-                <AlphaTestSurvey />
-                <BadgeEarnedPopup />
-                <NetworkSyncManager />
-                <UpdateBanner />
-                <RootLayoutContent />
-              </AuthGuard>
-            </NotificationProvider>
-          </AuthProvider>
-        </QueryClientProvider>
-      </trpc.Provider>
+      <ErrorBoundary
+        onError={(error, errorInfo) => {
+          console.error("[RootLayout] Global error caught:", error.message);
+          // TODO: Sentry 연동 시 여기에 보고 로직 추가
+        }}
+      >
+        <trpc.Provider client={trpcClient} queryClient={queryClient}>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <NotificationProvider>
+                <AuthGuard>
+                  <PermissionRequest />
+                  <BatteryOptimizationGuideWrapper />
+                  <AlphaTestSurvey />
+                  <BadgeEarnedPopup />
+                  <NetworkSyncManager />
+                  <UpdateBanner />
+                  <RootLayoutContent />
+                </AuthGuard>
+              </NotificationProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </trpc.Provider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 

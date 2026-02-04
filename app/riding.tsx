@@ -75,6 +75,11 @@ import {
   startBackupInterval,
   stopBackupInterval,
 } from "@/lib/ride-session-recovery";
+import {
+  checkAnalysisEligibility,
+  generateDefaultAnalysis,
+  recordAnalysisRequest,
+} from "@/lib/ai-optimization";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -1555,6 +1560,35 @@ export default function RidingScreen() {
         });
         setShowAnalysisModal(true);
         setIsAnalyzing(true);
+        
+        // AI 분석 적합성 체크 (비용 절감)
+        const eligibility = checkAnalysisEligibility({
+          distance: rideData.distance,
+          duration: rideData.duration,
+          avgSpeed: rideData.avgSpeed,
+          maxSpeed: rideData.maxSpeed,
+          gpsPointsCount: rideData.gpsPoints?.length || 0,
+        });
+        
+        if (!eligibility.eligible) {
+          // 짧은 주행 등은 AI 호출 건너뛰기 (비용 절감)
+          console.log(`[Riding] AI analysis skipped: ${eligibility.reason}`);
+          recordAnalysisRequest(true);
+          const defaultAnalysis = generateDefaultAnalysis(
+            {
+              distance: rideData.distance,
+              duration: rideData.duration,
+              avgSpeed: rideData.avgSpeed,
+              maxSpeed: rideData.maxSpeed,
+            },
+            eligibility.skipReason || 'too_short'
+          );
+          setRideAnalysis(defaultAnalysis);
+          setIsAnalyzing(false);
+          return;
+        }
+        
+        recordAnalysisRequest(false);
         
         // Analyze GPS data for advanced metrics
         const rideAnalysis = analyzeRideData(rideData.gpsPoints || []);

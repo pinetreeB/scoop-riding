@@ -9,6 +9,7 @@ import { createContext } from "./context";
 import adminRoutes from "../admin/routes";
 import { setupWebSocket } from "../websocket";
 import aiRoutes from "../ai/routes";
+import { defaultRateLimiter, aiRateLimiter, authRateLimiter } from "../middleware/rate-limiter";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -57,6 +58,17 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+  // Rate Limiting 미들웨어 적용
+  // 인증 API: 분당 10회 제한 (브루트포스 방지)
+  app.use("/api/auth/login", authRateLimiter);
+  app.use("/api/auth/register", authRateLimiter);
+  
+  // AI API: 분당 20회 제한 (비용 절감)
+  app.use("/api/ai", aiRateLimiter);
+  
+  // 일반 API: 분당 100회 제한
+  app.use("/api/trpc", defaultRateLimiter);
+
   registerOAuthRoutes(app);
 
   app.get("/api/health", (_req, res) => {
@@ -91,6 +103,7 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`[api] server listening on port ${port}`);
     console.log(`[ws] WebSocket server available at ws://localhost:${port}/ws/group-riding`);
+    console.log(`[rate-limit] Rate limiting enabled for API endpoints`);
   });
 }
 
