@@ -1091,3 +1091,6 @@
 - [x] 배터리 최적화 가이드에 LG, 샤오미 등 다른 제조사 설정 안내 추가 - Samsung, LG, Xiaomi/Redmi/POCO, OnePlus/OPPO/Realme, Huawei/Honor 기기별 설정 방법 안내
 - [x] 설정 화면에서 배터리 최적화 가이드 다시 보기 옵션 추가 - 설정 > 백그라운드 설정 가이드 메뉴 추가
 - [ ] 주행 화면에 배터리 최적화 설정 바로가기 버튼 추가
+
+## 기능 수정 (2026-02-04)
+- [x] 배터리 최적화 가이드에서 중국산 제조사(Xiaomi, OnePlus, OPPO, Realme, Huawei, Honor) 설정 안내 제거 - Samsung, LG만 유지

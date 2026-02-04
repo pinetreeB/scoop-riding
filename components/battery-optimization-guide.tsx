@@ -202,37 +202,6 @@ export function BatteryOptimizationGuide({
               colors={colors}
             />
 
-            {/* Xiaomi / Redmi / POCO */}
-            <DeviceTipCard
-              brand="Xiaomi / Redmi / POCO"
-              steps={[
-                "설정 → 앱 → 앱 관리 → SCOOP → 자동 시작 허용",
-                "설정 → 앱 → 앱 관리 → SCOOP → 배터리 절약 → 제한 없음",
-                "보안 앱 → 배터리 → 앱 배터리 절약 → SCOOP → 제한 없음",
-              ]}
-              colors={colors}
-            />
-
-            {/* OnePlus / OPPO / Realme */}
-            <DeviceTipCard
-              brand="OnePlus / OPPO / Realme"
-              steps={[
-                "설정 → 배터리 → 배터리 최적화 → SCOOP → 최적화 안 함",
-                "설정 → 앱 → SCOOP → 배터리 사용 → 백그라운드 활동 허용",
-              ]}
-              colors={colors}
-            />
-
-            {/* Huawei / Honor */}
-            <DeviceTipCard
-              brand="Huawei / Honor"
-              steps={[
-                "설정 → 앱 → 앱 실행 → SCOOP → 수동 관리 → 모두 켜기",
-                "설정 → 배터리 → 앱 실행 → SCOOP → 자동 관리 해제",
-              ]}
-              colors={colors}
-            />
-
             {/* Buttons */}
             <View style={{ gap: 12, marginTop: 8 }}>
               <Pressable
