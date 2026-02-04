@@ -835,8 +835,26 @@ export default function HomeScreen() {
                 </View>
               </Pressable>
 
-              {/* Placeholder for future feature */}
-              <View style={{ flex: 1 }} />
+              {/* Eco Leaderboard */}
+              <Pressable
+                onPress={() => {
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  router.push("/eco-leaderboard" as any);
+                }}
+                style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
+              >
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
+                  <View className="flex-row items-center mb-2">
+                    <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#10B981' + '20' }}>
+                      <MaterialIcons name="eco" size={20} color="#10B981" />
+                    </View>
+                  </View>
+                  <Text className="text-foreground font-bold">에코 리더보드</Text>
+                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>친환경 주행{"\n"}랭킹</Text>
+                </View>
+              </Pressable>
             </View>
           </View>
         )}

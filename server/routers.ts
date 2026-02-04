@@ -7,6 +7,7 @@ import * as db from "./db";
 import * as jose from "jose";
 import { ENV } from "./_core/env";
 import { getWeatherInfo, type WeatherInfo } from "./weather";
+import { aiUsageRouter } from "./ai-usage-router";
 
 // JWT secret for session tokens - MUST match sdk.ts getSessionSecret()
 // Uses ENV.cookieSecret which comes from JWT_SECRET environment variable
@@ -445,6 +446,19 @@ export const appRouter = router({
       )
       .mutation(async ({ ctx, input }) => {
         try {
+          // Check monthly AI usage limit (30 calls/month for all AI features)
+          const { canUseAi, incrementAiUsage } = await import("./ai-usage");
+          const canUse = await canUseAi(ctx.user.id);
+          
+          if (!canUse.allowed) {
+            return {
+              success: false,
+              error: canUse.message || "이번 달 AI 사용 횟수를 모두 사용했습니다.",
+              monthlyRemaining: 0,
+              monthlyLimit: canUse.monthlyLimit,
+            };
+          }
+
           // Get scooter info if available
           let scooterInfo = "";
           let batteryAnalysis = null;
@@ -571,6 +585,10 @@ export const appRouter = router({
             }
             
             const analysis = JSON.parse(jsonStr);
+            
+            // Increment monthly AI usage on success
+            const monthlyResult = await incrementAiUsage(ctx.user.id, "ridingAnalysis");
+            
             return {
               success: true,
               analysis: {
@@ -581,6 +599,7 @@ export const appRouter = router({
                 tips: analysis.tips || [],
                 highlights: analysis.highlights || [],
               },
+              monthlyRemaining: monthlyResult.remaining,
             };
           } catch (parseError) {
             console.error("[rides.analyzeRide] JSON parse error:", parseError);
@@ -1964,7 +1983,20 @@ export const appRouter = router({
         temperature: z.number().optional(), // Current temperature in Celsius
       }))
       .mutation(async ({ ctx, input }) => {
-        // Check daily limit
+        // Check monthly AI usage limit (30 calls/month for all AI features)
+        const { canUseAi, incrementAiUsage } = await import("./ai-usage");
+        const canUse = await canUseAi(ctx.user.id);
+        
+        if (!canUse.allowed) {
+          return {
+            success: false,
+            error: canUse.message || "이번 달 AI 사용 횟수를 모두 사용했습니다.",
+            remaining: 0,
+            monthlyLimit: canUse.monthlyLimit,
+          };
+        }
+        
+        // Also check daily limit for backward compatibility
         const today = new Date().toISOString().split("T")[0];
         const usage = await db.getAiChatUsage(ctx.user.id, today);
         const DAILY_LIMIT = 10;
@@ -2067,13 +2099,15 @@ ${recentRides.map((r, i) => `${i + 1}. ${r.date}: ${(r.distance / 1000).toFixed(
           await db.saveAiChatMessage(ctx.user.id, "user", input.question, input.scooterId);
           await db.saveAiChatMessage(ctx.user.id, "assistant", aiResponse, input.scooterId);
 
-          // Update usage count
+          // Update usage count (daily + monthly)
           await db.incrementAiChatUsage(ctx.user.id, today);
+          const monthlyResult = await incrementAiUsage(ctx.user.id, "chatbot");
 
           return {
             success: true,
             response: aiResponse,
             remaining: DAILY_LIMIT - (usage?.messageCount || 0) - 1,
+            monthlyRemaining: monthlyResult.remaining,
           };
         } catch (error: any) {
           console.error("[batteryAi.analyze] LLM error:", error);
@@ -2284,6 +2318,9 @@ ${recentRides.map((r, i) => `${i + 1}. ${r.date}: ${(r.distance / 1000).toFixed(
         return db.getBatteryHealthHistory(ctx.user.id, input.scooterId, input.limit);
       }),
   }),
+
+  // AI Usage management router
+  aiUsage: aiUsageRouter,
 
   // Weather API router
   weather: router({

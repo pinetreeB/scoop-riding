@@ -1045,3 +1045,31 @@ export const batteryHealthReports = mysqlTable("batteryHealthReports", {
 
 export type BatteryHealthReport = typeof batteryHealthReports.$inferSelect;
 export type InsertBatteryHealthReport = typeof batteryHealthReports.$inferInsert;
+
+
+/**
+ * AI Usage tracking table - 사용자별 AI 기능 사용량 추적
+ * 월별로 모든 AI 기능(챗봇, 주행분석 등) 사용 횟수를 통합 관리
+ */
+export const aiUsage = mysqlTable("aiUsage", {
+  id: int("id").autoincrement().primaryKey(),
+  /** User ID */
+  userId: int("userId").notNull(),
+  /** Year-Month for tracking (e.g., "2026-02") */
+  yearMonth: varchar("yearMonth", { length: 7 }).notNull(),
+  /** Total AI calls this month */
+  totalCalls: int("totalCalls").default(0).notNull(),
+  /** Chatbot calls */
+  chatbotCalls: int("chatbotCalls").default(0).notNull(),
+  /** Riding analysis calls */
+  ridingAnalysisCalls: int("ridingAnalysisCalls").default(0).notNull(),
+  /** Other AI feature calls */
+  otherCalls: int("otherCalls").default(0).notNull(),
+  /** Monthly limit (default 30, can be increased for premium users) */
+  monthlyLimit: int("monthlyLimit").default(30).notNull(),
+  /** Last updated timestamp */
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type AiUsage = typeof aiUsage.$inferSelect;
+export type InsertAiUsage = typeof aiUsage.$inferInsert;
