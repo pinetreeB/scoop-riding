@@ -13,6 +13,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
+import { useTranslation } from "@/hooks/use-translation";
 
 type RankingPeriod = "weekly" | "monthly";
 
@@ -28,6 +29,7 @@ interface RankingItem {
 export default function RankingScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
 
   const [period, setPeriod] = useState<RankingPeriod>("weekly");
@@ -89,19 +91,19 @@ export default function RankingScreen() {
               className="text-base font-semibold"
               style={{ color: isCurrentUser ? colors.primary : colors.foreground }}
             >
-              {item.name || "익명 라이더"}
+              {item.name || t("ranking.anonymousRider")}
             </Text>
             {isCurrentUser && (
               <View
                 className="ml-2 px-2 py-0.5 rounded-full"
                 style={{ backgroundColor: colors.primary }}
               >
-                <Text className="text-xs text-white font-medium">나</Text>
+                <Text className="text-xs text-white font-medium">{t("ranking.me")}</Text>
               </View>
             )}
           </View>
           <Text className="text-sm text-muted mt-0.5">
-            {item.totalRides}회 주행
+            {t("ranking.ridesCount", { count: item.totalRides })}
           </Text>
         </View>
 
@@ -110,7 +112,7 @@ export default function RankingScreen() {
           <Text className="text-lg font-bold text-foreground">
             {(item.totalDistance / 1000).toFixed(1)}
           </Text>
-          <Text className="text-xs text-muted">km</Text>
+          <Text className="text-xs text-muted">{t("units.km")}</Text>
         </View>
       </Pressable>
     );
@@ -134,7 +136,7 @@ export default function RankingScreen() {
             className="font-semibold"
             style={{ color: period === "weekly" ? "#FFFFFF" : colors.muted }}
           >
-            주간 랭킹
+            {t("ranking.weekly")}
           </Text>
         </Pressable>
         <Pressable
@@ -151,7 +153,7 @@ export default function RankingScreen() {
             className="font-semibold"
             style={{ color: period === "monthly" ? "#FFFFFF" : colors.muted }}
           >
-            월간 랭킹
+            {t("ranking.monthly")}
           </Text>
         </Pressable>
       </View>
@@ -162,8 +164,8 @@ export default function RankingScreen() {
           <MaterialIcons name="info-outline" size={20} color={colors.muted} />
           <Text className="text-muted text-sm ml-2 flex-1">
             {period === "weekly"
-              ? "이번 주 총 주행거리 기준 랭킹입니다."
-              : "이번 달 총 주행거리 기준 랭킹입니다."}
+              ? t("ranking.weeklyInfo")
+              : t("ranking.monthlyInfo")}
           </Text>
         </View>
       </View>
@@ -175,9 +177,9 @@ export default function RankingScreen() {
       <ScreenContainer>
         <View className="flex-1 items-center justify-center p-6">
           <MaterialIcons name="leaderboard" size={64} color={colors.muted} />
-          <Text className="text-foreground text-lg font-semibold mt-4">로그인이 필요합니다</Text>
+          <Text className="text-foreground text-lg font-semibold mt-4">{t("ranking.loginRequired")}</Text>
           <Text className="text-muted text-center mt-2">
-            랭킹을 확인하려면 로그인해주세요.
+            {t("ranking.loginRequiredDesc")}
           </Text>
         </View>
       </ScreenContainer>
@@ -195,7 +197,7 @@ export default function RankingScreen() {
         >
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
-        <Text className="text-lg font-bold text-foreground">주행 랭킹</Text>
+        <Text className="text-lg font-bold text-foreground">{t("ranking.title")}</Text>
         <View className="w-8" />
       </View>
 
@@ -214,8 +216,8 @@ export default function RankingScreen() {
             <View className="items-center py-10">
               <MaterialIcons name="leaderboard" size={64} color={colors.muted} />
               <Text className="text-muted mt-4 text-center">
-                아직 랭킹 데이터가 없습니다.{"\n"}
-                주행을 시작해보세요!
+                {t("ranking.noData")}{"\n"}
+                {t("ranking.noDataDesc")}
               </Text>
             </View>
           }

@@ -20,6 +20,7 @@ import { useColors } from "@/hooks/use-colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
+import { useTranslation } from "@/hooks/use-translation";
 
 // Predefined colors for scooter
 const SCOOTER_COLORS = [
@@ -31,13 +32,6 @@ const SCOOTER_COLORS = [
   "#00BCD4", // Cyan
   "#FF9800", // Amber
   "#607D8B", // Blue Grey
-];
-
-// Battery type options
-const BATTERY_TYPES = [
-  { value: "lithium_ion", label: "리튬이온 (Li-ion)", cellVoltage: { full: 4.2, empty: 3.0 } },
-  { value: "lifepo4", label: "리튬인산철 (LiFePO4)", cellVoltage: { full: 3.65, empty: 2.5 } },
-  { value: "lipo", label: "리튬폴리머 (Li-Po)", cellVoltage: { full: 4.2, empty: 3.0 } },
 ];
 
 // Common voltage presets
@@ -83,26 +77,41 @@ const initialFormData: ScooterFormData = {
   batteryEmptyVoltage: "",
 };
 
+// Battery type cell voltages
+const BATTERY_TYPE_VOLTAGES: Record<string, { full: number; empty: number }> = {
+  lithium_ion: { full: 4.2, empty: 3.0 },
+  lifepo4: { full: 3.65, empty: 2.5 },
+  lipo: { full: 4.2, empty: 3.0 },
+};
+
 // Calculate full/empty voltage based on battery type and cell count
 function calculateVoltages(batteryType: string, cellCount: number) {
-  const type = BATTERY_TYPES.find(t => t.value === batteryType);
+  const type = BATTERY_TYPE_VOLTAGES[batteryType];
   if (!type || cellCount <= 0) return { full: "", empty: "" };
   
   return {
-    full: (type.cellVoltage.full * cellCount).toFixed(1),
-    empty: (type.cellVoltage.empty * cellCount).toFixed(1),
+    full: (type.full * cellCount).toFixed(1),
+    empty: (type.empty * cellCount).toFixed(1),
   };
 }
 
 export default function ScootersScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { t } = useTranslation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<ScooterFormData>(initialFormData);
   const [isSaving, setIsSaving] = useState(false);
   const [showBatterySection, setShowBatterySection] = useState(false);
+
+  // Battery type options with translations
+  const BATTERY_TYPES = [
+    { value: "lithium_ion", label: t("settings.scooters.batteryTypes.lithiumIon") },
+    { value: "lifepo4", label: t("settings.scooters.batteryTypes.lifepo4") },
+    { value: "lipo", label: t("settings.scooters.batteryTypes.lipo") },
+  ];
 
   const trpcUtils = trpc.useUtils();
   const scootersQuery = trpc.scooters.list.useQuery(undefined, {
@@ -192,7 +201,7 @@ export default function ScootersScreen() {
 
   const handleSaveScooter = async () => {
     if (!formData.name.trim()) {
-      Alert.alert("오류", "기체 이름을 입력해주세요.");
+      Alert.alert(t("common.error"), t("settings.scooters.nameRequired"));
       return;
     }
 
@@ -244,7 +253,7 @@ export default function ScootersScreen() {
       }
     } catch (error) {
       console.error("Save scooter error:", error);
-      Alert.alert("오류", "기체 저장 중 오류가 발생했습니다.");
+      Alert.alert(t("common.error"), t("settings.scooters.saveError"));
     } finally {
       setIsSaving(false);
     }
@@ -256,12 +265,12 @@ export default function ScootersScreen() {
     }
 
     Alert.alert(
-      "기체 삭제",
-      `"${scooter.name}"을(를) 삭제하시겠습니까?`,
+      t("settings.scooters.deleteTitle"),
+      t("settings.scooters.deleteConfirm", { name: scooter.name }),
       [
-        { text: "취소", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "삭제",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -272,7 +281,7 @@ export default function ScootersScreen() {
               }
             } catch (error) {
               console.error("Delete scooter error:", error);
-              Alert.alert("오류", "기체 삭제 중 오류가 발생했습니다.");
+              Alert.alert(t("common.error"), t("settings.scooters.deleteError"));
             }
           },
         },
@@ -295,7 +304,7 @@ export default function ScootersScreen() {
       }
     } catch (error) {
       console.error("Set default error:", error);
-      Alert.alert("오류", "기본 기체 설정 중 오류가 발생했습니다.");
+      Alert.alert(t("common.error"), t("settings.scooters.setDefaultError"));
     }
   };
 
@@ -307,7 +316,6 @@ export default function ScootersScreen() {
   };
 
   const formatBatteryInfo = (scooter: any) => {
-    if (!scooter.batteryVoltage && !scooter.batteryCapacity) return null;
     const parts = [];
     if (scooter.batteryVoltage) parts.push(`${scooter.batteryVoltage}V`);
     if (scooter.batteryCapacity) parts.push(`${scooter.batteryCapacity}Ah`);
@@ -329,9 +337,9 @@ export default function ScootersScreen() {
       <ScreenContainer>
         <View className="flex-1 items-center justify-center p-6">
           <MaterialIcons name="lock" size={64} color={colors.muted} />
-          <Text className="text-xl font-bold text-foreground mt-4">로그인이 필요합니다</Text>
+          <Text className="text-xl font-bold text-foreground mt-4">{t("settings.scooters.loginRequired")}</Text>
           <Text className="text-muted text-center mt-2">
-            기체 관리 기능을 사용하려면 로그인해주세요.
+            {t("settings.scooters.loginRequiredDesc")}
           </Text>
           <Pressable
             onPress={() => router.push("/login")}
@@ -340,7 +348,7 @@ export default function ScootersScreen() {
             ]}
             className="mt-6 px-8 py-3 rounded-xl"
           >
-            <Text className="text-white font-bold">로그인</Text>
+            <Text className="text-white font-bold">{t("settings.scooters.login")}</Text>
           </Pressable>
         </View>
       </ScreenContainer>
@@ -366,7 +374,7 @@ export default function ScootersScreen() {
             >
               <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
             </Pressable>
-            <Text className="text-2xl font-bold text-foreground">내 기체</Text>
+            <Text className="text-2xl font-bold text-foreground">{t("settings.scooters.title")}</Text>
           </View>
           <Pressable
             onPress={handleAddScooter}
@@ -376,7 +384,7 @@ export default function ScootersScreen() {
             className="flex-row items-center px-4 py-2 rounded-xl"
           >
             <MaterialIcons name="add" size={20} color="#FFFFFF" />
-            <Text className="text-white font-bold ml-1">추가</Text>
+            <Text className="text-white font-bold ml-1">{t("settings.scooters.add")}</Text>
           </Pressable>
         </View>
 
@@ -388,9 +396,9 @@ export default function ScootersScreen() {
         ) : scooters.length === 0 ? (
           <View className="items-center py-12 px-6">
             <MaterialIcons name="electric-scooter" size={80} color={colors.muted} />
-            <Text className="text-xl font-bold text-foreground mt-4">등록된 기체가 없습니다</Text>
+            <Text className="text-xl font-bold text-foreground mt-4">{t("settings.scooters.noScootersTitle")}</Text>
             <Text className="text-muted text-center mt-2">
-              전동킥보드를 등록하고 주행 기록을 관리해보세요.
+              {t("settings.scooters.noScootersDesc")}
             </Text>
           </View>
         ) : (
@@ -421,7 +429,7 @@ export default function ScootersScreen() {
                           className="ml-2 px-2 py-0.5 rounded-full"
                           style={{ backgroundColor: colors.primary }}
                         >
-                          <Text className="text-white text-xs font-bold">기본</Text>
+                          <Text className="text-white text-xs font-bold">{t("settings.scooters.default")}</Text>
                         </View>
                       )}
                     </View>
@@ -439,7 +447,7 @@ export default function ScootersScreen() {
                       </View>
                       <View className="flex-row items-center mr-4">
                         <MaterialIcons name="electric-scooter" size={14} color={colors.muted} />
-                        <Text className="text-muted text-xs ml-1">{scooter.totalRides || 0}회</Text>
+                        <Text className="text-muted text-xs ml-1">{scooter.totalRides || 0}{t("settings.scooters.rides")}</Text>
                       </View>
                       {formatBatteryInfo(scooter) && (
                         <View className="flex-row items-center">
@@ -490,7 +498,7 @@ export default function ScootersScreen() {
             ))}
 
             <Text className="text-muted text-xs text-center mt-2 mb-4">
-              탭하여 통계 보기 • 길게 눌러서 수정
+              {t("settings.scooters.tapToViewStats")}
             </Text>
           </View>
         )}
@@ -514,10 +522,10 @@ export default function ScootersScreen() {
               onPress={() => setIsModalVisible(false)}
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
             >
-              <Text style={{ color: colors.primary }} className="text-base">취소</Text>
+              <Text style={{ color: colors.primary }} className="text-base">{t("common.cancel")}</Text>
             </Pressable>
             <Text className="text-lg font-bold text-foreground">
-              {editingId ? "기체 수정" : "기체 추가"}
+              {editingId ? t("settings.scooters.editScooter") : t("settings.scooters.addScooter")}
             </Text>
             <Pressable
               onPress={handleSaveScooter}
@@ -527,7 +535,7 @@ export default function ScootersScreen() {
               {isSaving ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <Text style={{ color: colors.primary }} className="text-base font-bold">저장</Text>
+                <Text style={{ color: colors.primary }} className="text-base font-bold">{t("common.save")}</Text>
               )}
             </Pressable>
           </View>
@@ -535,11 +543,11 @@ export default function ScootersScreen() {
           <ScrollView className="flex-1 px-5 py-4">
             {/* Name */}
             <View className="mb-4">
-              <Text className="text-sm font-medium text-foreground mb-2">기체 이름 *</Text>
+              <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.name")}</Text>
               <TextInput
                 value={formData.name}
                 onChangeText={(text) => setFormData({ ...formData, name: text })}
-                placeholder="예: 내 킥보드"
+                placeholder={t("settings.scooters.form.namePlaceholder")}
                 placeholderTextColor={colors.muted}
                 className="bg-surface border border-border rounded-xl px-4 py-3 text-foreground"
                 style={{ fontSize: 16 }}
@@ -548,11 +556,11 @@ export default function ScootersScreen() {
 
             {/* Brand */}
             <View className="mb-4">
-              <Text className="text-sm font-medium text-foreground mb-2">제조사</Text>
+              <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.brand")}</Text>
               <TextInput
                 value={formData.brand}
                 onChangeText={(text) => setFormData({ ...formData, brand: text })}
-                placeholder="예: Segway, Xiaomi, Ninebot"
+                placeholder={t("settings.scooters.form.brandPlaceholder")}
                 placeholderTextColor={colors.muted}
                 className="bg-surface border border-border rounded-xl px-4 py-3 text-foreground"
                 style={{ fontSize: 16 }}
@@ -561,11 +569,11 @@ export default function ScootersScreen() {
 
             {/* Model */}
             <View className="mb-4">
-              <Text className="text-sm font-medium text-foreground mb-2">모델명</Text>
+              <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.model")}</Text>
               <TextInput
                 value={formData.model}
                 onChangeText={(text) => setFormData({ ...formData, model: text })}
-                placeholder="예: Ninebot Max G30"
+                placeholder={t("settings.scooters.form.modelPlaceholder")}
                 placeholderTextColor={colors.muted}
                 className="bg-surface border border-border rounded-xl px-4 py-3 text-foreground"
                 style={{ fontSize: 16 }}
@@ -574,11 +582,11 @@ export default function ScootersScreen() {
 
             {/* Serial Number */}
             <View className="mb-4">
-              <Text className="text-sm font-medium text-foreground mb-2">시리얼 번호</Text>
+              <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.serialNumber")}</Text>
               <TextInput
                 value={formData.serialNumber}
                 onChangeText={(text) => setFormData({ ...formData, serialNumber: text })}
-                placeholder="선택 사항"
+                placeholder={t("settings.scooters.form.optional")}
                 placeholderTextColor={colors.muted}
                 className="bg-surface border border-border rounded-xl px-4 py-3 text-foreground"
                 style={{ fontSize: 16 }}
@@ -587,7 +595,7 @@ export default function ScootersScreen() {
 
             {/* Initial Odometer */}
             <View className="mb-4">
-              <Text className="text-sm font-medium text-foreground mb-2">초기 주행거리 (km)</Text>
+              <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.initialOdometer")}</Text>
               <TextInput
                 value={formData.initialOdometer}
                 onChangeText={(text) => {
@@ -601,13 +609,13 @@ export default function ScootersScreen() {
                 style={{ fontSize: 16 }}
               />
               <Text className="text-muted text-xs mt-1">
-                기존 주행거리가 있다면 입력해주세요 (미터 단위로 저장됨)
+                {t("settings.scooters.form.initialOdometerHint")}
               </Text>
             </View>
 
             {/* Color */}
             <View className="mb-4">
-              <Text className="text-sm font-medium text-foreground mb-2">색상</Text>
+              <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.color")}</Text>
               <View className="flex-row flex-wrap">
                 {SCOOTER_COLORS.map((color) => (
                   <Pressable
@@ -635,7 +643,7 @@ export default function ScootersScreen() {
             >
               <View className="flex-row items-center">
                 <MaterialIcons name="battery-charging-full" size={20} color={colors.success} />
-                <Text className="text-foreground font-medium ml-2">배터리 정보 설정</Text>
+                <Text className="text-foreground font-medium ml-2">{t("settings.scooters.form.batteryInfo")}</Text>
               </View>
               <MaterialIcons 
                 name={showBatterySection ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
@@ -648,12 +656,12 @@ export default function ScootersScreen() {
             {showBatterySection && (
               <View className="bg-surface border border-border rounded-xl p-4 mb-4">
                 <Text className="text-xs text-muted mb-3">
-                  배터리 정보를 입력하면 주행 시 전압을 기록하여 연비 분석 및 배터리 수명 예측이 가능합니다.
+                  {t("settings.scooters.form.batteryInfoHint")}
                 </Text>
 
                 {/* Voltage Presets */}
                 <View className="mb-4">
-                  <Text className="text-sm font-medium text-foreground mb-2">빠른 선택</Text>
+                  <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.quickSelect")}</Text>
                   <View className="flex-row flex-wrap">
                     {VOLTAGE_PRESETS.map((preset) => (
                       <Pressable
@@ -686,7 +694,7 @@ export default function ScootersScreen() {
 
                 {/* Battery Type */}
                 <View className="mb-4">
-                  <Text className="text-sm font-medium text-foreground mb-2">배터리 종류</Text>
+                  <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.batteryType")}</Text>
                   <View className="flex-row flex-wrap">
                     {BATTERY_TYPES.map((type) => (
                       <Pressable
@@ -720,7 +728,7 @@ export default function ScootersScreen() {
                 {/* Voltage and Capacity Row */}
                 <View className="flex-row mb-4">
                   <View className="flex-1 mr-2">
-                    <Text className="text-sm font-medium text-foreground mb-2">공칭 전압 (V)</Text>
+                    <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.nominalVoltage")}</Text>
                     <TextInput
                       value={formData.batteryVoltage}
                       onChangeText={(text) => {
@@ -735,7 +743,7 @@ export default function ScootersScreen() {
                     />
                   </View>
                   <View className="flex-1 ml-2">
-                    <Text className="text-sm font-medium text-foreground mb-2">용량 (Ah)</Text>
+                    <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.capacity")}</Text>
                     <TextInput
                       value={formData.batteryCapacity}
                       onChangeText={(text) => {
@@ -753,7 +761,7 @@ export default function ScootersScreen() {
 
                 {/* Cell Count */}
                 <View className="mb-4">
-                  <Text className="text-sm font-medium text-foreground mb-2">직렬 셀 수 (S)</Text>
+                  <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.cellCount")}</Text>
                   <TextInput
                     value={formData.batteryCellCount}
                     onChangeText={handleCellCountChange}
@@ -764,14 +772,14 @@ export default function ScootersScreen() {
                     style={{ fontSize: 16 }}
                   />
                   <Text className="text-xs text-muted mt-1">
-                    셀 수를 입력하면 만충/방전 전압이 자동 계산됩니다
+                    {t("settings.scooters.form.cellCountHint")}
                   </Text>
                 </View>
 
                 {/* Full/Empty Voltage Row */}
                 <View className="flex-row mb-2">
                   <View className="flex-1 mr-2">
-                    <Text className="text-sm font-medium text-foreground mb-2">만충 전압 (V)</Text>
+                    <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.fullVoltage")}</Text>
                     <TextInput
                       value={formData.batteryFullVoltage}
                       onChangeText={(text) => {
@@ -786,7 +794,7 @@ export default function ScootersScreen() {
                     />
                   </View>
                   <View className="flex-1 ml-2">
-                    <Text className="text-sm font-medium text-foreground mb-2">방전 전압 (V)</Text>
+                    <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.emptyVoltage")}</Text>
                     <TextInput
                       value={formData.batteryEmptyVoltage}
                       onChangeText={(text) => {
@@ -806,7 +814,7 @@ export default function ScootersScreen() {
                 {formData.batteryVoltage && formData.batteryCapacity && (
                   <View className="bg-background rounded-lg p-3 mt-2">
                     <Text className="text-sm text-foreground">
-                      총 용량: <Text className="font-bold">
+                      {t("settings.scooters.form.totalCapacity")}: <Text className="font-bold">
                         {(parseInt(formData.batteryVoltage) * parseFloat(formData.batteryCapacity)).toFixed(0)} Wh
                       </Text>
                     </Text>
@@ -817,11 +825,11 @@ export default function ScootersScreen() {
 
             {/* Notes */}
             <View className="mb-6">
-              <Text className="text-sm font-medium text-foreground mb-2">메모</Text>
+              <Text className="text-sm font-medium text-foreground mb-2">{t("settings.scooters.form.notes")}</Text>
               <TextInput
                 value={formData.notes}
                 onChangeText={(text) => setFormData({ ...formData, notes: text })}
-                placeholder="선택 사항"
+                placeholder={t("settings.scooters.form.optional")}
                 placeholderTextColor={colors.muted}
                 multiline
                 numberOfLines={3}

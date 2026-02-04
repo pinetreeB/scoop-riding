@@ -25,6 +25,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "@/hooks/use-translation";
 
 // Configure Google Sign-In
 GoogleSignin.configure({
@@ -36,6 +37,7 @@ GoogleSignin.configure({
 export default function LoginScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -54,9 +56,9 @@ export default function LoginScreen() {
     // Check if Google OAuth is configured
     if (!process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID) {
       Alert.alert(
-        "설정 필요",
-        "Google 로그인을 사용하려면 Google OAuth 클라이언트 ID를 설정해야 합니다.",
-        [{ text: "확인" }]
+        t("common.error"),
+        t("auth.alerts.googleSetupRequired"),
+        [{ text: t("common.confirm") }]
       );
       return;
     }
@@ -76,7 +78,7 @@ export default function LoginScreen() {
         const user = data.user;
 
         if (!user.email || !user.id) {
-          Alert.alert("오류", "Google 계정 정보를 가져올 수 없습니다.");
+          Alert.alert(t("common.error"), t("auth.alerts.googleAccountError"));
           return;
         }
 
@@ -108,7 +110,7 @@ export default function LoginScreen() {
 
           // AuthGuard will handle navigation automatically
         } else {
-          Alert.alert("로그인 실패", result.error || "Google 로그인에 실패했습니다.");
+          Alert.alert(t("auth.alerts.loginFailed"), result.error || t("auth.alerts.googleError"));
         }
       }
     } catch (error) {
@@ -118,18 +120,18 @@ export default function LoginScreen() {
             // Operation is already in progress
             break;
           case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-            Alert.alert("오류", "Google Play 서비스를 사용할 수 없습니다.");
+            Alert.alert(t("common.error"), t("auth.alerts.googlePlayNotAvailable"));
             break;
           case statusCodes.SIGN_IN_CANCELLED:
             // User cancelled the sign-in flow
             break;
           default:
             console.error("Google sign-in error:", error);
-            Alert.alert("오류", "Google 로그인 중 오류가 발생했습니다.");
+            Alert.alert(t("common.error"), t("auth.alerts.googleError"));
         }
       } else {
         console.error("Google login error:", error);
-        Alert.alert("오류", "Google 로그인 중 오류가 발생했습니다.");
+        Alert.alert(t("common.error"), t("auth.alerts.googleError"));
       }
     } finally {
       setIsGoogleLoading(false);
@@ -138,11 +140,11 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim()) {
-      Alert.alert("오류", "이메일을 입력해주세요.");
+      Alert.alert(t("common.error"), t("auth.alerts.emailRequired"));
       return;
     }
     if (!password) {
-      Alert.alert("오류", "비밀번호를 입력해주세요.");
+      Alert.alert(t("common.error"), t("auth.alerts.passwordRequired"));
       return;
     }
 
@@ -175,11 +177,11 @@ export default function LoginScreen() {
 
         // AuthGuard will handle navigation automatically
       } else {
-        Alert.alert("로그인 실패", result.error || "로그인에 실패했습니다.");
+        Alert.alert(t("auth.alerts.loginFailed"), result.error || t("auth.alerts.loginError"));
       }
     } catch (error) {
       console.error("Login error:", error);
-      Alert.alert("오류", "로그인 중 오류가 발생했습니다.");
+      Alert.alert(t("common.error"), t("auth.alerts.loginError"));
     } finally {
       setIsLoading(false);
     }
@@ -218,12 +220,12 @@ export default function LoginScreen() {
             <View className="gap-4">
               {/* Email Input */}
               <View>
-                <Text className="text-sm text-muted mb-2">이메일</Text>
+                <Text className="text-sm text-muted mb-2">{t("auth.email")}</Text>
                 <View className="flex-row items-center bg-surface rounded-xl px-4 border border-border">
                   <MaterialIcons name="email" size={20} color={colors.muted} />
                   <TextInput
                     className="flex-1 py-4 px-3 text-foreground"
-                    placeholder="이메일 주소 입력"
+                    placeholder={t("auth.emailPlaceholder")}
                     placeholderTextColor={colors.muted}
                     value={email}
                     onChangeText={setEmail}
@@ -238,13 +240,13 @@ export default function LoginScreen() {
               {/* Password Input */}
               <View>
                 <View className="flex-row justify-between items-center mb-2">
-                  <Text className="text-sm text-muted">비밀번호</Text>
+                  <Text className="text-sm text-muted">{t("auth.password")}</Text>
                   <Pressable
                     onPress={goToForgotPassword}
                     style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
                   >
                     <Text style={{ color: colors.primary }} className="text-sm">
-                      비밀번호 찾기
+                      {t("auth.forgotPassword")}
                     </Text>
                   </Pressable>
                 </View>
@@ -252,7 +254,7 @@ export default function LoginScreen() {
                   <MaterialIcons name="lock" size={20} color={colors.muted} />
                   <TextInput
                     className="flex-1 py-4 px-3 text-foreground"
-                    placeholder="비밀번호 입력"
+                    placeholder={t("auth.passwordPlaceholder")}
                     placeholderTextColor={colors.muted}
                     value={password}
                     onChangeText={setPassword}
@@ -288,7 +290,7 @@ export default function LoginScreen() {
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text className="text-white font-semibold text-lg">로그인</Text>
+                  <Text className="text-white font-semibold text-lg">{t("auth.login")}</Text>
                 )}
               </Pressable>
 
@@ -296,7 +298,7 @@ export default function LoginScreen() {
               {/* TODO: Google OAuth 설정 완료 후 다시 활성화
               <View className="flex-row items-center my-4">
                 <View className="flex-1 h-px bg-border" />
-                <Text className="mx-4 text-muted text-sm">또는</Text>
+                <Text className="mx-4 text-muted text-sm">{t("auth.orContinueWith")}</Text>
                 <View className="flex-1 h-px bg-border" />
               </View>
               <Pressable
@@ -318,7 +320,7 @@ export default function LoginScreen() {
                     <View className="w-5 h-5 mr-3">
                       <MaterialIcons name="g-mobiledata" size={24} color={colors.foreground} />
                     </View>
-                    <Text className="text-foreground font-semibold">Google로 계속하기</Text>
+                    <Text className="text-foreground font-semibold">{t("auth.google")}</Text>
                   </>
                 )}
               </Pressable>
@@ -326,13 +328,13 @@ export default function LoginScreen() {
 
               {/* Register Link */}
               <View className="flex-row items-center justify-center mt-6">
-                <Text className="text-muted">계정이 없으신가요? </Text>
+                <Text className="text-muted">{t("auth.noAccount")} </Text>
                 <Pressable
                   onPress={goToRegister}
                   style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
                 >
                   <Text style={{ color: colors.primary }} className="font-semibold">
-                    회원가입
+                    {t("auth.signup")}
                   </Text>
                 </Pressable>
               </View>

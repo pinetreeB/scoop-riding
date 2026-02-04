@@ -558,7 +558,9 @@
     "confirmPassword": "Confirm Password",
     "confirmPasswordPlaceholder": "Re-enter password",
     "registerSuccess": "Registration Complete",
-    "registerSuccessMessage": "Registration successful. Please login.",
+    "registerSuccessMessage": "Welcome! Enjoy safe riding with SCOOP.",
+    "signupDesc": "Create an account and save your riding records",
+    "passwordPlaceholderWithHint": "Enter password (6+ characters)",
     "alerts": {
       "emailRequired": "Please enter your email.",
       "passwordRequired": "Please enter your password.",

@@ -24,6 +24,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface GroupMember {
   userId: number;
@@ -54,6 +55,7 @@ export default function GroupRidingScreen() {
   const router = useRouter();
   const colors = useColors();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const utils = trpc.useUtils();
   
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -76,22 +78,22 @@ export default function GroupRidingScreen() {
       }
 
       Alert.alert(
-        "그룹 생성 완료",
-        `그룹 코드: ${data.code}\n\n친구들에게 이 코드를 공유하세요!`,
+        t("groupRiding.alerts.createSuccess"),
+        t("groupRiding.alerts.createSuccessMessage", { code: data.code }),
         [
           {
-            text: "코드 복사",
+            text: t("groupRiding.alerts.copyCode"),
             onPress: async () => {
               await Clipboard.setStringAsync(data.code);
-              Alert.alert("복사됨", "그룹 코드가 클립보드에 복사되었습니다.");
+              Alert.alert(t("groupRiding.alerts.copied"), t("groupRiding.alerts.copiedMessage"));
             },
           },
-          { text: "확인" },
+          { text: t("common.confirm") },
         ]
       );
     },
     onError: (error) => {
-      Alert.alert("오류", error.message || "그룹 생성에 실패했습니다.");
+      Alert.alert(t("common.error"), error.message || t("groupRiding.alerts.createError"));
     },
   });
 
@@ -107,13 +109,13 @@ export default function GroupRidingScreen() {
       }
 
       if (data.status === "pending") {
-        Alert.alert("참가 신청 완료", `"${data.groupName}" 그룹에 참가 신청했습니다.\n\n그룹장의 승인을 기다려주세요.`);
+        Alert.alert(t("groupRiding.alerts.joinPending"), t("groupRiding.alerts.joinPendingMessage", { name: data.groupName }));
       } else {
-        Alert.alert("참가 완료", `"${data.groupName}" 그룹에 참가했습니다.`);
+        Alert.alert(t("groupRiding.alerts.joinSuccess"), t("groupRiding.alerts.joinSuccessMessage", { name: data.groupName }));
       }
     },
     onError: (error) => {
-      Alert.alert("오류", error.message || "그룹 참가에 실패했습니다.");
+      Alert.alert(t("common.error"), error.message || t("groupRiding.alerts.joinError"));
     },
   });
 
@@ -126,7 +128,7 @@ export default function GroupRidingScreen() {
       }
     },
     onError: (error) => {
-      Alert.alert("오류", error.message || "그룹 나가기에 실패했습니다.");
+      Alert.alert(t("common.error"), error.message || t("groupRiding.alerts.leaveError"));
     },
   });
 
@@ -137,10 +139,10 @@ export default function GroupRidingScreen() {
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-      Alert.alert("승인 완료", "멤버가 승인되었습니다.");
+      Alert.alert(t("groupRiding.alerts.approveSuccess"), t("groupRiding.alerts.approveSuccessMessage"));
     },
     onError: (error) => {
-      Alert.alert("오류", error.message || "멤버 승인에 실패했습니다.");
+      Alert.alert(t("common.error"), error.message || t("groupRiding.alerts.approveError"));
     },
   });
 
@@ -153,7 +155,7 @@ export default function GroupRidingScreen() {
       }
     },
     onError: (error) => {
-      Alert.alert("오류", error.message || "멤버 거절에 실패했습니다.");
+      Alert.alert(t("common.error"), error.message || t("groupRiding.alerts.rejectError"));
     },
   });
 
@@ -166,7 +168,7 @@ export default function GroupRidingScreen() {
   // 그룹 생성
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) {
-      Alert.alert("오류", "그룹 이름을 입력해주세요.");
+      Alert.alert(t("common.error"), t("groupRiding.alerts.nameRequired"));
       return;
     }
     createGroupMutation.mutate({ name: newGroupName.trim() });
@@ -175,7 +177,7 @@ export default function GroupRidingScreen() {
   // 그룹 참가
   const handleJoinGroup = async () => {
     if (!joinCode.trim() || joinCode.length !== 6) {
-      Alert.alert("오류", "6자리 그룹 코드를 입력해주세요.");
+      Alert.alert(t("common.error"), t("groupRiding.alerts.codeRequired"));
       return;
     }
     joinGroupMutation.mutate({ code: joinCode.toUpperCase() });
@@ -185,16 +187,16 @@ export default function GroupRidingScreen() {
   const handleLeaveGroup = (group: GroupSession) => {
     const isHost = group.hostId === user?.id;
     const message = isHost
-      ? "그룹을 삭제하시겠습니까? 모든 멤버가 나가게 됩니다."
-      : "그룹에서 나가시겠습니까?";
+      ? t("groupRiding.alerts.deleteGroupMessage")
+      : t("groupRiding.alerts.leaveGroupConfirm");
 
     Alert.alert(
-      isHost ? "그룹 삭제" : "그룹 나가기",
+      isHost ? t("groupRiding.alerts.deleteGroup") : t("groupRiding.leaveGroup"),
       message,
       [
-        { text: "취소", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: isHost ? "삭제" : "나가기",
+          text: isHost ? t("common.delete") : t("groupRiding.leaveGroup"),
           style: "destructive",
           onPress: () => leaveGroupMutation.mutate({ groupId: group.id }),
         },
@@ -206,7 +208,7 @@ export default function GroupRidingScreen() {
   const handleShareCode = async (group: GroupSession) => {
     try {
       await Share.share({
-        message: `SCOOP 그룹 라이딩에 참가하세요!\n\n그룹명: ${group.name}\n참가 코드: ${group.code}`,
+        message: t("groupRiding.shareMessage", { name: group.name, code: group.code }),
       });
     } catch (error) {
       console.error("Share error:", error);
@@ -226,12 +228,12 @@ export default function GroupRidingScreen() {
   // 멤버 거절
   const handleRejectMember = (groupId: number, memberId: number) => {
     Alert.alert(
-      "멤버 거절",
-      "이 멤버의 참가 요청을 거절하시겠습니까?",
+      t("groupRiding.alerts.rejectMember"),
+      t("groupRiding.alerts.rejectMemberConfirm"),
       [
-        { text: "취소", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "거절",
+          text: t("groupRiding.reject"),
           style: "destructive",
           onPress: () => rejectMemberMutation.mutate({ groupId, memberId }),
         },
@@ -249,12 +251,12 @@ export default function GroupRidingScreen() {
             </Text>
             {item.hostId === user?.id && (
               <View className="bg-primary/20 px-2 py-0.5 rounded-full ml-2">
-                <Text className="text-xs text-primary font-medium">호스트</Text>
+                <Text className="text-xs text-primary font-medium">{t("groupRiding.host")}</Text>
               </View>
             )}
             {item.isRiding && (
               <View className="bg-success/20 px-2 py-0.5 rounded-full ml-2">
-                <Text className="text-xs text-success font-medium">주행중</Text>
+                <Text className="text-xs text-success font-medium">{t("groupRiding.riding")}</Text>
               </View>
             )}
           </View>
@@ -286,7 +288,7 @@ export default function GroupRidingScreen() {
       {/* Members */}
       <View className="mt-3">
         <Text className="text-sm font-medium text-foreground mb-2">
-          멤버 ({item.members.filter(m => m.status !== "pending").length}명)
+          {t("groupRiding.members")} ({item.members.filter(m => m.status !== "pending").length})
         </Text>
         <View className="flex-row flex-wrap gap-2">
           {item.members.filter(m => m.status !== "pending").map((member) => (
@@ -309,7 +311,7 @@ export default function GroupRidingScreen() {
                   </Text>
                 </View>
               )}
-              <Text className="text-sm text-foreground ml-1.5">{member.name || "익명"}</Text>
+              <Text className="text-sm text-foreground ml-1.5">{member.name || t("groupRiding.anonymous")}</Text>
               {member.isHost && (
                 <MaterialIcons name="star" size={12} color={colors.warning} style={{ marginLeft: 2 }} />
               )}
@@ -324,8 +326,8 @@ export default function GroupRidingScreen() {
       {/* Pending Members (Host Only) */}
       {item.hostId === user?.id && item.members.filter(m => m.status === "pending").length > 0 && (
         <View className="mt-3 p-3 bg-warning/10 rounded-lg border border-warning/30">
-          <Text className="text-sm font-medium text-foreground mb-2">
-            승인 대기 ({item.members.filter(m => m.status === "pending").length}명)
+          <Text className="text-sm font-medium text-warning mb-2">
+            {t("groupRiding.pendingApproval")} ({item.members.filter(m => m.status === "pending").length})
           </Text>
           {item.members.filter(m => m.status === "pending").map((member) => (
             <View
@@ -348,7 +350,7 @@ export default function GroupRidingScreen() {
                     </Text>
                   </View>
                 )}
-                <Text className="text-sm text-foreground ml-2">{member.name || "익명"}</Text>
+                <Text className="text-sm text-foreground ml-2">{member.name || t("groupRiding.anonymous")}</Text>
               </View>
               <View className="flex-row gap-2">
                 <Pressable
@@ -356,14 +358,14 @@ export default function GroupRidingScreen() {
                   style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                   className="bg-success px-3 py-1.5 rounded-full"
                 >
-                  <Text className="text-white text-xs font-medium">승인</Text>
+                  <Text className="text-white text-xs font-medium">{t("groupRiding.approve")}</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => handleRejectMember(item.id, member.userId)}
                   style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                   className="bg-error px-3 py-1.5 rounded-full"
                 >
-                  <Text className="text-white text-xs font-medium">거절</Text>
+                  <Text className="text-white text-xs font-medium">{t("groupRiding.reject")}</Text>
                 </Pressable>
               </View>
             </View>
@@ -380,7 +382,7 @@ export default function GroupRidingScreen() {
             {isPending && (
               <View className="mt-4 p-3 bg-warning/10 rounded-lg border border-warning/30">
                 <Text className="text-sm text-warning text-center">
-                  그룹장의 승인을 기다리고 있습니다...
+                  {t("groupRiding.waitingForHost")}
                 </Text>
               </View>
             )}
@@ -394,7 +396,7 @@ export default function GroupRidingScreen() {
             >
               <MaterialIcons name="play-arrow" size={20} color="#FFFFFF" />
               <Text className="text-white font-semibold ml-2">
-                {isPending ? '승인 대기중' : '그룹 라이딩 시작'}
+                {isPending ? t("groupRiding.waitingPending") : t("groupRiding.startGroupRide")}
               </Text>
             </Pressable>
           </>
@@ -413,7 +415,7 @@ export default function GroupRidingScreen() {
         >
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
-        <Text className="text-lg font-bold text-foreground">그룹 라이딩</Text>
+        <Text className="text-lg font-bold text-foreground">{t("groupRiding.title")}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -427,7 +429,7 @@ export default function GroupRidingScreen() {
           className="bg-primary py-3 rounded-lg flex-row items-center justify-center"
         >
           <MaterialIcons name="add" size={20} color="#FFFFFF" />
-          <Text className="text-white font-semibold ml-2">그룹 만들기</Text>
+          <Text className="text-white font-semibold ml-2">{t("groupRiding.createGroup")}</Text>
         </Pressable>
         <Pressable
           onPress={() => setShowJoinModal(true)}
@@ -437,7 +439,7 @@ export default function GroupRidingScreen() {
           className="bg-surface border border-primary py-3 rounded-lg flex-row items-center justify-center"
         >
           <MaterialIcons name="group-add" size={20} color={colors.primary} />
-          <Text className="text-primary font-semibold ml-2">참가하기</Text>
+          <Text className="text-primary font-semibold ml-2">{t("groupRiding.join")}</Text>
         </Pressable>
       </View>
 
@@ -450,10 +452,10 @@ export default function GroupRidingScreen() {
         <View className="flex-1 items-center justify-center px-8">
           <MaterialIcons name="groups" size={64} color={colors.muted} />
           <Text className="text-lg font-medium text-foreground mt-4 text-center">
-            참가 중인 그룹이 없습니다
+            {t("groupRiding.noGroups")}
           </Text>
           <Text className="text-sm text-muted mt-2 text-center">
-            새 그룹을 만들거나 친구의 그룹 코드로 참가하세요
+            {t("groupRiding.noGroupsDesc")}
           </Text>
         </View>
       ) : (
@@ -481,17 +483,17 @@ export default function GroupRidingScreen() {
             <SafeAreaView edges={["bottom"]} style={{ backgroundColor: colors.background }}>
               <View className="bg-background rounded-t-3xl p-6">
               <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-xl font-bold text-foreground">새 그룹 만들기</Text>
+                <Text className="text-xl font-bold text-foreground">{t("groupRiding.createNew")}</Text>
                 <Pressable onPress={() => setShowCreateModal(false)}>
                   <MaterialIcons name="close" size={24} color={colors.foreground} />
                 </Pressable>
               </View>
 
-              <Text className="text-sm text-muted mb-2">그룹 이름</Text>
+              <Text className="text-sm text-muted mb-2">{t("groupRiding.groupName")}</Text>
               <TextInput
                 value={newGroupName}
                 onChangeText={setNewGroupName}
-                placeholder="그룹 이름을 입력하세요"
+                placeholder={t("groupRiding.enterGroupName")}
                 placeholderTextColor={colors.muted}
                 className="bg-surface border border-border rounded-lg px-4 py-3 text-foreground mb-6"
                 maxLength={50}
@@ -509,7 +511,7 @@ export default function GroupRidingScreen() {
                 {createGroupMutation.isPending ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text className="text-white font-bold text-base">그룹 만들기</Text>
+                  <Text className="text-white font-bold text-base">{t("groupRiding.createGroup")}</Text>
                 )}
               </Pressable>
               </View>
@@ -533,17 +535,17 @@ export default function GroupRidingScreen() {
             <SafeAreaView edges={["bottom"]} style={{ backgroundColor: colors.background }}>
               <View className="bg-background rounded-t-3xl p-6">
               <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-xl font-bold text-foreground">그룹 참가하기</Text>
+                <Text className="text-xl font-bold text-foreground">{t("groupRiding.joinExisting")}</Text>
                 <Pressable onPress={() => setShowJoinModal(false)}>
                   <MaterialIcons name="close" size={24} color={colors.foreground} />
                 </Pressable>
               </View>
 
-              <Text className="text-sm text-muted mb-2">그룹 코드 (6자리)</Text>
+              <Text className="text-sm text-muted mb-2">{t("groupRiding.groupCode")}</Text>
               <TextInput
                 value={joinCode}
                 onChangeText={(text) => setJoinCode(text.toUpperCase())}
-                placeholder="ABCD12"
+                placeholder={t("groupRiding.groupCodePlaceholder")}
                 placeholderTextColor={colors.muted}
                 className="bg-surface border border-border rounded-lg px-4 py-3 text-foreground mb-6 text-center text-xl tracking-widest"
                 maxLength={6}
@@ -562,7 +564,7 @@ export default function GroupRidingScreen() {
                 {joinGroupMutation.isPending ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text className="text-white font-bold text-base">참가하기</Text>
+                  <Text className="text-white font-bold text-base">{t("groupRiding.join")}</Text>
                 )}
               </Pressable>
               </View>
