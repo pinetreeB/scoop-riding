@@ -1102,6 +1102,31 @@ export const appRouter = router({
       }),
   }),
 
+  // Eco Leaderboard
+  ecoLeaderboard: router({
+    // Get eco leaderboard
+    getLeaderboard: protectedProcedure
+      .input(z.object({
+        period: z.enum(["weekly", "monthly", "allTime"]).default("weekly"),
+        limit: z.number().min(1).max(100).default(50),
+      }).optional())
+      .query(async ({ input }) => {
+        return db.getEcoLeaderboard(
+          input?.period ?? "weekly",
+          input?.limit ?? 50
+        );
+      }),
+
+    // Get user's eco rank
+    getMyRank: protectedProcedure
+      .input(z.object({
+        period: z.enum(["weekly", "monthly", "allTime"]).default("weekly"),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        return db.getUserEcoRank(ctx.user.id, input?.period ?? "weekly");
+      }),
+  }),
+
   // Notifications
   notifications: router({
     // Get user notifications

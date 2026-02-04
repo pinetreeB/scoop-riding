@@ -498,7 +498,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Quick Actions Row */}
-        <View className="flex-row mx-5 mb-4" style={{ gap: 8 }}>
+        <View className="flex-row mx-5 mb-4" style={{ gap: 12 }}>
           {/* My Tracking Report */}
           <Pressable
             onPress={handleViewHistory}
@@ -792,7 +792,7 @@ export default function HomeScreen() {
             </View>
 
             {/* Second Row - Weather Stats */}
-            <View className="flex-row gap-2 mt-2">
+            <View className="flex-row gap-3 mt-3">
               {/* Weather Stats */}
               <Pressable
                 onPress={() => {
@@ -826,7 +826,7 @@ export default function HomeScreen() {
               >
                 <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
                   <View className="flex-row items-center mb-2">
-                    <View className="w-8 h-8 rounded-full bg-green-500/20 items-center justify-center">
+                    <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#22C55E' + '20' }}>
                       <MaterialIcons name="calendar-today" size={18} color="#22C55E" />
                     </View>
                   </View>

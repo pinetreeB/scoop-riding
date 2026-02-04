@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { Text, View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
-import { useRouter } from "expo-router";
+import { useState, useEffect, useCallback } from "react";
+import { Text, View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from "react-native";
+import { useRouter, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
@@ -9,7 +9,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
-import { getGradeColor, getGradeDescription, type EcoScoreResult } from "@/lib/eco-score";
+import { getGradeColor, getGradeDescription } from "@/lib/eco-score";
 
 interface EcoLeaderboardEntry {
   rank: number;
@@ -25,51 +25,42 @@ interface EcoLeaderboardEntry {
 export default function EcoLeaderboardScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [period, setPeriod] = useState<'weekly' | 'monthly' | 'allTime'>('weekly');
-  const [leaderboard, setLeaderboard] = useState<EcoLeaderboardEntry[]>([]);
-  const [myRank, setMyRank] = useState<EcoLeaderboardEntry | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // 임시 데이터 (실제로는 서버에서 가져옴)
-  useEffect(() => {
-    loadLeaderboard();
-  }, [period]);
+  // tRPC queries
+  const leaderboardQuery = trpc.ecoLeaderboard.getLeaderboard.useQuery(
+    { period, limit: 50 },
+    { enabled: isAuthenticated }
+  );
 
-  const loadLeaderboard = async () => {
-    setIsLoading(true);
-    
-    // TODO: 실제 API 연동
-    // 현재는 샘플 데이터
-    const sampleData: EcoLeaderboardEntry[] = [
-      { rank: 1, userId: 1, userName: "에코라이더", avgEcoScore: 95, grade: 'S', totalCO2Saved: 12.5, rideCount: 45 },
-      { rank: 2, userId: 2, userName: "그린스쿠터", avgEcoScore: 88, grade: 'A', totalCO2Saved: 10.2, rideCount: 38 },
-      { rank: 3, userId: 3, userName: "친환경킥보드", avgEcoScore: 82, grade: 'A', totalCO2Saved: 8.7, rideCount: 32 },
-      { rank: 4, userId: 4, userName: "스마트라이더", avgEcoScore: 76, grade: 'A', totalCO2Saved: 7.3, rideCount: 28 },
-      { rank: 5, userId: 5, userName: "에코드라이버", avgEcoScore: 71, grade: 'B', totalCO2Saved: 6.1, rideCount: 25 },
-      { rank: 6, userId: 6, userName: "그린모빌리티", avgEcoScore: 68, grade: 'B', totalCO2Saved: 5.4, rideCount: 22 },
-      { rank: 7, userId: 7, userName: "클린라이더", avgEcoScore: 64, grade: 'B', totalCO2Saved: 4.8, rideCount: 20 },
-      { rank: 8, userId: 8, userName: "에코모빌", avgEcoScore: 59, grade: 'C', totalCO2Saved: 4.2, rideCount: 18 },
-      { rank: 9, userId: 9, userName: "그린휠", avgEcoScore: 55, grade: 'C', totalCO2Saved: 3.6, rideCount: 15 },
-      { rank: 10, userId: 10, userName: "에코휠", avgEcoScore: 52, grade: 'C', totalCO2Saved: 3.1, rideCount: 13 },
-    ];
+  const myRankQuery = trpc.ecoLeaderboard.getMyRank.useQuery(
+    { period },
+    { enabled: isAuthenticated }
+  );
 
-    setLeaderboard(sampleData);
-    
-    // 내 순위 (샘플)
-    if (user) {
-      setMyRank({
-        rank: 15,
-        userId: user.id,
-        userName: user.name || "나",
-        avgEcoScore: 72,
-        grade: 'B',
-        totalCO2Saved: 5.8,
-        rideCount: 23,
-      });
-    }
-    
-    setIsLoading(false);
+  const leaderboard = leaderboardQuery.data || [];
+  const myRank = myRankQuery.data || null;
+  const isLoading = leaderboardQuery.isLoading || myRankQuery.isLoading;
+
+  // Refetch on focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        leaderboardQuery.refetch();
+        myRankQuery.refetch();
+      }
+    }, [isAuthenticated, period])
+  );
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      leaderboardQuery.refetch(),
+      myRankQuery.refetch(),
+    ]);
+    setRefreshing(false);
   };
 
   const handlePeriodChange = (newPeriod: typeof period) => {
@@ -219,11 +210,21 @@ export default function EcoLeaderboardScreen() {
           keyExtractor={(item) => String(item.userId)}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <MaterialIcons name="eco" size={48} color={colors.muted} />
               <Text style={[styles.emptyText, { color: colors.muted }]}>
                 아직 데이터가 없습니다
+              </Text>
+              <Text style={[styles.emptySubText, { color: colors.muted }]}>
+                주행을 시작하면 에코 점수가 기록됩니다
               </Text>
             </View>
           }
@@ -414,6 +415,11 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 12,
     fontSize: 14,
+    fontWeight: "600",
+  },
+  emptySubText: {
+    marginTop: 4,
+    fontSize: 12,
   },
   tipCard: {
     flexDirection: "row",

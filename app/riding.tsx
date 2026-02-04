@@ -80,6 +80,7 @@ import {
   generateDefaultAnalysis,
   recordAnalysisRequest,
 } from "@/lib/ai-optimization";
+import { compressGpsData } from "@/lib/gps-compression";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -1476,6 +1477,18 @@ export default function RidingScreen() {
       // Sync to server for ranking - blocking with verification
       try {
         console.log("[Riding] Starting server sync for record:", rideData.id);
+        
+        // GPS 데이터 압축 적용 (저장 비용 절감)
+        let compressedGpsPointsJson: string | undefined;
+        if (rideData.gpsPoints?.length > 0) {
+          const { points: compressedPoints, stats } = compressGpsData(
+            rideData.gpsPoints,
+            rideData.distance
+          );
+          console.log(`[Riding] GPS compressed: ${stats.originalCount} → ${stats.compressedCount} points (${stats.compressionRatio}% saved)`);
+          compressedGpsPointsJson = JSON.stringify(compressedPoints);
+        }
+        
         const syncResult = await syncToServer.mutateAsync({
           recordId: rideData.id,
           date: rideData.date,
@@ -1485,9 +1498,7 @@ export default function RidingScreen() {
           maxSpeed: rideData.maxSpeed,
           startTime: rideData.startTime,
           endTime: rideData.endTime,
-          gpsPointsJson: rideData.gpsPoints?.length > 0 
-            ? JSON.stringify(rideData.gpsPoints) 
-            : undefined,
+          gpsPointsJson: compressedGpsPointsJson,
           // Include scooter ID for stats update
           scooterId: rideData.scooterId,
           // Include voltage data for server

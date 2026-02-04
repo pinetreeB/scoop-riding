@@ -5161,3 +5161,179 @@ export async function getAllRidingRecordsAdmin(
     return { records: [], total: 0 };
   }
 }
+
+
+// ==================== Eco Leaderboard Functions ====================
+
+export interface EcoLeaderboardEntry {
+  rank: number;
+  userId: number;
+  userName: string;
+  profileImageUrl?: string;
+  avgEcoScore: number;
+  grade: 'S' | 'A' | 'B' | 'C' | 'D';
+  totalCO2Saved: number;
+  rideCount: number;
+}
+
+// Calculate eco score from ride data
+function calculateEcoScoreFromRide(
+  avgSpeed: number,
+  maxSpeed: number,
+  distance: number,
+  duration: number
+): { score: number; co2Saved: number } {
+  // Optimal speed score (15-25km/h is optimal)
+  let speedScore = 100;
+  if (avgSpeed < 15) {
+    speedScore = Math.max(0, (avgSpeed / 15) * 100);
+  } else if (avgSpeed > 25) {
+    speedScore = Math.max(0, 100 - ((avgSpeed - 25) * 6.67));
+  }
+  
+  // Max speed penalty (over 40km/h reduces score)
+  const maxSpeedPenalty = maxSpeed > 40 ? Math.min(30, (maxSpeed - 40) * 1.5) : 0;
+  
+  // Distance bonus (longer rides are more efficient)
+  const distanceKm = distance / 1000;
+  const distanceBonus = Math.min(20, distanceKm * 4);
+  
+  // Calculate final score
+  const score = Math.max(0, Math.min(100, speedScore - maxSpeedPenalty + distanceBonus));
+  
+  // CO2 saved (car emits ~120g/km, scooter ~5g/km)
+  const co2Saved = distanceKm * 0.115; // kg
+  
+  return { score: Math.round(score), co2Saved };
+}
+
+// Determine grade from score
+function getGradeFromScore(score: number): 'S' | 'A' | 'B' | 'C' | 'D' {
+  if (score >= 90) return 'S';
+  if (score >= 75) return 'A';
+  if (score >= 60) return 'B';
+  if (score >= 40) return 'C';
+  return 'D';
+}
+
+// Get eco leaderboard
+export async function getEcoLeaderboard(
+  period: "weekly" | "monthly" | "allTime",
+  limit: number = 50
+): Promise<EcoLeaderboardEntry[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const now = new Date();
+  let startDate: Date | null = null;
+
+  if (period === "weekly") {
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    startDate = new Date(now);
+    startDate.setDate(diff);
+    startDate.setHours(0, 0, 0, 0);
+  } else if (period === "monthly") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  // allTime: startDate remains null
+
+  try {
+    // Build query conditions
+    const conditions = [sql`${ridingRecords.userId} IS NOT NULL`];
+    if (startDate) {
+      conditions.push(sql`${ridingRecords.createdAt} >= ${startDate}`);
+    }
+
+    // Get all riding records in the period
+    const records = await db
+      .select({
+        userId: ridingRecords.userId,
+        distance: ridingRecords.distance,
+        duration: ridingRecords.duration,
+        avgSpeed: ridingRecords.avgSpeed,
+        maxSpeed: ridingRecords.maxSpeed,
+      })
+      .from(ridingRecords)
+      .where(and(...conditions));
+
+    // Aggregate by user
+    const userStats = new Map<number, { 
+      totalScore: number; 
+      totalCO2Saved: number; 
+      rideCount: number;
+    }>();
+    
+    for (const record of records) {
+      if (!record.userId) continue;
+      
+      const { score, co2Saved } = calculateEcoScoreFromRide(
+        record.avgSpeed || 0,
+        record.maxSpeed || 0,
+        record.distance || 0,
+        record.duration || 0
+      );
+      
+      const existing = userStats.get(record.userId) || { 
+        totalScore: 0, 
+        totalCO2Saved: 0, 
+        rideCount: 0 
+      };
+      
+      userStats.set(record.userId, {
+        totalScore: existing.totalScore + score,
+        totalCO2Saved: existing.totalCO2Saved + co2Saved,
+        rideCount: existing.rideCount + 1,
+      });
+    }
+
+    // Get user info
+    const userIds = Array.from(userStats.keys());
+    if (userIds.length === 0) return [];
+
+    const userInfos = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        profileImageUrl: users.profileImageUrl,
+      })
+      .from(users)
+      .where(sql`${users.id} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)})`);
+
+    // Build leaderboard
+    const leaderboard: EcoLeaderboardEntry[] = userInfos
+      .map((user) => {
+        const stats = userStats.get(user.id) || { totalScore: 0, totalCO2Saved: 0, rideCount: 0 };
+        const avgScore = stats.rideCount > 0 ? Math.round(stats.totalScore / stats.rideCount) : 0;
+        
+        return {
+          rank: 0,
+          userId: user.id,
+          userName: user.name || "Unknown",
+          profileImageUrl: user.profileImageUrl || undefined,
+          avgEcoScore: avgScore,
+          grade: getGradeFromScore(avgScore),
+          totalCO2Saved: Math.round(stats.totalCO2Saved * 100) / 100,
+          rideCount: stats.rideCount,
+        };
+      })
+      .sort((a, b) => b.avgEcoScore - a.avgEcoScore)
+      .slice(0, limit)
+      .map((entry, index) => ({ ...entry, rank: index + 1 }));
+
+    return leaderboard;
+  } catch (error) {
+    console.error("[Database] Failed to get eco leaderboard:", error);
+    return [];
+  }
+}
+
+// Get user's eco rank
+export async function getUserEcoRank(
+  userId: number,
+  period: "weekly" | "monthly" | "allTime"
+): Promise<EcoLeaderboardEntry | null> {
+  const leaderboard = await getEcoLeaderboard(period, 1000); // Get more to find user
+  const userEntry = leaderboard.find(entry => entry.userId === userId);
+  return userEntry || null;
+}
