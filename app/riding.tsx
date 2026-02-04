@@ -59,10 +59,22 @@ import { GroupChatWS, type ChatMessage as WsChatMessage } from "@/components/gro
 import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
 import { WeatherRidingTipCompact } from "@/components/weather-riding-tips";
 import { notifyWeatherChange, notifyWeatherWarning } from "@/lib/notifications";
+import { PerformanceIndicator } from "@/components/performance-indicator";
+import { performanceMonitor } from "@/lib/performance-monitor";
 import { useAuth } from "@/hooks/use-auth";
 import { analyzeRideData, type RideAnalysisResult } from "@/lib/ride-analysis";
 import { useGroupWebSocket } from "@/hooks/use-group-websocket";
 import { GroupMembersOverlay, type GroupMember } from "@/components/group-members-overlay";
+import {
+  RideSessionBackup,
+  saveRideSessionBackup,
+  loadRideSessionBackup,
+  clearRideSessionBackup,
+  hasRecoverableSession,
+  getRecoverableSessionSummary,
+  startBackupInterval,
+  stopBackupInterval,
+} from "@/lib/ride-session-recovery";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -318,6 +330,11 @@ export default function RidingScreen() {
   const durationRef = useRef(0);
   const voiceSettingsRef = useRef<VoiceSettings | null>(null);
   const isBackgroundEnabledRef = useRef(false);
+  
+  // 세션 자동 복구 관련
+  const backupIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rideIdRef = useRef<string>(generateId());
+  const [isRecoveredSession, setIsRecoveredSession] = useState(false);
 
   useEffect(() => {
     isRunningRef.current = isRunning;
@@ -589,17 +606,146 @@ export default function RidingScreen() {
     }
   }, []);
 
+  // 세션 복구 확인 및 초기화
   useEffect(() => {
-    startTimeRef.current = new Date();
-    initializeGps();
+    const checkAndInitialize = async () => {
+      // 복구 가능한 세션이 있는지 확인
+      const hasRecoverable = await hasRecoverableSession();
+      
+      if (hasRecoverable) {
+        const summary = await getRecoverableSessionSummary();
+        if (summary) {
+          const durationMin = Math.floor(summary.duration / 60);
+          const distanceKm = (summary.distance / 1000).toFixed(2);
+          
+          Alert.alert(
+            "이전 주행 복구",
+            `이전에 중단된 주행 기록이 있습니다.\n\n주행 시간: ${durationMin}분\n주행 거리: ${distanceKm}km\nGPS 포인트: ${summary.pointsCount}개\n\n복구하시겠습니까?`,
+            [
+              {
+                text: "새로 시작",
+                style: "destructive",
+                onPress: async () => {
+                  await clearRideSessionBackup();
+                  startTimeRef.current = new Date();
+                  initializeGps();
+                  startSessionBackup();
+                },
+              },
+              {
+                text: "복구하기",
+                onPress: async () => {
+                  await recoverSession();
+                },
+              },
+            ]
+          );
+          return;
+        }
+      }
+      
+      // 복구할 세션이 없으면 새로 시작
+      startTimeRef.current = new Date();
+      initializeGps();
+      startSessionBackup();
+    };
+    
+    checkAndInitialize();
 
     return () => {
       stopLocationTracking();
+      stopBackupInterval(backupIntervalRef.current);
       if (Platform.OS !== "web") {
         stopBackgroundLocationTracking();
       }
     };
   }, []);
+  
+  // 세션 복구 함수
+  const recoverSession = async () => {
+    const backup = await loadRideSessionBackup();
+    if (!backup) {
+      startTimeRef.current = new Date();
+      initializeGps();
+      startSessionBackup();
+      return;
+    }
+    
+    // 복구된 데이터로 상태 초기화
+    rideIdRef.current = backup.id;
+    startTimeRef.current = new Date(backup.startTime);
+    setDuration(backup.duration);
+    setRestTime(backup.restTime);
+    setDistance(backup.distance);
+    setMaxSpeed(backup.maxSpeed);
+    setGpsPoints(backup.gpsPoints);
+    gpsPointsRef.current = backup.gpsPoints;
+    setIsRunning(backup.isRunning);
+    setIsRecoveredSession(true);
+    
+    if (backup.scooter) {
+      setSelectedScooter(backup.scooter as SelectedScooter);
+    }
+    if (backup.startVoltage) {
+      setStartVoltage({ voltage: backup.startVoltage, soc: 0 });
+    }
+    if (backup.weatherInfo) {
+      setWeatherInfo(backup.weatherInfo);
+    }
+    if (backup.groupId) {
+      setGroupId(backup.groupId);
+      groupIdRef.current = backup.groupId;
+    }
+    if (backup.withNavigation && backup.destinationName && backup.destinationLat && backup.destinationLng) {
+      setHasNavigation(true);
+      setNavigationDestination({
+        name: backup.destinationName,
+        lat: backup.destinationLat,
+        lng: backup.destinationLng,
+      });
+    }
+    
+    // ref 동기화
+    distanceRef.current = backup.distance;
+    durationRef.current = backup.duration;
+    
+    // GPS 초기화 및 백업 시작
+    initializeGps();
+    startSessionBackup();
+    
+    Alert.alert("복구 완료", "이전 주행 기록이 복구되었습니다.");
+  };
+  
+  // 세션 백업 시작
+  const startSessionBackup = () => {
+    backupIntervalRef.current = startBackupInterval(() => ({
+      id: rideIdRef.current,
+      startTime: startTimeRef.current.toISOString(),
+      lastUpdateTime: new Date().toISOString(),
+      isRunning: isRunningRef.current,
+      isPaused: isAutoPausedRef.current,
+      distance: distanceRef.current,
+      duration: durationRef.current,
+      restTime,
+      maxSpeed,
+      gpsPoints: gpsPointsRef.current,
+      scooter: selectedScooter,
+      startVoltage: startVoltage?.voltage ?? null,
+      weatherInfo: weatherInfo ? {
+        temperature: weatherInfo.temperature ?? 0,
+        humidity: weatherInfo.humidity ?? 0,
+        windSpeed: weatherInfo.windSpeed ?? 0,
+        windDirection: weatherInfo.windDirection ?? 0,
+        precipitationType: weatherInfo.precipitationType,
+        weatherCondition: weatherInfo.weatherCondition,
+      } : null,
+      groupId: groupIdRef.current,
+      withNavigation: hasNavigation,
+      destinationName: navigationDestination?.name ?? null,
+      destinationLat: navigationDestination?.lat ?? null,
+      destinationLng: navigationDestination?.lng ?? null,
+    }));
+  };
 
   useEffect(() => {
     // interval은 한 번만 생성하고 ref로 최신 값 참조
@@ -1637,12 +1783,19 @@ export default function RidingScreen() {
           >
             <MaterialIcons name="close" size={28} color="#FFFFFF" />
           </Pressable>
-          <View className="flex-row items-center">
-            <View
-              className="w-3 h-3 rounded-full mr-2"
-              style={{ backgroundColor: getGpsStatusColor() }}
+          <View className="flex-row items-center gap-2">
+            <PerformanceIndicator
+              gpsAccuracy={accuracy}
+              gpsPointCount={gpsPointCount}
+              isBackgroundEnabled={isBackgroundEnabled}
             />
-            <Text className="text-gray-400 text-sm">{getGpsStatusText()}</Text>
+            <View className="flex-row items-center">
+              <View
+                className="w-3 h-3 rounded-full mr-2"
+                style={{ backgroundColor: getGpsStatusColor() }}
+              />
+              <Text className="text-gray-400 text-sm">{getGpsStatusText()}</Text>
+            </View>
           </View>
           <Pressable
             onPress={() => setShowMap(!showMap)}

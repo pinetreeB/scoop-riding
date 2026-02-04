@@ -40,16 +40,28 @@ export default function AdminDashboardScreen() {
   }, [user]);
 
   // Survey statistics
-  const { data: surveyStats, refetch: refetchSurveyStats, isLoading: loadingSurveyStats } = 
-    trpc.survey.getStats.useQuery(undefined, { enabled: user?.role === "admin" });
+  const { data: surveyStats, refetch: refetchSurveyStats, isLoading: loadingSurveyStats, error: surveyStatsError } = 
+    trpc.survey.getStats.useQuery(undefined, { 
+      enabled: user?.role === "admin",
+      retry: 2,
+      retryDelay: 1000,
+    });
 
   // Survey responses
-  const { data: surveyResponses, refetch: refetchSurveyResponses } = 
-    trpc.survey.getAll.useQuery({ page: 1, limit: 50 }, { enabled: user?.role === "admin" });
+  const { data: surveyResponses, refetch: refetchSurveyResponses, error: surveyResponsesError } = 
+    trpc.survey.getAll.useQuery({ page: 1, limit: 50 }, { 
+      enabled: user?.role === "admin",
+      retry: 2,
+      retryDelay: 1000,
+    });
 
   // Bug reports
-  const { data: bugReports, refetch: refetchBugReports, isLoading: loadingBugReports } = 
-    trpc.bugReports.getAll.useQuery({ page: 1, limit: 50 }, { enabled: user?.role === "admin" });
+  const { data: bugReports, refetch: refetchBugReports, isLoading: loadingBugReports, error: bugReportsError } = 
+    trpc.bugReports.getAll.useQuery({ page: 1, limit: 50 }, { 
+      enabled: user?.role === "admin",
+      retry: 2,
+      retryDelay: 1000,
+    });
 
   const updateBugStatusMutation = trpc.bugReports.updateStatus.useMutation();
 
@@ -467,7 +479,10 @@ function AnnouncementsTab({ colors }: { colors: any }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<any>(null);
 
-  const { data: announcements, refetch, isLoading } = trpc.admin.getAnnouncements.useQuery();
+  const { data: announcements, refetch, isLoading, error } = trpc.admin.getAnnouncements.useQuery(undefined, {
+    retry: 2,
+    retryDelay: 1000,
+  });
   const createMutation = trpc.admin.createAnnouncement.useMutation({
     onSuccess: () => {
       refetch();
@@ -776,7 +791,10 @@ function UsersTab({ colors }: { colors: any }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
 
-  const { data, refetch, isLoading } = trpc.admin.getUsers.useQuery({ page: 1, limit: 50 });
+  const { data, refetch, isLoading, error } = trpc.admin.getUsers.useQuery({ page: 1, limit: 50 }, {
+    retry: 2,
+    retryDelay: 1000,
+  });
   const { data: userDetails, isLoading: detailsLoading } = trpc.admin.getUserDetails.useQuery(
     { userId: selectedUser! },
     { enabled: !!selectedUser }
@@ -824,6 +842,14 @@ function UsersTab({ colors }: { colors: any }) {
 
       {isLoading ? (
         <ActivityIndicator size="large" color={colors.primary} />
+      ) : error ? (
+        <View className="items-center py-12">
+          <MaterialIcons name="error-outline" size={48} color={colors.error} />
+          <Text className="text-muted mt-2">데이터를 불러올 수 없습니다</Text>
+          <TouchableOpacity onPress={() => refetch()} className="mt-4 bg-primary px-4 py-2 rounded-lg">
+            <Text className="text-white">다시 시도</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <>
           <Text className="text-sm text-muted mb-2">
@@ -977,7 +1003,10 @@ function UsersTab({ colors }: { colors: any }) {
 
 // Posts Tab Component
 function PostsTab({ colors }: { colors: any }) {
-  const { data: posts, refetch, isLoading } = trpc.community.getPosts.useQuery({ limit: 50 });
+  const { data: posts, refetch, isLoading, error } = trpc.community.getPosts.useQuery({ limit: 50 }, {
+    retry: 2,
+    retryDelay: 1000,
+  });
   const deleteMutation = trpc.admin.deletePost.useMutation({
     onSuccess: () => refetch(),
   });
@@ -997,6 +1026,14 @@ function PostsTab({ colors }: { colors: any }) {
     <View className="flex-1 p-4">
       {isLoading ? (
         <ActivityIndicator size="large" color={colors.primary} />
+      ) : error ? (
+        <View className="items-center py-12">
+          <MaterialIcons name="error-outline" size={48} color={colors.error} />
+          <Text className="text-muted mt-2">데이터를 불러올 수 없습니다</Text>
+          <TouchableOpacity onPress={() => refetch()} className="mt-4 bg-primary px-4 py-2 rounded-lg">
+            <Text className="text-white">다시 시도</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <>
           {posts?.map((post: any) => (
@@ -1040,8 +1077,12 @@ function PostsTab({ colors }: { colors: any }) {
 // Rides Tab Component - 모든 유저 주행 기록
 function RidesTab({ colors }: { colors: any }) {
   const [page, setPage] = useState(1);
-  const { data, refetch, isLoading } = trpc.admin.getAllRidingRecords.useQuery(
-    { page, limit: 50 }
+  const { data, refetch, isLoading, error } = trpc.admin.getAllRidingRecords.useQuery(
+    { page, limit: 50 },
+    {
+      retry: 2,
+      retryDelay: 1000,
+    }
   );
 
   const formatDuration = (seconds: number): string => {
@@ -1079,6 +1120,14 @@ function RidesTab({ colors }: { colors: any }) {
 
       {isLoading ? (
         <ActivityIndicator size="large" color={colors.primary} />
+      ) : error ? (
+        <View className="items-center py-12">
+          <MaterialIcons name="error-outline" size={48} color={colors.error} />
+          <Text className="text-muted mt-2">데이터를 불러올 수 없습니다</Text>
+          <TouchableOpacity onPress={() => refetch()} className="mt-4 bg-primary px-4 py-2 rounded-lg">
+            <Text className="text-white">다시 시도</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <>
           {data?.records?.map((record: any) => (
