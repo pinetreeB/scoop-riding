@@ -1450,6 +1450,10 @@ export default function RidingScreen() {
       try {
         await saveRidingRecord(recordWithVoltage);
         console.log("[Riding] Record saved to local storage");
+        
+        // 주행 기록 저장 성공 후 세션 백업 삭제 (버그 수정: 정상 저장 후에도 복구 팝업이 표시되는 문제)
+        await clearRideSessionBackup();
+        console.log("[Riding] Session backup cleared after successful save");
       } catch (saveError) {
         console.error("[Riding] Failed to save record:", saveError);
         Alert.alert(
@@ -1676,6 +1680,8 @@ export default function RidingScreen() {
         stopBackgroundLocationTracking();
       }
       clearStartVoltage();
+      // 짧은 주행도 세션 백업 삭제 (버그 수정)
+      clearRideSessionBackup();
       // Navigate to main tab instead of back (which goes to scooter selection)
       router.replace("/(tabs)");
       return;
