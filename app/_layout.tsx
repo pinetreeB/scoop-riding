@@ -36,6 +36,7 @@ import { BadgeEarnedPopup } from "@/components/badge-earned-popup";
 import { AppLoading } from "@/components/app-loading";
 import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { I18nProvider } from "@/lib/i18n-provider";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -199,6 +200,7 @@ export default function RootLayout() {
 
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <I18nProvider>
       <ErrorBoundary
         onError={(error, errorInfo) => {
           console.error("[RootLayout] Global error caught:", error.message);
@@ -223,6 +225,7 @@ export default function RootLayout() {
           </QueryClientProvider>
         </trpc.Provider>
       </ErrorBoundary>
+      </I18nProvider>
     </GestureHandlerRootView>
   );
 

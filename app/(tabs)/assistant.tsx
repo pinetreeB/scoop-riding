@@ -13,6 +13,8 @@ import {
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "@/hooks/use-translation";
+import { useLanguage } from "@/lib/i18n-provider";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getApiBaseUrl } from "@/constants/oauth";
@@ -33,29 +35,34 @@ const API_BASE_URL = getApiBaseUrl() || "http://localhost:3000";
 export default function AssistantScreen() {
   const colors = useColors();
   const { user } = useAuth();
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "안녕하세요! 저는 SCOOP의 AI 어시스턴트 스쿠피입니다. 🛴\n\n전동킥보드 안전 수칙, 법규, 주행 팁 등 무엇이든 물어보세요!",
-      timestamp: new Date(),
-    },
-  ]);
+  const getWelcomeMessage = (lang: string) => lang === "en" 
+    ? "Hello! I'm Scoopy, SCOOP's AI assistant. \ud83d\udef4\n\nFeel free to ask me anything about electric scooter safety, regulations, and riding tips!"
+    : "안녕하세요! 저는 SCOOP의 AI 어시스턴트 스쿠피입니다. \ud83d\udef4\n\n전동킥보드 안전 수칙, 법규, 주행 팁 등 무엇이든 물어보세요!";
+
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  // Fetch suggestions on mount
+  // Initialize welcome message and fetch suggestions when language changes
   useEffect(() => {
+    setMessages([{
+      id: "welcome",
+      role: "assistant",
+      content: getWelcomeMessage(language),
+      timestamp: new Date(),
+    }]);
     fetchSuggestions();
-  }, []);
+  }, [language]);
 
   const fetchSuggestions = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/suggestions`);
+      const response = await fetch(`${API_BASE_URL}/api/ai/suggestions?language=${language}`);
       if (response.ok) {
         const data = await response.json();
         setSuggestions(data.suggestions || []);
@@ -98,6 +105,7 @@ export default function AssistantScreen() {
           message: text.trim(),
           userId: user?.id || 0,
           conversationHistory,
+          language,
         }),
       });
 
@@ -115,7 +123,9 @@ export default function AssistantScreen() {
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: data.error || "죄송합니다. 응답을 생성하는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+          content: data.error || (language === "en" 
+            ? "Sorry, an error occurred while generating a response. Please try again later."
+            : "죄송합니다. 응답을 생성하는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, errorMessage]);
@@ -125,7 +135,9 @@ export default function AssistantScreen() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.",
+        content: language === "en" 
+          ? "A network error occurred. Please check your internet connection."
+          : "네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -202,7 +214,7 @@ export default function AssistantScreen() {
             marginBottom: 8,
           }}
         >
-          이런 것들을 물어보세요
+          {language === "en" ? "Try asking these" : "이런 것들을 물어보세요"}
         </Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {suggestions.map((suggestion, index) => (
@@ -268,10 +280,10 @@ export default function AssistantScreen() {
                 color: colors.foreground,
               }}
             >
-              스쿠피
+              {language === "en" ? "Scoopy" : "스쿠피"}
             </Text>
             <Text style={{ fontSize: 13, color: colors.muted }}>
-              SCOOP AI 어시스턴트
+              {language === "en" ? "SCOOP AI Assistant" : "SCOOP AI 어시스턴트"}
             </Text>
           </View>
         </View>
@@ -352,7 +364,7 @@ export default function AssistantScreen() {
               color: colors.foreground,
               maxHeight: 100,
             }}
-            placeholder="메시지를 입력하세요..."
+            placeholder={language === "en" ? "Type a message..." : "메시지를 입력하세요..."}
             placeholderTextColor={colors.muted}
             value={inputText}
             onChangeText={setInputText}

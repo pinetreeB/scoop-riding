@@ -7,23 +7,10 @@ import * as crypto from "crypto";
 let _db: ReturnType<typeof drizzle> | null = null;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
-// GCP_DATABASE_URL takes priority over DATABASE_URL for server migration
 export async function getDb() {
-  const dbUrl = process.env.GCP_DATABASE_URL || process.env.DATABASE_URL;
-  if (!_db && dbUrl) {
+  if (!_db && process.env.DATABASE_URL) {
     try {
-      // GCP Cloud SQL requires SSL connection
-      const isGcpDb = !!process.env.GCP_DATABASE_URL;
-      if (isGcpDb) {
-        // For GCP Cloud SQL, we need to add SSL configuration
-        const dbUrlWithSsl = dbUrl.includes('?') 
-          ? `${dbUrl}&ssl={"rejectUnauthorized":false}`
-          : `${dbUrl}?ssl={"rejectUnauthorized":false}`;
-        _db = drizzle(dbUrlWithSsl);
-      } else {
-        _db = drizzle(dbUrl);
-      }
-      console.log("[Database] Connected to:", isGcpDb ? "GCP Cloud SQL" : "Default DB");
+      _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -323,24 +310,6 @@ export async function getUserRidingRecords(userId: number): Promise<RidingRecord
 export async function createRidingRecord(data: InsertRidingRecord): Promise<number | null> {
   const db = await getDb();
   if (!db) return null;
-
-  // Check for duplicate record (same userId and startTime)
-  if (data.startTime) {
-    const existing = await db.select({ id: ridingRecords.id })
-      .from(ridingRecords)
-      .where(
-        and(
-          eq(ridingRecords.userId, data.userId),
-          eq(ridingRecords.startTime, data.startTime)
-        )
-      )
-      .limit(1);
-    
-    if (existing.length > 0) {
-      console.log("[DB] Duplicate riding record detected, returning existing id:", existing[0].id);
-      return existing[0].id;
-    }
-  }
 
   // Build insert data with only defined fields
   const insertData: InsertRidingRecord = {

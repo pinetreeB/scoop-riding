@@ -3,10 +3,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
+import { useTranslation } from "@/hooks/use-translation";
 
 export default function TabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom, 8);
   const tabBarHeight = 56 + bottomPadding;
 
@@ -29,7 +31,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "홈",
+          title: t("tabs.home"),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="home" size={size} color={color} />
           ),
@@ -38,7 +40,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: "기록",
+          title: t("tabs.history"),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="history" size={size} color={color} />
           ),
@@ -47,7 +49,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="community"
         options={{
-          title: "커뮤니티",
+          title: t("tabs.community"),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="forum" size={size} color={color} />
           ),
@@ -56,7 +58,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="assistant"
         options={{
-          title: "AI 도우미",
+          title: t("tabs.aiHelper"),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="smart-toy" size={size} color={color} />
           ),
@@ -65,7 +67,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "설정",
+          title: t("tabs.settings"),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="settings" size={size} color={color} />
           ),

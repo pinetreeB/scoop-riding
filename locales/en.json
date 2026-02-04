@@ -1,0 +1,353 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "search": "Search",
+    "noData": "No data available",
+    "refresh": "Refresh",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "tabs": {
+    "home": "Home",
+    "history": "History",
+    "community": "Community",
+    "aiHelper": "AI Helper",
+    "settings": "Settings"
+  },
+  "home": {
+    "welcome": "Welcome",
+    "startRiding": "Start Riding",
+    "groupRiding": "Group Riding",
+    "weather": {
+      "title": "Current Weather",
+      "temperature": "Temperature",
+      "humidity": "Humidity",
+      "wind": "Wind",
+      "precipitation": "Precipitation"
+    },
+    "stats": {
+      "totalDistance": "Total Distance",
+      "totalRides": "Total Rides",
+      "thisMonth": "This Month"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "myScooters": "My Scooters",
+      "routes": "Saved Routes",
+      "ranking": "Ranking",
+      "challenges": "Challenges"
+    }
+  },
+  "riding": {
+    "title": "Riding",
+    "start": "Start Riding",
+    "stop": "Stop Riding",
+    "pause": "Pause",
+    "resume": "Resume",
+    "distance": "Distance",
+    "speed": "Speed",
+    "avgSpeed": "Avg Speed",
+    "maxSpeed": "Max Speed",
+    "duration": "Duration",
+    "altitude": "Altitude",
+    "ecoScore": "Eco Score",
+    "selectScooter": "Select Scooter",
+    "enterVoltage": "Enter Current Voltage",
+    "voltage": "Voltage",
+    "startVoltage": "Start Voltage",
+    "endVoltage": "End Voltage",
+    "batteryUsed": "Battery Used",
+    "efficiency": "Efficiency",
+    "confirmStop": "Do you want to stop riding?",
+    "rideSummary": "Ride Summary",
+    "saveRecord": "Save Record",
+    "discardRecord": "Discard Record",
+    "analyzing": "AI Analyzing...",
+    "analysisComplete": "Analysis Complete",
+    "shortRide": "Short Ride",
+    "shortRideMessage": "Rides under 1 minute are not recorded"
+  },
+  "groupRiding": {
+    "title": "Group Riding",
+    "createGroup": "Create Group",
+    "joinGroup": "Join Group",
+    "groupName": "Group Name",
+    "inviteCode": "Invite Code",
+    "enterInviteCode": "Enter Invite Code",
+    "members": "Members",
+    "waitingApproval": "Waiting for Approval",
+    "approved": "Approved",
+    "startGroupRide": "Start Group Ride",
+    "leaveGroup": "Leave Group",
+    "shareLocation": "Sharing Location",
+    "chat": "Chat",
+    "sendMessage": "Send Message",
+    "noMembers": "No members yet",
+    "pendingRequests": "Pending Requests",
+    "approve": "Approve",
+    "reject": "Reject"
+  },
+  "history": {
+    "title": "Ride History",
+    "noRecords": "No ride records",
+    "firstRide": "Start your first ride!",
+    "totalStats": "Total Stats",
+    "monthlyStats": "Monthly Stats",
+    "viewDetails": "View Details",
+    "shareRecord": "Share Record",
+    "deleteRecord": "Delete Record",
+    "confirmDelete": "Are you sure you want to delete this record?",
+    "compareRecords": "Compare Records",
+    "heatmap": "Heatmap",
+    "calendar": "Calendar"
+  },
+  "community": {
+    "title": "Community",
+    "writePost": "Write Post",
+    "noPosts": "No posts yet",
+    "firstPost": "Write the first post!",
+    "categories": {
+      "all": "All",
+      "general": "General",
+      "rideShare": "Ride Share",
+      "question": "Question",
+      "tip": "Tips"
+    },
+    "post": {
+      "title": "Title",
+      "content": "Content",
+      "category": "Category",
+      "attachImage": "Attach Image",
+      "submit": "Submit",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Are you sure you want to delete this post?"
+    },
+    "comments": {
+      "title": "Comments",
+      "write": "Write Comment",
+      "noComments": "No comments",
+      "reply": "Reply"
+    },
+    "likes": "Likes",
+    "views": "Views"
+  },
+  "aiHelper": {
+    "title": "AI Helper",
+    "placeholder": "Ask me anything...",
+    "send": "Send",
+    "thinking": "Thinking...",
+    "usageLimit": "Usage Limit",
+    "remaining": "Remaining",
+    "limitReached": "You have used all your monthly queries",
+    "suggestions": {
+      "battery": "Battery Management",
+      "maintenance": "Maintenance Tips",
+      "safety": "Safe Riding Guide",
+      "weather": "Weather Riding Tips"
+    },
+    "welcome": "Hello! Ask me anything about electric scooters.",
+    "errorMessage": "Sorry, an error occurred. Please try again."
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": {
+      "title": "Profile",
+      "editProfile": "Edit Profile",
+      "nickname": "Nickname",
+      "email": "Email",
+      "profileImage": "Profile Image"
+    },
+    "scooters": {
+      "title": "My Scooters",
+      "addScooter": "Add Scooter",
+      "editScooter": "Edit Scooter",
+      "deleteScooter": "Delete Scooter",
+      "scooterName": "Scooter Name",
+      "batteryCapacity": "Battery Capacity",
+      "voltage": "Voltage",
+      "ampHour": "Amp Hour",
+      "noScooters": "No registered scooters"
+    },
+    "notifications": {
+      "title": "Notification Settings",
+      "push": "Push Notifications",
+      "community": "Community Notifications",
+      "groupRiding": "Group Riding Notifications",
+      "badge": "Badge Notifications"
+    },
+    "language": {
+      "title": "Language",
+      "korean": "한국어",
+      "english": "English",
+      "systemDefault": "System Default"
+    },
+    "theme": {
+      "title": "Theme",
+      "light": "Light Mode",
+      "dark": "Dark Mode",
+      "system": "System Default"
+    },
+    "units": {
+      "title": "Units",
+      "metric": "Metric (km, km/h)",
+      "imperial": "Imperial (mi, mph)"
+    },
+    "account": {
+      "title": "Account",
+      "logout": "Logout",
+      "deleteAccount": "Delete Account",
+      "confirmLogout": "Are you sure you want to logout?",
+      "confirmDelete": "Are you sure you want to delete your account? This action cannot be undone."
+    },
+    "about": {
+      "title": "About",
+      "version": "Version",
+      "termsOfService": "Terms of Service",
+      "privacyPolicy": "Privacy Policy",
+      "openSource": "Open Source Licenses"
+    },
+    "support": {
+      "title": "Support",
+      "bugReport": "Report Bug",
+      "feedback": "Send Feedback",
+      "faq": "FAQ"
+    },
+    "admin": {
+      "title": "Admin",
+      "dashboard": "Admin Dashboard"
+    }
+  },
+  "scooter": {
+    "select": "Select Scooter",
+    "noScooter": "No registered scooters",
+    "addFirst": "Please register a scooter first",
+    "goToSettings": "Go to Settings",
+    "details": {
+      "totalDistance": "Total Distance",
+      "totalRides": "Total Rides",
+      "avgEfficiency": "Avg Efficiency",
+      "lastRide": "Last Ride"
+    }
+  },
+  "ranking": {
+    "title": "Ranking",
+    "totalDistance": "Total Distance",
+    "monthlyDistance": "Monthly Distance",
+    "ecoScore": "Eco Score",
+    "myRank": "My Rank",
+    "top30": "Top 30"
+  },
+  "badge": {
+    "title": "Badges",
+    "earned": "Earned Badges",
+    "notEarned": "Locked Badges",
+    "congratulations": "Congratulations!",
+    "newBadge": "You earned a new badge",
+    "badges": {
+      "firstRide": "First Ride",
+      "firstRideDesc": "Completed your first ride",
+      "distance100": "100km Achievement",
+      "distance100Desc": "Reached 100km total distance",
+      "rides10": "10 Rides",
+      "rides10Desc": "Completed 10 rides",
+      "marathoner": "Marathoner",
+      "marathonerDesc": "Reached 500km total distance",
+      "ecoRider": "Eco Rider",
+      "ecoRiderDesc": "Maintained eco score above 80"
+    }
+  },
+  "challenge": {
+    "title": "Challenges",
+    "active": "Active",
+    "completed": "Completed",
+    "join": "Join",
+    "progress": "Progress",
+    "reward": "Reward",
+    "deadline": "Deadline"
+  },
+  "friends": {
+    "title": "Friends",
+    "addFriend": "Add Friend",
+    "friendRequests": "Friend Requests",
+    "myFriends": "My Friends",
+    "noFriends": "No friends yet",
+    "searchFriend": "Search Friends",
+    "sendRequest": "Send Request",
+    "accept": "Accept",
+    "decline": "Decline",
+    "remove": "Remove Friend"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "noNotifications": "No notifications",
+    "markAllRead": "Mark All Read",
+    "types": {
+      "badge": "Badge Earned",
+      "friend": "Friend Request",
+      "community": "Community",
+      "groupRiding": "Group Riding",
+      "system": "System"
+    }
+  },
+  "announcement": {
+    "title": "Announcements",
+    "important": "Important",
+    "maintenance": "Maintenance",
+    "event": "Event",
+    "update": "Update"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "signup": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password",
+    "continueWith": "Continue with",
+    "orContinueWith": "or",
+    "google": "Continue with Google",
+    "apple": "Continue with Apple",
+    "kakao": "Continue with Kakao"
+  },
+  "error": {
+    "network": "Network error occurred",
+    "server": "Server error occurred",
+    "unknown": "Unknown error occurred",
+    "tryAgain": "Please try again",
+    "sessionExpired": "Session expired. Please login again"
+  },
+  "units": {
+    "km": "km",
+    "kmh": "km/h",
+    "m": "m",
+    "min": "min",
+    "hour": "hr",
+    "sec": "sec",
+    "volt": "V",
+    "ah": "Ah",
+    "wh": "Wh",
+    "whkm": "Wh/km",
+    "percent": "%",
+    "celsius": "°C"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{days}} days ago",
+    "hoursAgo": "{{hours}} hours ago",
+    "minutesAgo": "{{minutes}} minutes ago",
+    "justNow": "Just now"
+  }
+}

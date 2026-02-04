@@ -36,6 +36,8 @@ import Constants from "expo-constants";
 import * as Sharing from "expo-sharing";
 import { captureScreen } from "react-native-view-shot";
 import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
+import { useTranslation } from "@/hooks/use-translation";
+import { useLanguage, type LanguagePreference } from "@/lib/i18n-provider";
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -43,6 +45,8 @@ export default function ProfileScreen() {
   const trpcUtils = trpc.useUtils();
   const { user, logout, isAuthenticated, loading: authLoading } = useAuth();
   const { themeMode, setThemeMode, isDarkMode } = useThemeContext();
+  const { t } = useTranslation();
+  const { languagePreference, setLanguage } = useLanguage();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
@@ -885,6 +889,65 @@ export default function ProfileScreen() {
                 >
                   <View style={{ backgroundColor: themeMode === "dark" ? colors.primary : colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
                     <Text style={{ color: themeMode === "dark" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>다크</Text>
+                  </View>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Language Setting */}
+            <View className="flex-row items-center p-4 border-b border-border">
+              <MaterialIcons 
+                name="language" 
+                size={24} 
+                color={colors.primary} 
+              />
+              <View className="flex-1 ml-3">
+                <Text className="text-foreground font-medium">{t('settings.language')}</Text>
+                <Text className="text-muted text-xs">
+                  {languagePreference === "system" ? t('settings.languageSystem') : languagePreference === "ko" ? t('settings.languageKorean') : t('settings.languageEnglish')}
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-1">
+                <Pressable 
+                  onPress={() => {
+                    if (Platform.OS !== "web") {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    setLanguage("system");
+                  }}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                  className="px-3 py-1 rounded-full"
+                >
+                  <View style={{ backgroundColor: languagePreference === "system" ? colors.primary : colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
+                    <Text style={{ color: languagePreference === "system" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>{t('settings.auto')}</Text>
+                  </View>
+                </Pressable>
+                <Pressable 
+                  onPress={() => {
+                    if (Platform.OS !== "web") {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    setLanguage("ko");
+                  }}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                  className="px-3 py-1 rounded-full"
+                >
+                  <View style={{ backgroundColor: languagePreference === "ko" ? colors.primary : colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
+                    <Text style={{ color: languagePreference === "ko" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>한국어</Text>
+                  </View>
+                </Pressable>
+                <Pressable 
+                  onPress={() => {
+                    if (Platform.OS !== "web") {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    setLanguage("en");
+                  }}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                  className="px-3 py-1 rounded-full"
+                >
+                  <View style={{ backgroundColor: languagePreference === "en" ? colors.primary : colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
+                    <Text style={{ color: languagePreference === "en" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>English</Text>
                   </View>
                 </Pressable>
               </View>

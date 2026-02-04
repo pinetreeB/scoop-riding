@@ -15,8 +15,53 @@ function getCurrentDateString(): string {
 }
 
 // 시스템 프롬프트 생성 함수
-function getSystemPrompt(): string {
+function getSystemPrompt(language: string = "ko"): string {
   const currentDate = getCurrentDateString();
+  
+  if (language === "en") {
+    return `You are "Scoopy", the AI assistant for the SCOOP app. You are an expert in electric scooters and mobility, providing helpful assistance to users.
+
+## Important: Current Date
+Today's date is ${currentDate}. Use this date as reference for all time expressions like "now", "today", "this year".
+
+## Role
+- Provide electric scooter safety guidelines and regulations
+- Offer riding tips and technical advice
+- Share vehicle maintenance and repair information
+- Answer general mobility-related questions
+
+## Korean Electric Scooter Regulations (2024)
+- Must be 16 years or older to operate
+- Requires moped license or higher
+- Helmet is mandatory
+- Ride on bicycle paths or right edge of roads
+- Sidewalk riding prohibited (except designated bicycle zones)
+- Maximum speed: 25km/h (15.5mph)
+- DUI prohibited (BAC 0.03% or above is punishable)
+- No passengers allowed
+
+## Safety Guidelines
+- Check brakes, tires, and lights before riding
+- Use headlights and taillights at night
+- Be cautious of slippery conditions in rain
+- Avoid sudden acceleration/braking
+- Slow down and check both ways at intersections
+- Avoid wearing earphones (need to hear surroundings)
+
+## Response Style
+- Maintain a friendly and professional tone
+- Provide concise and clear answers
+- Use emojis appropriately when needed
+- Always emphasize legal compliance for safety questions
+- Honestly admit when you don't know something
+
+## Limitations
+- Cannot provide medical/legal advice (recommend consulting professionals)
+- No promotion of illegal activities
+- No requesting personal information
+- No promoting services other than SCOOP app`;
+  }
+  
   return `당신은 SCOOP 앱의 AI 어시스턴트 "스쿠피"입니다. 전동킥보드 및 모빌리티 전문가로서 사용자에게 도움을 제공합니다.
 
 ## 중요: 현재 날짜
@@ -88,7 +133,7 @@ function checkRateLimit(userId: number): boolean {
 // Chat endpoint
 router.post("/chat", async (req: Request, res: Response) => {
   try {
-    const { message, userId, conversationHistory } = req.body;
+    const { message, userId, conversationHistory, language = "ko" } = req.body;
 
     if (!message || typeof message !== "string") {
       return res.status(400).json({ error: "메시지를 입력해주세요." });
@@ -114,14 +159,21 @@ router.post("/chat", async (req: Request, res: Response) => {
     const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
 
     // Add system instruction as first user message (동적으로 현재 날짜 포함)
-    const currentSystemPrompt = getSystemPrompt();
+    const currentSystemPrompt = getSystemPrompt(language);
+    const instructionSuffix = language === "en" 
+      ? "\n\nPlease answer the user's questions following the above guidelines."
+      : "\n\n위 지침을 따라 사용자의 질문에 답변해주세요.";
+    const welcomeMessage = language === "en"
+      ? "Hello! I'm Scoopy, SCOOP's AI assistant. Feel free to ask me anything about electric scooters and mobility! 🛴"
+      : "안녕하세요! 저는 SCOOP의 AI 어시스턴트 스쿠피입니다. 전동킥보드와 모빌리티에 관한 질문이 있으시면 무엇이든 물어보세요! 🛴";
+    
     contents.push({
       role: "user",
-      parts: [{ text: currentSystemPrompt + "\n\n위 지침을 따라 사용자의 질문에 답변해주세요." }]
+      parts: [{ text: currentSystemPrompt + instructionSuffix }]
     });
     contents.push({
       role: "model",
-      parts: [{ text: "안녕하세요! 저는 SCOOP의 AI 어시스턴트 스쿠피입니다. 전동킥보드와 모빌리티에 관한 질문이 있으시면 무엇이든 물어보세요! 🛴" }]
+      parts: [{ text: welcomeMessage }]
     });
 
     // Add conversation history if provided
@@ -200,8 +252,10 @@ router.post("/chat", async (req: Request, res: Response) => {
 });
 
 // Quick suggestions endpoint
-router.get("/suggestions", (_req: Request, res: Response) => {
-  const suggestions = [
+router.get("/suggestions", (req: Request, res: Response) => {
+  const language = req.query.language as string || "ko";
+  
+  const suggestionsKo = [
     "전동킥보드 안전하게 타는 방법",
     "비 오는 날 주행 팁",
     "배터리 오래 쓰는 방법",
@@ -211,6 +265,19 @@ router.get("/suggestions", (_req: Request, res: Response) => {
     "브레이크 점검 방법",
     "타이어 공기압 관리",
   ];
+  
+  const suggestionsEn = [
+    "How to ride an electric scooter safely",
+    "Tips for riding in the rain",
+    "How to extend battery life",
+    "Is wearing a helmet mandatory?",
+    "Do I need a license for electric scooters?",
+    "Night riding precautions",
+    "How to check brakes",
+    "Tire pressure maintenance",
+  ];
+  
+  const suggestions = language === "en" ? suggestionsEn : suggestionsKo;
   
   // Return 4 random suggestions
   const shuffled = suggestions.sort(() => 0.5 - Math.random());

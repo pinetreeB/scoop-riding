@@ -1,9 +1,0 @@
-{
-  "query": "INSERT INTO announcements (title, content, type, priority, isActive, showPopup, createdBy, createdAt, updatedAt) VALUES ('✅ 서버 정상화 안내', '안녕하세요, SCOOP 사용자 여러분!\\n\\n서버 장애로 불편을 드려 죄송합니다.\\n\\n서버를 새로운 환경(GCP Cloud SQL)으로 이전하여 정상화되었습니다.\\n\\n더 안정적인 서비스를 제공하기 위해 노력하겠습니다.\\n\\n감사합니다.', 'notice', 100, 1, 1, 1, NOW(), NOW());",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO announcements (title, content, type, priority, isActive, showPopup, createdBy, createdAt, updatedAt) VALUES ('✅ 서버 정상화 안내', '안녕하세요, SCOOP 사용자 여러분!\\n\\n서버 장애로 불편을 드려 죄송합니다.\\n\\n서버를 새로운 환경(GCP Cloud SQL)으로 이전하여 정상화되었습니다.\\n\\n더 안정적인 서비스를 제공하기 위해 노력하겠습니다.\\n\\n감사합니다.', 'notice', 100, 1, 1, 1, NOW(), NOW());",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 1534
-}
