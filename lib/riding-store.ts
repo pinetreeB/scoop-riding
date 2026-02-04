@@ -198,6 +198,33 @@ export async function saveRidingRecord(record: RidingRecord, retryCount = 0): Pr
     delete recordWithoutGps.gpsPoints;
 
     const existing = await getRidingRecords();
+    
+    // Check for duplicate records (same ID or very similar data within 1 minute)
+    const isDuplicate = existing.some((r: RidingRecord) => {
+      // Exact ID match
+      if (r.id === record.id) {
+        console.log(`[RidingStore] Duplicate detected: same ID ${record.id}`);
+        return true;
+      }
+      
+      // Check for similar records (same distance, duration, and startTime within 1 minute)
+      const timeDiff = Math.abs(new Date(r.startTime).getTime() - new Date(record.startTime).getTime());
+      if (
+        timeDiff < 60000 && // Within 1 minute
+        Math.abs(r.distance - record.distance) < 10 && // Distance within 10m
+        Math.abs(r.duration - record.duration) < 5 // Duration within 5 seconds
+      ) {
+        console.log(`[RidingStore] Duplicate detected: similar record (timeDiff=${timeDiff}ms, distDiff=${Math.abs(r.distance - record.distance)}m)`);
+        return true;
+      }
+      
+      return false;
+    });
+    
+    if (isDuplicate) {
+      console.log(`[RidingStore] Skipping duplicate record ${record.id}`);
+      return; // Skip saving duplicate
+    }
     console.log(`[RidingStore] Existing records count: ${existing.length}`);
     
     const updated = [recordWithoutGps, ...existing];

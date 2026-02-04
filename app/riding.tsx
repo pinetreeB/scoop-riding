@@ -274,6 +274,10 @@ export default function RidingScreen() {
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [rideAnalysis, setRideAnalysis] = useState<RideAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  // Prevent duplicate saves
+  const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
   const [analysisRideStats, setAnalysisRideStats] = useState<any>(null);
   const analyzeRide = trpc.rides.analyzeRide.useMutation();
   
@@ -1406,6 +1410,14 @@ export default function RidingScreen() {
 
   // Function to save ride record (called after voltage input or skip)
   const saveRideRecord = async (rideData: any, endVoltage?: number, endSoc?: number) => {
+    // Prevent duplicate saves
+    if (isSavingRef.current) {
+      console.log("[Riding] Save already in progress, skipping duplicate call");
+      return;
+    }
+    isSavingRef.current = true;
+    setIsSaving(true);
+    
     try {
       // Add voltage data and weather info if available
       const recordWithVoltage = {
@@ -1589,10 +1601,22 @@ export default function RidingScreen() {
         "오류 발생",
         "주행 기록 저장 중 예상치 못한 오류가 발생했습니다.",
         [
-          { text: "다시 시도", onPress: () => handleStop() },
-          { text: "저장 안함", style: "destructive", onPress: () => router.back() },
+          { text: "다시 시도", onPress: () => {
+            isSavingRef.current = false;
+            setIsSaving(false);
+            handleStop();
+          } },
+          { text: "저장 안함", style: "destructive", onPress: () => {
+            isSavingRef.current = false;
+            setIsSaving(false);
+            router.replace("/(tabs)");
+          } },
         ]
       );
+    } finally {
+      // Reset saving state after completion
+      isSavingRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -1607,7 +1631,8 @@ export default function RidingScreen() {
         stopBackgroundLocationTracking();
       }
       clearStartVoltage();
-      router.back();
+      // Navigate to main tab instead of back (which goes to scooter selection)
+      router.replace("/(tabs)");
       return;
     }
 
@@ -1704,7 +1729,7 @@ export default function RidingScreen() {
                 "주행 기록 저장 중 예상치 못한 오류가 발생했습니다.",
                 [
                   { text: "다시 시도", onPress: () => handleStop() },
-                  { text: "저장 안함", style: "destructive", onPress: () => router.back() },
+                  { text: "저장 안함", style: "destructive", onPress: () => router.replace("/(tabs)") },
                 ]
               );
             }
