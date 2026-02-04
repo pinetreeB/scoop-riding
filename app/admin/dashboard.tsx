@@ -1,4 +1,4 @@
-import { useState, useEffect, Component, ErrorInfo, ReactNode } from "react";
+import React, { useState, useEffect, useCallback, Component, ReactNode, ErrorInfo } from "react";
 import {
   View,
   Text,

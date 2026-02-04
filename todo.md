@@ -1106,3 +1106,6 @@
 - [x] 버그 리포트 답변 시 사용자에게 푸시 알림 발송 기능 추가 - Expo Push API 연동 완료
 - [ ] 관리자용 앱 빌드 (APK)
 - [x] 주행 랭킹 더보기 30위까지만 표시되도록 수정 - limit: 50 → 30으로 변경
+
+## 버그 수정 (2026-02-04 추가)
+- [x] 앱 내 관리자 대시보드 "undefined is not a function" 오류 재수정 - React import 문 수정 (Component, ReactNode, ErrorInfo 등 누락된 import 추가)
