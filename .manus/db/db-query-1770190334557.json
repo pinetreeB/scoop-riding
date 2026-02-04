@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, email, name, role, \"isAdmin\", \"createdAt\" FROM users WHERE email = 'tmd7221@gmail.com';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, email, name, role, \"isAdmin\", \"createdAt\" FROM users WHERE email = 'tmd7221@gmail.com';",
+  "rows": [
+    {
+      "id": "1920694",
+      "email": "tmd7221@gmail.com",
+      "name": "소나무군",
+      "role": "admin",
+      "isAdmin": "isAdmin",
+      "createdAt": "createdAt"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\trole\tisAdmin\tcreatedAt\n1920694\ttmd7221@gmail.com\t소나무군\tadmin\tisAdmin\tcreatedAt\n",
+  "stderr": "",
+  "execution_time_ms": 1561
+}
