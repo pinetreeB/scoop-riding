@@ -1,0 +1,170 @@
+{
+  "query": "SELECT id, email, name FROM users ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, email, name FROM users ORDER BY id;",
+  "rows": [
+    {
+      "id": "30030",
+      "email": "scoop@scoopmotor.com",
+      "name": "스쿱 모빌리티"
+    },
+    {
+      "id": "120051",
+      "email": "jjg920228@naver.com",
+      "name": "음사"
+    },
+    {
+      "id": "120152",
+      "email": "1226lyg@naver.com",
+      "name": "이용구"
+    },
+    {
+      "id": "120503",
+      "email": "design__j@naver.com",
+      "name": "shark"
+    },
+    {
+      "id": "150001",
+      "email": "gustjrfjf369@gmail.com",
+      "name": "감자"
+    },
+    {
+      "id": "210009",
+      "email": "ojjksj1234@naver.com",
+      "name": "양승균"
+    },
+    {
+      "id": "330874",
+      "email": "abc@abc.com",
+      "name": "ㅇㅇ(118.235)"
+    },
+    {
+      "id": "420001",
+      "email": "goxoaos646@naver.com",
+      "name": "김정훈"
+    },
+    {
+      "id": "570001",
+      "email": "jmk3517@gmail.com",
+      "name": "별의고리"
+    },
+    {
+      "id": "1920694",
+      "email": "tmd7221@gmail.com",
+      "name": "소나무군"
+    },
+    {
+      "id": "2790182",
+      "email": "wlqja25@naver.com",
+      "name": "JB"
+    },
+    {
+      "id": "3545973",
+      "email": "zc3513@naver.com",
+      "name": "김승현"
+    },
+    {
+      "id": "3546138",
+      "email": "cardj0989@gmail.com",
+      "name": "명월"
+    },
+    {
+      "id": "3546319",
+      "email": "en966@naver.com",
+      "name": "간헐적 정상인"
+    },
+    {
+      "id": "3546359",
+      "email": "twiny76@naver.com",
+      "name": "유프리"
+    },
+    {
+      "id": "3546629",
+      "email": "gnlrjsx11@naver.com",
+      "name": "강희건"
+    },
+    {
+      "id": "3546747",
+      "email": "gmlrjsc11@naver.com",
+      "name": "강희건"
+    },
+    {
+      "id": "3547106",
+      "email": "hiasins35@naver.com",
+      "name": "임연수"
+    },
+    {
+      "id": "3547701",
+      "email": "cjaookcy@gmail.com",
+      "name": "미친 드러머"
+    },
+    {
+      "id": "3547822",
+      "email": "ehxogud0@naver.com",
+      "name": "하마119"
+    },
+    {
+      "id": "3547919",
+      "email": "whdqls1020@naver.com",
+      "name": "블루"
+    },
+    {
+      "id": "3548194",
+      "email": "lehoss@naver.com",
+      "name": "yuki11"
+    },
+    {
+      "id": "3548336",
+      "email": "gusdbgusdb@naver.com",
+      "name": "릴로"
+    },
+    {
+      "id": "3570423",
+      "email": "jeaseung1999@gmail.com",
+      "name": "만두"
+    },
+    {
+      "id": "3571703",
+      "email": "wndel119@naver.com",
+      "name": "전주"
+    },
+    {
+      "id": "3571734",
+      "email": "dnjs1329@naver.com",
+      "name": "전주어린이"
+    },
+    {
+      "id": "3690001",
+      "email": "twincartt@naver.com",
+      "name": "Ssi"
+    },
+    {
+      "id": "3690477",
+      "email": "gjdbwjs@naver.com",
+      "name": "목사아들"
+    },
+    {
+      "id": "3840161",
+      "email": "youdkgood@gmail.com",
+      "name": "로버"
+    },
+    {
+      "id": "3961721",
+      "email": "test1215@naver.com",
+      "name": "민트초코"
+    },
+    {
+      "id": "3961751",
+      "email": "dodo5087270@gmail.com",
+      "name": "누구여"
+    },
+    {
+      "id": "4530402",
+      "email": "wlalsrh@naver.com",
+      "name": "Gminimotors"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\n30030\tscoop@scoopmotor.com\t스쿱 모빌리티\n120051\tjjg920228@naver.com\t음사\n120152\t1226lyg@naver.com\t이용구\n120503\tdesign__j@naver.com\tshark\n150001\tgustjrfjf369@gmail.com\t감자\n210009\tojjksj1234@naver.com\t양승균\n330874\tabc@abc.com\tㅇㅇ(118.235)\n420001\tgoxoaos646@naver.com\t김정훈\n570001\tjmk3517@gmail.com\t별의고리\n1920694\ttmd7221@gmail.com\t소나무군\n2790182\twlqja25@naver.com\tJB\n3545973\tzc3513@naver.com\t김승현\n3546138\tcardj0989@gmail.com\t명월\n3546319\ten966@naver.com\t간헐적 정상인\n3546359\ttwiny76@naver.com\t유프리\n3546629\tgnlrjsx11@naver.com\t강희건\n3546747\tgmlrjsc11@naver.com\t강희건\n3547106\thiasins35@naver.com\t임연수\n3547701\tcjaookcy@gmail.com\t미친 드러머\n3547822\tehxogud0@naver.com\t하마119\n3547919\twhdqls1020@naver.com\t블루\n3548194\tlehoss@naver.com\tyuki11\n3548336\tgusdbgusdb@naver.com\t릴로\n3570423\tjeaseung1999@gmail.com\t만두\n3571703\twndel119@naver.com\t전주\n3571734\tdnjs1329@naver.com\t전주어린이\n3690001\ttwincartt@naver.com\tSsi\n3690477\tgjdbwjs@naver.com\t목사아들\n3840161\tyoudkgood@gmail.com\t로버\n3961721\ttest1215@naver.com\t민트초코\n3961751\tdodo5087270@gmail.com\t누구여\n4530402\twlalsrh@naver.com\tGminimotors\n",
+  "stderr": "",
+  "execution_time_ms": 1522
+}

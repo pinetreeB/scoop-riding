@@ -1,0 +1,11 @@
+{
+  "query": "SELECT id, \"userId\", \"recordId\", date, duration, distance, \"avgSpeed\", \"maxSpeed\", \"startTime\", \"endTime\", \"createdAt\" \nFROM \"ridingRecords\" \nWHERE \"userId\" IN (SELECT id FROM users WHERE name LIKE '%로버%' OR name LIKE '%rover%' OR name LIKE '%Rover%')\nORDER BY \"createdAt\" DESC\nLIMIT 50;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, \"userId\", \"recordId\", date, duration, distance, \"avgSpeed\", \"maxSpeed\", \"startTime\", \"endTime\", \"createdAt\" \nFROM \"ridingRecords\" \nWHERE \"userId\" IN (SELECT id FROM users WHERE name LIKE '%로버%' OR name LIKE '%rover%' OR name LIKE '%Rover%')\nORDER BY \"createdAt\" DESC\nLIMIT 50;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 2 column 21 near \"\"ridingRecords\" ",
+    "WHERE \"userId\" IN (SELECT id FROM users WHERE name LIKE '%로버%' OR name LIKE '%rover%' OR name LIKE '%Rover%')",
+    "ORDER BY \"createdAt\" DESC",
+    "LIMIT 50\""
+  ]
+}

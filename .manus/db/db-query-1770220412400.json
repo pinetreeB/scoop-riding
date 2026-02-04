@@ -1,0 +1,20 @@
+{
+  "query": "SELECT r.startTime, COUNT(*) as cnt, GROUP_CONCAT(r.id ORDER BY r.id) as ids\nFROM ridingRecords r\nINNER JOIN users u ON r.userId = u.id\nWHERE u.name = '로버'\nGROUP BY r.startTime\nHAVING COUNT(*) > 1\nORDER BY cnt DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT r.startTime, COUNT(*) as cnt, GROUP_CONCAT(r.id ORDER BY r.id) as ids\nFROM ridingRecords r\nINNER JOIN users u ON r.userId = u.id\nWHERE u.name = '로버'\nGROUP BY r.startTime\nHAVING COUNT(*) > 1\nORDER BY cnt DESC;",
+  "rows": [
+    {
+      "startTime": "2026-02-04 15:06:51",
+      "cnt": "14",
+      "ids": "2640003,2640004,2640005,2640006,2640007,2640008,2640009,2640010,2640011,2640012,2640013,2640014,2640015,2640016"
+    },
+    {
+      "startTime": "2026-02-03 13:33:39",
+      "cnt": "4",
+      "ids": "2460001,2460002,2460003,2460004"
+    }
+  ],
+  "messages": [],
+  "stdout": "startTime\tcnt\tids\n2026-02-04 15:06:51\t14\t2640003,2640004,2640005,2640006,2640007,2640008,2640009,2640010,2640011,2640012,2640013,2640014,2640015,2640016\n2026-02-03 13:33:39\t4\t2460001,2460002,2460003,2460004\n",
+  "stderr": "",
+  "execution_time_ms": 1543
+}

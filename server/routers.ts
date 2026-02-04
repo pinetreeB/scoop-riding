@@ -353,6 +353,19 @@ export const appRouter = router({
         console.log("[rides.create] Input:", { recordId: input.recordId, date: input.date, duration: input.duration, distance: input.distance, scooterId: input.scooterId });
         
         try {
+          // Check for duplicate by startTime (same user, same startTime within 60 seconds = duplicate)
+          if (input.startTime) {
+            const existingByStartTime = await db.getRidingRecordByStartTime(
+              ctx.user.id,
+              new Date(input.startTime),
+              60 // 60 seconds tolerance
+            );
+            if (existingByStartTime) {
+              console.log("[rides.create] Duplicate detected by startTime, existing recordId:", existingByStartTime.recordId);
+              return { success: true, id: existingByStartTime.id, duplicate: true };
+            }
+          }
+          
           const result = await db.createRidingRecord({
             userId: ctx.user.id,
             recordId: input.recordId,

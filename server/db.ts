@@ -399,6 +399,30 @@ export async function getRidingRecordByRecordId(recordId: string, userId: number
   return results[0];
 }
 
+// Check for duplicate record by startTime (within tolerance seconds)
+export async function getRidingRecordByStartTime(
+  userId: number,
+  startTime: Date,
+  toleranceSeconds: number = 60
+): Promise<RidingRecord | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  // Calculate time range
+  const minTime = new Date(startTime.getTime() - toleranceSeconds * 1000);
+  const maxTime = new Date(startTime.getTime() + toleranceSeconds * 1000);
+
+  const results = await db.select().from(ridingRecords).where(
+    and(
+      eq(ridingRecords.userId, userId),
+      gt(ridingRecords.startTime, minTime),
+      lt(ridingRecords.startTime, maxTime)
+    )
+  ).limit(1);
+  
+  return results[0];
+}
+
 // Scooter (기체) Management Functions
 
 export async function getUserScooters(userId: number): Promise<Scooter[]> {

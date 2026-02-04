@@ -1,0 +1,200 @@
+{
+  "query": "SELECT r.id, r.recordId, r.date, r.duration, r.distance, r.startTime, r.createdAt,\n       COUNT(*) OVER (PARTITION BY r.recordId) as duplicate_count\nFROM ridingRecords r\nINNER JOIN users u ON r.userId = u.id\nWHERE u.name = '로버'\nORDER BY r.recordId, r.createdAt;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT r.id, r.recordId, r.date, r.duration, r.distance, r.startTime, r.createdAt,\n       COUNT(*) OVER (PARTITION BY r.recordId) as duplicate_count\nFROM ridingRecords r\nINNER JOIN users u ON r.userId = u.id\nWHERE u.name = '로버'\nORDER BY r.recordId, r.createdAt;",
+  "rows": [
+    {
+      "id": "2460001",
+      "recordId": "ml6otyuxqgz3o16bxxm",
+      "date": "2026. 2. 3.",
+      "duration": "5",
+      "distance": "11748",
+      "startTime": "2026-02-03 13:33:39",
+      "createdAt": "2026-02-03 14:24:59",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2460002",
+      "recordId": "ml6oupb31exvax5f5eb",
+      "date": "2026. 2. 3.",
+      "duration": "5",
+      "distance": "11748",
+      "startTime": "2026-02-03 13:33:39",
+      "createdAt": "2026-02-03 14:24:59",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2460004",
+      "recordId": "ml6ov1nplx00eo88n1q",
+      "date": "2026. 2. 3.",
+      "duration": "6",
+      "distance": "11748",
+      "startTime": "2026-02-03 13:33:39",
+      "createdAt": "2026-02-03 14:25:07",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2460003",
+      "recordId": "ml6ov3ofvqwv6d4lwo",
+      "date": "2026. 2. 3.",
+      "duration": "6",
+      "distance": "11748",
+      "startTime": "2026-02-03 13:33:39",
+      "createdAt": "2026-02-03 14:25:06",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640001",
+      "recordId": "ml85u5bwvhnagqkr1k",
+      "date": "2026. 2. 5.",
+      "duration": "228",
+      "distance": "4458",
+      "startTime": "2026-02-04 14:59:44",
+      "createdAt": "2026-02-04 15:06:14",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640006",
+      "recordId": "ml86qbvmvwcbdo0woks",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:32",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640003",
+      "recordId": "ml86qc34z5akdpgcpz",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:31:57",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640007",
+      "recordId": "ml86qij5ponmqb4t34",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:35",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640004",
+      "recordId": "ml86qkgycwgiwlgztoi",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:07",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640016",
+      "recordId": "ml86qosgg2g2wqaygpv",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:37",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640008",
+      "recordId": "ml86qpxhhlo2ym2vmy",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:35",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640013",
+      "recordId": "ml86qrl4kyehw54r30n",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:37",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640015",
+      "recordId": "ml86qsnmxlkopn6t2hj",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:37",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640009",
+      "recordId": "ml86qudfay707iluzwg",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:35",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640005",
+      "recordId": "ml86qvbj7mdgpdihn8",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:20",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640014",
+      "recordId": "ml86qz2sqcg876jclj",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:37",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640012",
+      "recordId": "ml86qzzlj09slriemi",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:37",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640010",
+      "recordId": "ml86r16d21973uv2xrz",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:35",
+      "duplicate_count": "1"
+    },
+    {
+      "id": "2640011",
+      "recordId": "ml86r7neqsdpvqhkmhb",
+      "date": "2026. 2. 5.",
+      "duration": "1020",
+      "distance": "10045",
+      "startTime": "2026-02-04 15:06:51",
+      "createdAt": "2026-02-04 15:32:36",
+      "duplicate_count": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\trecordId\tdate\tduration\tdistance\tstartTime\tcreatedAt\tduplicate_count\n2460001\tml6otyuxqgz3o16bxxm\t2026. 2. 3.\t5\t11748\t2026-02-03 13:33:39\t2026-02-03 14:24:59\t1\n2460002\tml6oupb31exvax5f5eb\t2026. 2. 3.\t5\t11748\t2026-02-03 13:33:39\t2026-02-03 14:24:59\t1\n2460004\tml6ov1nplx00eo88n1q\t2026. 2. 3.\t6\t11748\t2026-02-03 13:33:39\t2026-02-03 14:25:07\t1\n2460003\tml6ov3ofvqwv6d4lwo\t2026. 2. 3.\t6\t11748\t2026-02-03 13:33:39\t2026-02-03 14:25:06\t1\n2640001\tml85u5bwvhnagqkr1k\t2026. 2. 5.\t228\t4458\t2026-02-04 14:59:44\t2026-02-04 15:06:14\t1\n2640006\tml86qbvmvwcbdo0woks\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:32\t1\n2640003\tml86qc34z5akdpgcpz\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:31:57\t1\n2640007\tml86qij5ponmqb4t34\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:35\t1\n2640004\tml86qkgycwgiwlgztoi\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:07\t1\n2640016\tml86qosgg2g2wqaygpv\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:37\t1\n2640008\tml86qpxhhlo2ym2vmy\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:35\t1\n2640013\tml86qrl4kyehw54r30n\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:37\t1\n2640015\tml86qsnmxlkopn6t2hj\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:37\t1\n2640009\tml86qudfay707iluzwg\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:35\t1\n2640005\tml86qvbj7mdgpdihn8\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:20\t1\n2640014\tml86qz2sqcg876jclj\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:37\t1\n2640012\tml86qzzlj09slriemi\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:37\t1\n2640010\tml86r16d21973uv2xrz\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:35\t1\n2640011\tml86r7neqsdpvqhkmhb\t2026. 2. 5.\t1020\t10045\t2026-02-04 15:06:51\t2026-02-04 15:32:36\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1524
+}

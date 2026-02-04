@@ -1199,3 +1199,5 @@
 ## 버그 수정 (2026-02-05)
 - [x] 주행기록 복구 버그 - 정상 저장 후에도 복구 팝업이 표시되는 문제 (saveRideRecord 후 clearRideSessionBackup 호출 추가)
 - [x] 주행 종료 후 홈화면으로 복귀하지 않는 버그 - AI 분석 모달 onClose에서 clearRideSessionBackup 호출 및 isProcessingRef로 복구 팝업 방지
+- [x] 로버 계정 중복 주행 기록 삭제 처리 (16개 삭제, 3개 유지)
+- [x] 중복 저장 버그 원인 분석 및 수정 - 서버에서 startTime 기반 중복 체크 추가
