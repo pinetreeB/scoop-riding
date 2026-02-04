@@ -79,6 +79,7 @@
         <button onclick="switchTab('bugs')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="bugs">버그 리포트</button>
         <button onclick="switchTab('posts')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="posts">게시글 관리</button>
         <button onclick="switchTab('rides')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="rides">주행 기록</button>
+        <button onclick="switchTab('aiUsage')" class="tab-btn px-4 py-2 rounded-lg font-medium" data-tab="aiUsage">AI 사용량</button>
       </div>
 
       <!-- Users Tab -->
@@ -206,6 +207,75 @@
         </div>
         <!-- Pagination -->
         <div id="ridesPagination" class="flex justify-center items-center gap-4 mt-4"></div>
+      </div>
+
+      <!-- AI Usage Tab -->
+      <div id="tab-aiUsage" class="tab-content">
+        <div class="bg-white rounded-xl p-4 shadow mb-4 flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-semibold">AI 사용량 통계</h3>
+            <p class="text-sm text-gray-500">월간 AI 기능 사용 현황</p>
+          </div>
+          <div class="flex gap-2">
+            <select id="aiPeriod" onchange="loadAiUsage()" class="px-4 py-2 border border-gray-300 rounded-lg">
+              <option value="monthly">월간</option>
+              <option value="weekly">주간</option>
+              <option value="daily">일간</option>
+            </select>
+            <button onclick="loadAiUsage()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg">새로고침</button>
+          </div>
+        </div>
+
+        <!-- AI Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-white rounded-xl p-6 shadow">
+            <div class="text-gray-500 text-sm">총 호출 횟수</div>
+            <div id="aiTotalCalls" class="text-3xl font-bold text-blue-600">-</div>
+            <div class="text-gray-400 text-xs">회</div>
+          </div>
+          <div class="bg-white rounded-xl p-6 shadow">
+            <div class="text-gray-500 text-sm">총 토큰 사용량</div>
+            <div id="aiTotalTokens" class="text-3xl font-bold text-purple-600">-</div>
+            <div class="text-gray-400 text-xs">토큰</div>
+          </div>
+          <div class="bg-white rounded-xl p-6 shadow">
+            <div class="text-gray-500 text-sm">예상 비용</div>
+            <div id="aiEstimatedCost" class="text-3xl font-bold text-orange-500">-</div>
+            <div id="aiEstimatedCostUSD" class="text-gray-400 text-xs">$0.00</div>
+          </div>
+          <div class="bg-white rounded-xl p-6 shadow">
+            <div class="text-gray-500 text-sm">AI 사용 유저</div>
+            <div id="aiUniqueUsers" class="text-3xl font-bold text-green-600">-</div>
+            <div class="text-gray-400 text-xs">명</div>
+          </div>
+        </div>
+
+        <!-- Feature Usage -->
+        <div class="bg-white rounded-xl p-6 shadow mb-6">
+          <h4 class="text-lg font-semibold mb-4">기능별 사용량</h4>
+          <div id="aiFeatureUsage" class="space-y-3">
+            <div class="text-center text-gray-500 py-4">로딩 중...</div>
+          </div>
+        </div>
+
+        <!-- Monthly Limit Status -->
+        <div class="bg-white rounded-xl p-6 shadow">
+          <h4 class="text-lg font-semibold mb-4">월간 제한 현황</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="text-gray-500 text-sm">기본 제한</div>
+              <div class="text-xl font-bold text-gray-800">30회/월</div>
+            </div>
+            <div class="bg-yellow-50 rounded-lg p-4">
+              <div class="text-gray-500 text-sm">제한 도달 사용자</div>
+              <div id="aiLimitReachedUsers" class="text-xl font-bold text-yellow-600">-명</div>
+            </div>
+            <div class="bg-blue-50 rounded-lg p-4">
+              <div class="text-gray-500 text-sm">평균 사용량</div>
+              <div id="aiAvgUsage" class="text-xl font-bold text-blue-600">-회/월</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -359,6 +429,7 @@
         case 'bugs': loadBugs(); break;
         case 'posts': loadPosts(); break;
         case 'rides': loadRides(); break;
+        case 'aiUsage': loadAiUsage(); break;
       }
     }
 
@@ -840,6 +911,71 @@
         <button onclick="loadRides(${ridesPage + 1})" ${ridesPage === ridesTotalPages ? 'disabled' : ''}
           class="px-4 py-2 rounded-lg ${ridesPage === ridesTotalPages ? 'bg-gray-200 text-gray-500' : 'bg-orange-500 text-white hover:bg-orange-600'}">다음</button>
       `;
+    }
+
+    // ============ AI Usage ============
+    async function loadAiUsage() {
+      const period = document.getElementById('aiPeriod').value;
+      try {
+        const res = await fetch(API_BASE+'/api/admin/ai-usage?period='+period, { 
+          headers: { 'Authorization': 'Bearer '+adminToken } 
+        });
+        const data = await res.json();
+        renderAiUsage(data);
+      } catch (e) { 
+        console.error(e);
+        document.getElementById('aiFeatureUsage').innerHTML = '<div class="text-center text-red-500 py-4">데이터를 불러올 수 없습니다.</div>';
+      }
+    }
+
+    function renderAiUsage(data) {
+      // Stats
+      document.getElementById('aiTotalCalls').textContent = (data.totalCalls || 0).toLocaleString();
+      document.getElementById('aiTotalTokens').textContent = (data.totalTokens || 0).toLocaleString();
+      
+      const costKRW = data.estimatedCostKRW || 0;
+      const costUSD = data.estimatedCostUSD || 0;
+      document.getElementById('aiEstimatedCost').textContent = costKRW.toLocaleString() + '원';
+      document.getElementById('aiEstimatedCostUSD').textContent = '$' + costUSD.toFixed(2);
+      
+      document.getElementById('aiUniqueUsers').textContent = (data.uniqueUsers || 0).toLocaleString();
+      document.getElementById('aiLimitReachedUsers').textContent = (data.limitReachedUsers || 0) + '명';
+      document.getElementById('aiAvgUsage').textContent = (data.avgUsagePerUser || 0).toFixed(1) + '회/월';
+
+      // Feature Usage
+      const featureContainer = document.getElementById('aiFeatureUsage');
+      if (!data.featureBreakdown || data.featureBreakdown.length === 0) {
+        featureContainer.innerHTML = '<div class="text-center text-gray-500 py-4">AI 사용 기록이 없습니다.</div>';
+        return;
+      }
+      
+      const totalCalls = data.totalCalls || 1;
+      featureContainer.innerHTML = data.featureBreakdown.map(f => {
+        const percentage = ((f.count / totalCalls) * 100).toFixed(1);
+        const featureLabel = getFeatureLabel(f.feature);
+        return `
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <div class="flex justify-between mb-1">
+                <span class="text-sm font-medium text-gray-700">${featureLabel}</span>
+                <span class="text-sm text-gray-500">${f.count.toLocaleString()}회 (${percentage}%)</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-orange-500 h-2 rounded-full" style="width: ${percentage}%"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function getFeatureLabel(feature) {
+      switch(feature) {
+        case 'battery_ai': return 'AI 챗봇';
+        case 'ride_analysis': return '주행 분석';
+        case 'chatbot': return '챗봇';
+        default: return feature;
+      }
     }
   </script>
 </body>

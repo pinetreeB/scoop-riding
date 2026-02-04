@@ -351,6 +351,26 @@ export default function AdminDashboardScreen() {
 
 // Survey Tab Component
 function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderStars, colors }: any) {
+  // Safe renderStars function with fallback
+  const safeRenderStars = (rating: number) => {
+    if (typeof renderStars === 'function') {
+      return renderStars(rating);
+    }
+    // Fallback rendering
+    return (
+      <View className="flex-row">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Ionicons
+            key={star}
+            name={star <= rating ? "star" : "star-outline"}
+            size={14}
+            color={star <= rating ? "#F59E0B" : "#9CA3AF"}
+          />
+        ))}
+      </View>
+    );
+  };
+
   return (
     <View className="p-4">
       {loadingSurveyStats ? (
@@ -374,21 +394,21 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
               <View className="flex-row items-center justify-between">
                 <Text className="text-muted">전반적 만족도</Text>
                 <View className="flex-row items-center">
-                  {renderStars(Math.round(surveyStats.avgOverall ?? 0))}
+                  {safeRenderStars(Math.round(surveyStats.avgOverall ?? 0))}
                   <Text className="text-foreground font-semibold ml-2">{(surveyStats.avgOverall ?? 0).toFixed(1)}</Text>
                 </View>
               </View>
               <View className="flex-row items-center justify-between">
                 <Text className="text-muted">사용 편의성</Text>
                 <View className="flex-row items-center">
-                  {renderStars(Math.round(surveyStats.avgUsability ?? 0))}
+                  {safeRenderStars(Math.round(surveyStats.avgUsability ?? 0))}
                   <Text className="text-foreground font-semibold ml-2">{(surveyStats.avgUsability ?? 0).toFixed(1)}</Text>
                 </View>
               </View>
               <View className="flex-row items-center justify-between">
                 <Text className="text-muted">기능 완성도</Text>
                 <View className="flex-row items-center">
-                  {renderStars(Math.round(surveyStats.avgFeature ?? 0))}
+                  {safeRenderStars(Math.round(surveyStats.avgFeature ?? 0))}
                   <Text className="text-foreground font-semibold ml-2">{(surveyStats.avgFeature ?? 0).toFixed(1)}</Text>
                 </View>
               </View>
@@ -420,7 +440,7 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
               <View className="flex-row items-center gap-4 mb-2">
                 <View className="flex-row items-center">
                   <Text className="text-muted text-xs mr-1">만족도</Text>
-                  {renderStars(response.overallRating)}
+                  {safeRenderStars(response.overallRating)}
                 </View>
               </View>
               {response.improvementSuggestion && (
@@ -447,6 +467,29 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
 
 // Bugs Tab Component
 function BugsTab({ bugReports, loadingBugReports, showStatusOptions, getStatusColor, getStatusLabel, getSeverityColor, getSeverityLabel, colors }: any) {
+  // Safe function wrappers with fallbacks
+  const safeShowStatusOptions = (bugId: number, currentStatus: string) => {
+    if (typeof showStatusOptions === 'function') {
+      showStatusOptions(bugId, currentStatus);
+    }
+  };
+  const safeGetStatusColor = (status: string) => {
+    if (typeof getStatusColor === 'function') return getStatusColor(status);
+    return colors?.muted || '#6B7280';
+  };
+  const safeGetStatusLabel = (status: string) => {
+    if (typeof getStatusLabel === 'function') return getStatusLabel(status);
+    return status;
+  };
+  const safeGetSeverityColor = (severity: string) => {
+    if (typeof getSeverityColor === 'function') return getSeverityColor(severity);
+    return colors?.muted || '#6B7280';
+  };
+  const safeGetSeverityLabel = (severity: string) => {
+    if (typeof getSeverityLabel === 'function') return getSeverityLabel(severity);
+    return severity;
+  };
+
   return (
     <View className="p-4">
       {loadingBugReports ? (
@@ -472,7 +515,7 @@ function BugsTab({ bugReports, loadingBugReports, showStatusOptions, getStatusCo
             <TouchableOpacity
               key={bug.id}
               className="bg-surface rounded-xl p-4 border border-border mb-3"
-              onPress={() => showStatusOptions(bug.id, bug.status)}
+              onPress={() => safeShowStatusOptions(bug.id, bug.status)}
             >
               <View className="flex-row items-start justify-between mb-2">
                 <View className="flex-1 mr-3">
@@ -486,18 +529,18 @@ function BugsTab({ bugReports, loadingBugReports, showStatusOptions, getStatusCo
                 <View className="items-end">
                   <View 
                     className="px-2 py-1 rounded-full"
-                    style={{ backgroundColor: `${getStatusColor(bug.status)}20` }}
+                    style={{ backgroundColor: `${safeGetStatusColor(bug.status)}20` }}
                   >
-                    <Text style={{ color: getStatusColor(bug.status), fontSize: 11, fontWeight: "600" }}>
-                      {getStatusLabel(bug.status)}
+                    <Text style={{ color: safeGetStatusColor(bug.status), fontSize: 11, fontWeight: "600" }}>
+                      {safeGetStatusLabel(bug.status)}
                     </Text>
                   </View>
                   <View 
                     className="px-2 py-0.5 rounded mt-1"
-                    style={{ backgroundColor: `${getSeverityColor(bug.severity)}20` }}
+                    style={{ backgroundColor: `${safeGetSeverityColor(bug.severity)}20` }}
                   >
-                    <Text style={{ color: getSeverityColor(bug.severity), fontSize: 10 }}>
-                      {getSeverityLabel(bug.severity)}
+                    <Text style={{ color: safeGetSeverityColor(bug.severity), fontSize: 10 }}>
+                      {safeGetSeverityLabel(bug.severity)}
                     </Text>
                   </View>
                 </View>

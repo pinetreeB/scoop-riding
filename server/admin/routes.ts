@@ -958,6 +958,20 @@ router.get("/rides/user/:userId", verifyAdminToken, async (req: Request, res: Re
   }
 });
 
+// ============ AI Usage Stats API ============
+// Get AI usage statistics for admin dashboard
+router.get("/ai-usage", verifyAdminToken, async (req: Request, res: Response) => {
+  try {
+    const period = (req.query.period as string) || "monthly";
+    const { getAiUsageStats } = await import("../ai-usage");
+    const stats = await getAiUsageStats(period as "daily" | "weekly" | "monthly");
+    res.json(stats);
+  } catch (e) {
+    console.error("Admin AI usage stats error:", e);
+    res.status(500).json({ error: "AI 사용량 통계를 불러오는데 실패했습니다." });
+  }
+});
+
 // ============ Suspicious User Monitoring API ============
 // Get suspicious users list
 router.get("/monitoring/suspicious", verifyAdminToken, async (req: Request, res: Response) => {
@@ -1260,7 +1274,7 @@ function getAdminDashboardHTML(): string {
           <div class="bg-white rounded-xl p-6 shadow">
             <h3 class="text-lg font-semibold mb-4">사용자 주행 통계</h3>
             <div class="mb-4">
-              <input type="number" id="userStatsId" placeholder="사용자 ID 입력" class="px-4 py-2 border border-gray-300 rounded-lg mr-2">
+              <input type="text" id="userStatsId" placeholder="사용자 ID 입력" class="px-4 py-2 border border-gray-300 rounded-lg mr-2" inputmode="numeric" pattern="[0-9]*">
               <button onclick="loadUserStats()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg">조회</button>
               <button onclick="loadUserRideHistory()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg ml-2">주행 기록</button>
             </div>
@@ -1370,7 +1384,7 @@ function getAdminDashboardHTML(): string {
         <div class="bg-white rounded-xl p-4 shadow mt-6">
           <h4 class="font-semibold mb-4">새 차단 추가</h4>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <input type="number" id="banUserId" placeholder="사용자 ID" class="px-4 py-2 border border-gray-300 rounded-lg">
+            <input type="text" id="banUserId" placeholder="사용자 ID" class="px-4 py-2 border border-gray-300 rounded-lg" inputmode="numeric" pattern="[0-9]*">
             <input type="text" id="banReason" placeholder="차단 사유" class="px-4 py-2 border border-gray-300 rounded-lg">
             <select id="banType" class="px-4 py-2 border border-gray-300 rounded-lg">
               <option value="temporary">임시 차단</option>
