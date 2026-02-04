@@ -54,6 +54,10 @@ export function BatteryOptimizationGuide({
     }
   };
 
+  const openAppSettings = () => {
+    Linking.openSettings();
+  };
+
   const handleDontShowAgain = async () => {
     try {
       await AsyncStorage.setItem(BATTERY_GUIDE_DISMISSED_KEY, "true");
@@ -85,7 +89,7 @@ export function BatteryOptimizationGuide({
             paddingTop: 16,
             paddingBottom: 40,
             paddingHorizontal: 20,
-            maxHeight: "80%",
+            maxHeight: "85%",
           }}
         >
           {/* Handle bar */}
@@ -165,39 +169,72 @@ export function BatteryOptimizationGuide({
               />
             </View>
 
-            {/* Device-specific tips - Samsung only */}
-            <View
+            {/* Device-specific tips */}
+            <Text
               style={{
-                backgroundColor: colors.surface,
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 24,
+                fontSize: 16,
+                fontWeight: "bold",
+                color: colors.foreground,
+                marginBottom: 12,
               }}
             >
-              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                <MaterialIcons
-                  name="info-outline"
-                  size={18}
-                  color={colors.primary}
-                />
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "600",
-                    color: colors.foreground,
-                    marginLeft: 8,
-                  }}
-                >
-                  Samsung 기기 설정
-                </Text>
-              </View>
-              <Text style={{ fontSize: 13, color: colors.muted, lineHeight: 20 }}>
-                설정 → 배터리 → 백그라운드 사용 제한 → SCOOP 해제
-              </Text>
-            </View>
+              기기별 설정 방법
+            </Text>
+
+            {/* Samsung */}
+            <DeviceTipCard
+              brand="Samsung"
+              steps={[
+                "설정 → 배터리 → 백그라운드 사용 제한 → SCOOP 해제",
+                "설정 → 앱 → SCOOP → 배터리 → 제한 없음",
+                "설정 → 디바이스 케어 → 배터리 → 앱 절전 → SCOOP 제외",
+              ]}
+              colors={colors}
+            />
+
+            {/* LG */}
+            <DeviceTipCard
+              brand="LG"
+              steps={[
+                "설정 → 배터리 → 백그라운드 제한 → SCOOP 해제",
+                "설정 → 앱 → SCOOP → 배터리 사용 관리 → 제한 없음",
+              ]}
+              colors={colors}
+            />
+
+            {/* Xiaomi / Redmi / POCO */}
+            <DeviceTipCard
+              brand="Xiaomi / Redmi / POCO"
+              steps={[
+                "설정 → 앱 → 앱 관리 → SCOOP → 자동 시작 허용",
+                "설정 → 앱 → 앱 관리 → SCOOP → 배터리 절약 → 제한 없음",
+                "보안 앱 → 배터리 → 앱 배터리 절약 → SCOOP → 제한 없음",
+              ]}
+              colors={colors}
+            />
+
+            {/* OnePlus / OPPO / Realme */}
+            <DeviceTipCard
+              brand="OnePlus / OPPO / Realme"
+              steps={[
+                "설정 → 배터리 → 배터리 최적화 → SCOOP → 최적화 안 함",
+                "설정 → 앱 → SCOOP → 배터리 사용 → 백그라운드 활동 허용",
+              ]}
+              colors={colors}
+            />
+
+            {/* Huawei / Honor */}
+            <DeviceTipCard
+              brand="Huawei / Honor"
+              steps={[
+                "설정 → 앱 → 앱 실행 → SCOOP → 수동 관리 → 모두 켜기",
+                "설정 → 배터리 → 앱 실행 → SCOOP → 자동 관리 해제",
+              ]}
+              colors={colors}
+            />
 
             {/* Buttons */}
-            <View style={{ gap: 12 }}>
+            <View style={{ gap: 12, marginTop: 8 }}>
               <Pressable
                 onPress={openBatterySettings}
                 style={({ pressed }) => ({
@@ -212,6 +249,29 @@ export function BatteryOptimizationGuide({
                   style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}
                 >
                   배터리 설정 열기
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={openAppSettings}
+                style={({ pressed }) => ({
+                  backgroundColor: colors.surface,
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  alignItems: "center",
+                  opacity: pressed ? 0.8 : 1,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                })}
+              >
+                <Text
+                  style={{
+                    color: colors.foreground,
+                    fontSize: 16,
+                    fontWeight: "500",
+                  }}
+                >
+                  앱 설정 열기
                 </Text>
               </Pressable>
 
@@ -253,6 +313,58 @@ export function BatteryOptimizationGuide({
         </View>
       </View>
     </Modal>
+  );
+}
+
+function DeviceTipCard({
+  brand,
+  steps,
+  colors,
+}: {
+  brand: string;
+  steps: string[];
+  colors: ReturnType<typeof useColors>;
+}) {
+  return (
+    <View
+      style={{
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+        <MaterialIcons
+          name="phone-android"
+          size={18}
+          color={colors.primary}
+        />
+        <Text
+          style={{
+            fontSize: 14,
+            fontWeight: "600",
+            color: colors.foreground,
+            marginLeft: 8,
+          }}
+        >
+          {brand}
+        </Text>
+      </View>
+      {steps.map((step, index) => (
+        <Text
+          key={index}
+          style={{
+            fontSize: 13,
+            color: colors.muted,
+            lineHeight: 20,
+            marginLeft: 26,
+          }}
+        >
+          • {step}
+        </Text>
+      ))}
+    </View>
   );
 }
 
@@ -352,11 +464,28 @@ export function useBatteryOptimizationGuide() {
     }
   };
 
+  // Reset dismissed state (for settings screen)
+  const resetDismissed = async () => {
+    try {
+      await AsyncStorage.removeItem(BATTERY_GUIDE_DISMISSED_KEY);
+      setShouldShow(true);
+    } catch (error) {
+      console.log("[BatteryGuide] Error resetting dismissed:", error);
+    }
+  };
+
+  // Force show guide (for settings screen)
+  const forceShow = () => {
+    setIsVisible(true);
+  };
+
   return {
     shouldShow,
     isVisible,
     showGuide,
     hideGuide,
     markAsShown,
+    resetDismissed,
+    forceShow,
   };
 }

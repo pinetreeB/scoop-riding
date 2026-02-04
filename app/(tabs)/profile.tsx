@@ -35,6 +35,7 @@ import { calculateLevel, getLevelTitle, getLevelColor, LEVEL_DEFINITIONS } from 
 import Constants from "expo-constants";
 import * as Sharing from "expo-sharing";
 import { captureScreen } from "react-native-view-shot";
+import { BatteryOptimizationGuide, useBatteryOptimizationGuide } from "@/components/battery-optimization-guide";
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -75,6 +76,9 @@ export default function ProfileScreen() {
     downloadUrl: string | null;
     releaseNotes: string | null;
   }>({ hasUpdate: false, latestVersion: null, downloadUrl: null, releaseNotes: null });
+
+  // Battery optimization guide
+  const batteryGuide = useBatteryOptimizationGuide();
 
   const CURRENT_APP_VERSION = Constants.expoConfig?.version || "0.0.12";
 
@@ -1006,6 +1010,27 @@ export default function ProfileScreen() {
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
 
+            {/* Battery Optimization Guide - Android only */}
+            {Platform.OS === "android" && (
+              <Pressable
+                onPress={() => {
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  batteryGuide.forceShow();
+                }}
+                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                className="flex-row items-center p-4 border-b border-border"
+              >
+                <MaterialIcons name="battery-alert" size={24} color={colors.warning} />
+                <View className="flex-1 ml-3">
+                  <Text className="text-foreground font-medium">백그라운드 설정 가이드</Text>
+                  <Text className="text-muted text-xs">화면 꺼짐 시에도 주행 기록 유지</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
+              </Pressable>
+            )}
+
             {/* Admin Dashboard - only for admins */}
             {user?.role === "admin" && (
               <Pressable
@@ -1558,6 +1583,12 @@ export default function ProfileScreen() {
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Battery Optimization Guide Modal */}
+      <BatteryOptimizationGuide
+        visible={batteryGuide.isVisible}
+        onClose={batteryGuide.hideGuide}
+      />
     </ScreenContainer>
   );
 }
