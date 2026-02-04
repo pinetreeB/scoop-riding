@@ -1201,3 +1201,9 @@
 - [x] 주행 종료 후 홈화면으로 복귀하지 않는 버그 - AI 분석 모달 onClose에서 clearRideSessionBackup 호출 및 isProcessingRef로 복구 팝업 방지
 - [x] 로버 계정 중복 주행 기록 삭제 처리 (16개 삭제, 3개 유지)
 - [x] 중복 저장 버그 원인 분석 및 수정 - 서버에서 startTime 기반 중복 체크 추가
+
+## 성능 분석 (2026-02-05)
+- [x] 서버 응답 속도 저하 원인 분석 - gpsPointsJson 대용량 데이터 전송이 주원인
+- [ ] 앱 시작 시 서버 데이터 로딩 지연 원인 분석 (커뮤니티, 공지사항 등)
+- [x] DB 인덱스 통계 업데이트 (ANALYZE TABLE) - PlanetScale 특성상 카디널리티 0 유지
+- [x] getPosts N+1 쿼리 문제 수정 - 1710ms → 641ms (63% 개선)

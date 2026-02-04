@@ -642,22 +642,33 @@ export async function getPosts(
     .limit(limit)
     .offset(offset);
 
-  // Check if user has liked each post
-  if (userId) {
-    const postsWithLikes = await Promise.all(
-      result.map(async (post) => {
-        const like = await db
-          .select()
-          .from(postLikes)
-          .where(and(eq(postLikes.postId, post.id), eq(postLikes.userId, userId)))
-          .limit(1);
-        return { ...post, isLiked: like.length > 0 };
-      })
-    );
-    return postsWithLikes;
+  // Check if user has liked each post - optimized single query
+  if (userId && result.length > 0) {
+    // Get all post IDs
+    const postIds = result.map(post => post.id);
+    
+    // Single query to get all likes for these posts by this user
+    const userLikes = await db
+      .select({ postId: postLikes.postId })
+      .from(postLikes)
+      .where(
+        and(
+          sql`${postLikes.postId} IN (${sql.join(postIds.map(id => sql`${id}`), sql`, `)})`,
+          eq(postLikes.userId, userId)
+        )
+      );
+    
+    // Create a Set for O(1) lookup
+    const likedPostIds = new Set(userLikes.map(like => like.postId));
+    
+    // Map results with isLiked flag
+    return result.map(post => ({
+      ...post,
+      isLiked: likedPostIds.has(post.id)
+    }));
   }
 
-  return result;
+  return result.map(post => ({ ...post, isLiked: false }));
 }
 
 export async function getPostById(postId: number, userId?: number): Promise<PostWithAuthor | null> {
