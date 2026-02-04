@@ -19,6 +19,7 @@ import * as Location from "expo-location";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
+import { useAiUsage, formatAiUsage } from "@/hooks/use-ai-usage";
 
 interface ChatMessage {
   id: string;
@@ -41,6 +42,9 @@ export default function BatteryAiScreen() {
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [temperature, setTemperature] = useState<number | undefined>();
+
+  // AI 사용량 훅
+  const { remaining, monthlyLimit, canUse, limitMessage, refetch: refetchAiUsage } = useAiUsage();
 
   // API hooks
   const checkLimit = trpc.batteryAi.checkLimit.useQuery();
@@ -142,6 +146,7 @@ export default function BatteryAiScreen() {
         
         // Refresh limit
         checkLimit.refetch();
+        refetchAiUsage();
       } else {
         Alert.alert("오류", result.error || "응답을 받지 못했습니다.");
       }
@@ -249,13 +254,37 @@ export default function BatteryAiScreen() {
         </Pressable>
       </View>
 
-      {/* Usage Info */}
-      {checkLimit.data && (
-        <View className="flex-row items-center justify-center py-2 bg-surface/50">
-          <MaterialIcons name="chat" size={16} color={colors.muted} />
-          <Text className="text-xs text-muted ml-1">
-            오늘 {checkLimit.data.used}/{checkLimit.data.limit}회 사용
+      {/* Monthly AI Usage Info */}
+      <View className="flex-row items-center justify-center py-2 bg-surface/50 gap-4">
+        <View className="flex-row items-center">
+          <MaterialIcons 
+            name={remaining <= 5 ? "warning" : "smart-toy"} 
+            size={16} 
+            color={remaining <= 5 ? colors.warning : colors.primary} 
+          />
+          <Text className={`text-xs ml-1 ${remaining <= 5 ? 'text-warning font-medium' : 'text-muted'}`}>
+            월간 AI: {remaining}/{monthlyLimit}회 남음
           </Text>
+        </View>
+        {checkLimit.data && (
+          <View className="flex-row items-center">
+            <MaterialIcons name="chat" size={14} color={colors.muted} />
+            <Text className="text-xs text-muted ml-1">
+              오늘 {checkLimit.data.used}/{checkLimit.data.limit}회
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* AI Limit Warning */}
+      {!canUse && (
+        <View className="mx-4 mt-2 p-3 bg-error/10 rounded-xl border border-error/30">
+          <View className="flex-row items-center">
+            <MaterialIcons name="error-outline" size={20} color={colors.error} />
+            <Text className="text-sm text-error ml-2 flex-1">
+              {limitMessage || '이번 달 AI 사용 횟수를 모두 사용했습니다.'}
+            </Text>
+          </View>
         </View>
       )}
 
