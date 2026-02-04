@@ -384,7 +384,7 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
             </View>
             <View className="flex-1 bg-surface rounded-xl p-4 border border-border">
               <Text className="text-muted text-sm">추천율</Text>
-              <Text className="text-2xl font-bold text-success">{(surveyStats.recommendRate ?? 0).toFixed(0)}%</Text>
+              <Text className="text-2xl font-bold text-success">{Number(surveyStats.recommendRate ?? 0).toFixed(0)}%</Text>
             </View>
           </View>
 
@@ -395,21 +395,21 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
                 <Text className="text-muted">전반적 만족도</Text>
                 <View className="flex-row items-center">
                   {safeRenderStars(Math.round(surveyStats.avgOverall ?? 0))}
-                  <Text className="text-foreground font-semibold ml-2">{(surveyStats.avgOverall ?? 0).toFixed(1)}</Text>
+                  <Text className="text-foreground font-semibold ml-2">{Number(surveyStats.avgOverall ?? 0).toFixed(1)}</Text>
                 </View>
               </View>
               <View className="flex-row items-center justify-between">
                 <Text className="text-muted">사용 편의성</Text>
                 <View className="flex-row items-center">
                   {safeRenderStars(Math.round(surveyStats.avgUsability ?? 0))}
-                  <Text className="text-foreground font-semibold ml-2">{(surveyStats.avgUsability ?? 0).toFixed(1)}</Text>
+                  <Text className="text-foreground font-semibold ml-2">{Number(surveyStats.avgUsability ?? 0).toFixed(1)}</Text>
                 </View>
               </View>
               <View className="flex-row items-center justify-between">
                 <Text className="text-muted">기능 완성도</Text>
                 <View className="flex-row items-center">
                   {safeRenderStars(Math.round(surveyStats.avgFeature ?? 0))}
-                  <Text className="text-foreground font-semibold ml-2">{(surveyStats.avgFeature ?? 0).toFixed(1)}</Text>
+                  <Text className="text-foreground font-semibold ml-2">{Number(surveyStats.avgFeature ?? 0).toFixed(1)}</Text>
                 </View>
               </View>
             </View>
@@ -987,7 +987,7 @@ function UsersTab({ colors }: { colors: any }) {
                   </View>
                   <Text className="text-sm text-muted">{user.email}</Text>
                   <Text className="text-xs text-muted mt-1">
-                    주행 {user.totalRides || 0}회 · {((user.totalDistance || 0) / 1000).toFixed(1)}km
+                    주행 {user.totalRides || 0}회 · {(Number(user.totalDistance || 0) / 1000).toFixed(1)}km
                   </Text>
                 </View>
                 <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
@@ -1048,19 +1048,19 @@ function UsersTab({ colors }: { colors: any }) {
                     </View>
                     <View className="items-center">
                       <Text className="text-lg font-bold text-primary">
-                        {((userDetails.stats?.totalDistance || 0) / 1000).toFixed(1)}km
+                        {(Number(userDetails.stats?.totalDistance || 0) / 1000).toFixed(1)}km
                       </Text>
                       <Text className="text-xs text-muted">총 거리</Text>
                     </View>
                     <View className="items-center">
                       <Text className="text-lg font-bold text-primary">
-                        {(userDetails.stats?.avgSpeed || 0).toFixed(1)}
+                        {Number(userDetails.stats?.avgSpeed || 0).toFixed(1)}
                       </Text>
                       <Text className="text-xs text-muted">평균 속도</Text>
                     </View>
                     <View className="items-center">
                       <Text className="text-lg font-bold text-primary">
-                        {(userDetails.stats?.maxSpeed || 0).toFixed(1)}
+                        {Number(userDetails.stats?.maxSpeed || 0).toFixed(1)}
                       </Text>
                       <Text className="text-xs text-muted">최고 속도</Text>
                     </View>
@@ -1216,7 +1216,7 @@ function RidesTab({ colors }: { colors: any }) {
       <View className="bg-surface rounded-xl p-4 mb-4 border border-border">
         <Text className="text-muted text-sm">전체 주행 기록</Text>
         <Text className="text-2xl font-bold text-foreground">
-          {(data?.total ?? 0).toLocaleString()}건
+          {Number(data?.total ?? 0).toLocaleString()}건
         </Text>
       </View>
 
@@ -1259,7 +1259,7 @@ function RidesTab({ colors }: { colors: any }) {
               <View className="flex-row justify-between bg-background rounded-lg p-3">
                 <View className="items-center">
                   <Text className="text-base font-bold text-primary">
-                    {((record.distance || 0) / 1000).toFixed(2)}km
+                    {(Number(record.distance || 0) / 1000).toFixed(2)}km
                   </Text>
                   <Text className="text-xs text-muted">거리</Text>
                 </View>
@@ -1271,13 +1271,13 @@ function RidesTab({ colors }: { colors: any }) {
                 </View>
                 <View className="items-center">
                   <Text className="text-base font-bold text-foreground">
-                    {((record.avgSpeed || 0) / 10).toFixed(1)}
+                    {(Number(record.avgSpeed || 0) / 10).toFixed(1)}
                   </Text>
                   <Text className="text-xs text-muted">평균(km/h)</Text>
                 </View>
                 <View className="items-center">
                   <Text className="text-base font-bold text-warning">
-                    {((record.maxSpeed || 0) / 10).toFixed(1)}
+                    {(Number(record.maxSpeed || 0) / 10).toFixed(1)}
                   </Text>
                   <Text className="text-xs text-muted">최고(km/h)</Text>
                 </View>
@@ -1403,7 +1403,7 @@ function AiUsageTab({ colors }: { colors: any }) {
           <View className="flex-1 min-w-[120px] bg-background rounded-lg p-3">
             <Text className="text-muted text-xs mb-1">총 토큰 사용량</Text>
             <Text className="text-2xl font-bold text-foreground">
-              {aiStats?.totalTokens ? (aiStats.totalTokens / 1000).toFixed(1) : '0'}K
+              {aiStats?.totalTokens ? (Number(aiStats.totalTokens) / 1000).toFixed(1) : '0'}K
             </Text>
             <Text className="text-muted text-xs">토큰</Text>
           </View>
@@ -1445,7 +1445,7 @@ function AiUsageTab({ colors }: { colors: any }) {
               </View>
               <View className="items-end">
                 <Text className="text-foreground font-bold">{feature.calls}회</Text>
-                <Text className="text-muted text-xs">{((feature.tokens || 0) / 1000).toFixed(1)}K 토큰</Text>
+                <Text className="text-muted text-xs">{(Number(feature.tokens || 0) / 1000).toFixed(1)}K 토큰</Text>
               </View>
             </View>
           ))
@@ -1471,7 +1471,7 @@ function AiUsageTab({ colors }: { colors: any }) {
         <View className="flex-row items-center justify-between">
           <Text className="text-muted">평균 사용량</Text>
           <Text className="text-foreground font-medium">
-            {(aiStats?.avgUsagePerUser ?? 0).toFixed(1)}회/월
+            {Number(aiStats?.avgUsagePerUser || 0).toFixed(1)}회/월
           </Text>
         </View>
       </View>

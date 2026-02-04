@@ -1135,3 +1135,8 @@
 - [ ] 공지사항 탭에서 데이터가 표시되지 않음 (DB에는 3개 있음)
 - [ ] 설문, 버그, 사용자, 게시글 탭 데이터 로딩 확인 필요
 - [ ] 앱과 프로덕션 서버 연결 상태 확인
+
+## 버그 수정 (2026-02-04 긴급) - 관리자 대시보드 undefined is not a function 재발
+- [x] 관리자 대시보드 "undefined is not a function" 오류 근본 원인 분석 - toFixed/toLocaleString에 null/undefined 값 전달 문제
+- [x] 모든 함수 호출에 방어 코드 추가 - Number() 래핑으로 15개 호출 수정
+- [x] 서버 설정 차이 문제 확인 - 프로덕션 서버에서 null 반환 시 방어 코드로 해결
