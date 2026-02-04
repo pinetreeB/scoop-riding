@@ -617,8 +617,17 @@ export default function RidingScreen() {
   }, []);
 
   // 세션 복구 확인 및 초기화
+  // 저장 중이거나 분석 모달이 표시 중일 때 복구 팝업 방지용 ref
+  const isProcessingRef = useRef(false);
+  
   useEffect(() => {
     const checkAndInitialize = async () => {
+      // 저장 중이거나 분석 모달이 표시 중이면 복구 팝업 표시 안 함
+      if (isSavingRef.current || isProcessingRef.current) {
+        console.log("[Riding] Skipping recovery check - save or analysis in progress");
+        return;
+      }
+      
       // 복구 가능한 세션이 있는지 확인
       const hasRecoverable = await hasRecoverableSession();
       
@@ -1422,6 +1431,7 @@ export default function RidingScreen() {
       return;
     }
     isSavingRef.current = true;
+    isProcessingRef.current = true; // 복구 팝업 방지
     setIsSaving(true);
     
     try {
@@ -2308,11 +2318,24 @@ export default function RidingScreen() {
       {analysisRideStats && (
         <RideAnalysisModal
           visible={showAnalysisModal}
-          onClose={() => {
+          onClose={async () => {
+            // 먼저 모달 상태 초기화
             setShowAnalysisModal(false);
             setRideAnalysis(null);
             setAnalysisRideStats(null);
-            router.replace("/(tabs)");
+            
+            // 세션 백업 확실히 삭제 (버그 수정: 복구 팝업 방지)
+            try {
+              await clearRideSessionBackup();
+              console.log("[Riding] Session backup cleared on modal close");
+            } catch (e) {
+              console.error("[Riding] Failed to clear session backup:", e);
+            }
+            
+            // 홈화면으로 이동 (약간의 딜레이로 확실한 전환 보장)
+            setTimeout(() => {
+              router.replace("/(tabs)");
+            }, 100);
           }}
           analysis={rideAnalysis}
           isLoading={isAnalyzing}

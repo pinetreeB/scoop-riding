@@ -1194,3 +1194,8 @@
 
 ## 버그 수정 (2026-02-05)
 - [x] 주행기록 복구 버그 - 정상 저장 후에도 복구 팝업이 표시되는 문제 (saveRideRecord 후 clearRideSessionBackup 호출 추가)
+- [ ] 주행 종료 후 홈화면으로 복귀하지 않는 버그
+
+## 버그 수정 (2026-02-05)
+- [x] 주행기록 복구 버그 - 정상 저장 후에도 복구 팝업이 표시되는 문제 (saveRideRecord 후 clearRideSessionBackup 호출 추가)
+- [x] 주행 종료 후 홈화면으로 복귀하지 않는 버그 - AI 분석 모달 onClose에서 clearRideSessionBackup 호출 및 isProcessingRef로 복구 팝업 방지
