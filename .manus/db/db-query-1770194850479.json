@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO announcements (title, content, type, isActive, showPopup, priority, createdBy, createdAt, updatedAt) \nVALUES (\n  'v0.1.6 업데이트 안내',\n  '안녕하세요, SCOOP 라이더 여러분!\\n\\nv0.1.6 버전이 출시되었습니다.\\n\\n📌 주요 업데이트 내용:\\n• 그룹 라이딩 오류 수정 - 방 만들기, 참가, 나가기 기능이 정상 작동합니다\\n• 관리자 대시보드 안정성 개선\\n• 전반적인 버그 수정 및 성능 개선\\n\\n더 나은 라이딩 경험을 위해 최신 버전으로 업데이트해 주세요!\\n\\n감사합니다.\\nSCOOP 팀 드림',\n  'update',\n  1,\n  1,\n  10,\n  1,\n  NOW(),\n  NOW()\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO announcements (title, content, type, isActive, showPopup, priority, createdBy, createdAt, updatedAt) \nVALUES (\n  'v0.1.6 업데이트 안내',\n  '안녕하세요, SCOOP 라이더 여러분!\\n\\nv0.1.6 버전이 출시되었습니다.\\n\\n📌 주요 업데이트 내용:\\n• 그룹 라이딩 오류 수정 - 방 만들기, 참가, 나가기 기능이 정상 작동합니다\\n• 관리자 대시보드 안정성 개선\\n• 전반적인 버그 수정 및 성능 개선\\n\\n더 나은 라이딩 경험을 위해 최신 버전으로 업데이트해 주세요!\\n\\n감사합니다.\\nSCOOP 팀 드림',\n  'update',\n  1,\n  1,\n  10,\n  1,\n  NOW(),\n  NOW()\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1555
+}

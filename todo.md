@@ -1140,3 +1140,17 @@
 - [x] 관리자 대시보드 "undefined is not a function" 오류 근본 원인 분석 - toFixed/toLocaleString에 null/undefined 값 전달 문제
 - [x] 모든 함수 호출에 방어 코드 추가 - Number() 래핑으로 15개 호출 수정
 - [x] 서버 설정 차이 문제 확인 - 프로덕션 서버에서 null 반환 시 방어 코드로 해결
+
+## 배포 (2026-02-04) - APK 빌드 및 업데이트 배포
+- [ ] 업데이트 내역 정리 및 공지 작성
+- [ ] 버전 업데이트 (v0.0.x)
+- [ ] APK 빌드 실행
+- [ ] 업데이트 공지 DB 등록
+- [ ] 앱 업데이트 알림 설정
+
+## v0.1.6 배포 (2026-02-04)
+- [x] 업데이트 내역 정리 및 공지 작성 (날씨 기능, 에코 리더보드, 그룹 라이딩 수정, 안정성 개선)
+- [x] 버전 업데이트 (v0.1.6)
+- [x] APK 빌드 실행 - 완료 (https://expo.dev/artifacts/eas/qof7MkVvrFciUYxPjMpf3R.apk)
+- [x] 업데이트 공지 DB 등록
+- [x] 앱 버전 DB 등록 (forceUpdate=1)

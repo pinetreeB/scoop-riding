@@ -1,0 +1,30 @@
+{
+  "query": "SELECT version, versionCode FROM appVersions ORDER BY versionCode DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT version, versionCode FROM appVersions ORDER BY versionCode DESC LIMIT 5;",
+  "rows": [
+    {
+      "version": "0.1.4",
+      "versionCode": "23"
+    },
+    {
+      "version": "0.0.22",
+      "versionCode": "22"
+    },
+    {
+      "version": "0.0.20",
+      "versionCode": "20"
+    },
+    {
+      "version": "0.0.18",
+      "versionCode": "18"
+    },
+    {
+      "version": "0.0.13",
+      "versionCode": "13"
+    }
+  ],
+  "messages": [],
+  "stdout": "version\tversionCode\n0.1.4\t23\n0.0.22\t22\n0.0.20\t20\n0.0.18\t18\n0.0.13\t13\n",
+  "stderr": "",
+  "execution_time_ms": 1517
+}

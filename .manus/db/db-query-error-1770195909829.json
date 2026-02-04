@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO appVersions (id, version, versionCode, downloadUrl, releaseNotes, minVersionCode, platform, forceUpdate, createdAt, releasedAt)\nVALUES (360001, '0.1.6', 26, 'https://expo.dev/artifacts/eas/qof7MkVvrFciUYxPjMpf3R.apk', \n'📱 SCOOP v0.1.6 업데이트\\n\\n🌤️ 새로운 기능\\n• 실시간 날씨 정보 연동 (기상청 API)\\n• 주행 기록에 날씨 정보 자동 저장\\n• 날씨별 주행 통계 및 분석\\n• 에코 리더보드 - 친환경 주행 랭킹 시스템\\n\\n🔧 버그 수정\\n• 그룹 라이딩 오류 수정 (방 만들기, 참가, 나가기)\\n• 특정 기기에서 발생하는 오류 수정\\n\\n⚡ 성능 개선\\n• 앱 구동 로직 최적화\\n• 서버 알고리즘 안정성 강화\\n• 데이터 처리 속도 개선\\n\\n🛡️ 안정성 강화\\n• 에러 처리 로직 개선\\n• 네트워크 연결 안정성 향상\\n• 메모리 사용 최적화',\n0, 'android', 1, NOW(), NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO appVersions (id, version, versionCode, downloadUrl, releaseNotes, minVersionCode, platform, forceUpdate, createdAt, releasedAt)\nVALUES (360001, '0.1.6', 26, 'https://expo.dev/artifacts/eas/qof7MkVvrFciUYxPjMpf3R.apk', \n'📱 SCOOP v0.1.6 업데이트\\n\\n🌤️ 새로운 기능\\n• 실시간 날씨 정보 연동 (기상청 API)\\n• 주행 기록에 날씨 정보 자동 저장\\n• 날씨별 주행 통계 및 분석\\n• 에코 리더보드 - 친환경 주행 랭킹 시스템\\n\\n🔧 버그 수정\\n• 그룹 라이딩 오류 수정 (방 만들기, 참가, 나가기)\\n• 특정 기기에서 발생하는 오류 수정\\n\\n⚡ 성능 개선\\n• 앱 구동 로직 최적화\\n• 서버 알고리즘 안정성 강화\\n• 데이터 처리 속도 개선\\n\\n🛡️ 안정성 강화\\n• 에러 처리 로직 개선\\n• 네트워크 연결 안정성 향상\\n• 메모리 사용 최적화',\n0, 'android', 1, NOW(), NOW());",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'minVersionCode' in 'field list'"
+  ]
+}

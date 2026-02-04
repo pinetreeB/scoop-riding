@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO appVersions (version, downloadUrl, releaseNotes, isRequired, createdAt) \nVALUES (\n  '0.1.6',\n  'https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/c5766401-54b5-465e-8a49-83f1b2ee7a85',\n  '• 그룹 라이딩 오류 수정\\n• 관리자 대시보드 안정성 개선\\n• 버그 수정 및 성능 개선',\n  0,\n  NOW()\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO appVersions (version, downloadUrl, releaseNotes, isRequired, createdAt) \nVALUES (\n  '0.1.6',\n  'https://expo.dev/accounts/pinetreeb/projects/scoop-riding/builds/c5766401-54b5-465e-8a49-83f1b2ee7a85',\n  '• 그룹 라이딩 오류 수정\\n• 관리자 대시보드 안정성 개선\\n• 버그 수정 및 성능 개선',\n  0,\n  NOW()\n);",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'isRequired' in 'field list'"
+  ]
+}
