@@ -1,0 +1,50 @@
+{
+  "query": "SELECT id, title, type, isActive, showPopup, priority FROM announcements ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, title, type, isActive, showPopup, priority FROM announcements ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "120001",
+      "title": "✅ 서버 정상화 안내",
+      "type": "notice",
+      "isActive": "1",
+      "showPopup": "1",
+      "priority": "100"
+    },
+    {
+      "id": "90002",
+      "title": "⚠️ 서버 장애 안내",
+      "type": "maintenance",
+      "isActive": "0",
+      "showPopup": "1",
+      "priority": "100"
+    },
+    {
+      "id": "90001",
+      "title": "v0.1.6 업데이트 안내",
+      "type": "update",
+      "isActive": "1",
+      "showPopup": "1",
+      "priority": "10"
+    },
+    {
+      "id": "60001",
+      "title": "📱 SCOOP v0.1.4 업데이트",
+      "type": "update",
+      "isActive": "1",
+      "showPopup": "0",
+      "priority": "100"
+    },
+    {
+      "id": "30001",
+      "title": "🎉 SCOOP 오픈 알파 테스트 안내",
+      "type": "notice",
+      "isActive": "1",
+      "showPopup": "1",
+      "priority": "100"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\ttype\tisActive\tshowPopup\tpriority\n120001\t✅ 서버 정상화 안내\tnotice\t1\t1\t100\n90002\t⚠️ 서버 장애 안내\tmaintenance\t0\t1\t100\n90001\tv0.1.6 업데이트 안내\tupdate\t1\t1\t10\n60001\t📱 SCOOP v0.1.4 업데이트\tupdate\t1\t0\t100\n30001\t🎉 SCOOP 오픈 알파 테스트 안내\tnotice\t1\t1\t100\n",
+  "stderr": "",
+  "execution_time_ms": 1591
+}

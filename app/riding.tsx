@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Text, View, Pressable, Alert, BackHandler, Platform, Dimensions } from "react-native";
+import { Text, View, Pressable, Alert, BackHandler, Platform, Dimensions, AppState, AppStateStatus } from "react-native";
 import { useRouter } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
@@ -615,6 +615,42 @@ export default function RidingScreen() {
       };
     }
   }, []);
+
+  // AppState 변경 감지 - 백그라운드에서 포그라운드로 돌아올 때 화면 전환 처리
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const pendingNavigationRef = useRef<boolean>(false);
+  
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      console.log("[Riding] AppState changed:", appStateRef.current, "->", nextAppState);
+      
+      // 백그라운드에서 포그라운드로 돌아왔을 때
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextAppState === "active"
+      ) {
+        console.log("[Riding] App returned to foreground");
+        
+        // 저장 완료 후 화면 전환이 pending 상태였다면 실행
+        if (pendingNavigationRef.current) {
+          console.log("[Riding] Executing pending navigation to home");
+          pendingNavigationRef.current = false;
+          router.replace("/(tabs)");
+        }
+        
+        // 분석 모달이 표시 중이고 분석이 완료되었다면 화면 전환 대기
+        // (사용자가 모달을 닫으면 전환됨)
+      }
+      
+      appStateRef.current = nextAppState;
+    };
+    
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    
+    return () => {
+      subscription.remove();
+    };
+  }, [router]);
 
   // 세션 복구 확인 및 초기화
   useEffect(() => {
@@ -1596,6 +1632,12 @@ export default function RidingScreen() {
           );
           setRideAnalysis(defaultAnalysis);
           setIsAnalyzing(false);
+          
+          // 백그라운드 상태에서 저장 완료된 경우
+          if (AppState.currentState !== "active") {
+            console.log("[Riding] App in background (short ride), setting pending navigation");
+            pendingNavigationRef.current = true;
+          }
           return;
         }
         
@@ -1636,9 +1678,21 @@ export default function RidingScreen() {
           setRideAnalysis(analysisResult.analysis);
         }
         setIsAnalyzing(false);
+        
+        // 백그라운드 상태에서 저장 완료된 경우, 포그라운드로 돌아올 때 화면 전환 대기
+        if (AppState.currentState !== "active") {
+          console.log("[Riding] App in background, setting pending navigation");
+          pendingNavigationRef.current = true;
+        }
       } catch (e) {
         console.log("[Riding] AI analysis error:", e);
         setIsAnalyzing(false);
+        
+        // 백그라운드 상태에서 저장 완료된 경우
+        if (AppState.currentState !== "active") {
+          console.log("[Riding] App in background after error, setting pending navigation");
+          pendingNavigationRef.current = true;
+        }
       }
     } catch (error) {
       console.error("[Riding] Critical error during save:", error);

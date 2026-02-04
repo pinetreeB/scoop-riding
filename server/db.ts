@@ -324,6 +324,24 @@ export async function createRidingRecord(data: InsertRidingRecord): Promise<numb
   const db = await getDb();
   if (!db) return null;
 
+  // Check for duplicate record (same userId and startTime)
+  if (data.startTime) {
+    const existing = await db.select({ id: ridingRecords.id })
+      .from(ridingRecords)
+      .where(
+        and(
+          eq(ridingRecords.userId, data.userId),
+          eq(ridingRecords.startTime, data.startTime)
+        )
+      )
+      .limit(1);
+    
+    if (existing.length > 0) {
+      console.log("[DB] Duplicate riding record detected, returning existing id:", existing[0].id);
+      return existing[0].id;
+    }
+  }
+
   // Build insert data with only defined fields
   const insertData: InsertRidingRecord = {
     userId: data.userId,
