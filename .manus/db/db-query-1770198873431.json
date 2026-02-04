@@ -1,0 +1,18 @@
+{
+  "query": "SHOW COLUMNS FROM announcements WHERE Field = 'type';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SHOW COLUMNS FROM announcements WHERE Field = 'type';",
+  "rows": [
+    {
+      "Field": "type",
+      "Type": "enum('notice','update','event','maintenance')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "notice",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\ntype\tenum('notice','update','event','maintenance')\tNO\t\tnotice\t\n",
+  "stderr": "",
+  "execution_time_ms": 1494
+}

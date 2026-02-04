@@ -1160,3 +1160,31 @@
 - [x] 그룹 참가 시 승인 요청 없이 바로 들어가는 문제 - pending 상태 필터링 개선
 - [x] 앱 재시작 시 그룹 데이터가 사라지는 문제 - 삭제된 그룹 필터링 추가
 - [x] 그룹 라이딩 서버 API 및 DB 전면 점검 - getUserGroups 함수 수정 완료
+
+## 버그 수정 (2026-02-04 긴급) - 서버 응답 지연 문제
+- [ ] 서버 응답이 매우 느려짐 - 원인 분석
+- [ ] 그룹 만들기 "Unable to transform response from server" 오류
+- [ ] 커뮤니티 로딩 지연 문제
+- [ ] 댓글 작성 지연 문제
+- [ ] 데이터베이스 연결 상태 점검
+
+## 서버 이전 (2026-02-04) - GCP Cloud SQL 이전
+- [x] 서버 장애 팝업 공지 등록
+- [ ] GCP Cloud SQL 인스턴스 생성 안내
+- [ ] 데이터베이스 마이그레이션
+- [ ] 환경변수 업데이트 (DATABASE_URL)
+- [ ] 테스트 및 검증
+
+
+## 서버 이전 (2026-02-04)
+- [x] 서버 장애 팝업 공지 등록
+- [x] GCP Cloud SQL 인스턴스 생성 (scoop-riding-db, asia-northeast3)
+- [x] 네트워크 설정 (0.0.0.0/0 IP 허용)
+- [x] 데이터베이스 생성 (scoop_riding)
+- [x] 기존 TiDB Cloud에서 데이터 백업 (42개 테이블)
+- [x] GCP Cloud SQL로 데이터 복원 완료
+- [x] 앱 전용 사용자 생성 (scoop_app)
+- [x] SSL 연결 설정 추가
+- [x] GCP_DATABASE_URL 환경변수 설정
+- [x] 서버 코드 수정 (GCP DB 우선 사용)
+- [x] 연결 테스트 통과

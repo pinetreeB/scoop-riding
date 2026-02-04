@@ -1,0 +1,8 @@
+{
+  "query": "CREATE INDEX IF NOT EXISTS idx_groupSessions_isActive ON groupSessions(isActive);\nCREATE INDEX IF NOT EXISTS idx_groupMembers_userId ON groupMembers(userId);\nCREATE INDEX IF NOT EXISTS idx_groupMembers_groupId ON groupMembers(groupId);\nCREATE INDEX IF NOT EXISTS idx_groupMembers_status ON groupMembers(status);\nCREATE INDEX IF NOT EXISTS idx_posts_authorId ON posts(authorId);\nCREATE INDEX IF NOT EXISTS idx_comments_postId ON comments(postId);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute CREATE INDEX IF NOT EXISTS idx_groupSessions_isActive ON groupSessions(isActive);\nCREATE INDEX IF NOT EXISTS idx_groupMembers_userId ON groupMembers(userId);\nCREATE INDEX IF NOT EXISTS idx_groupMembers_groupId ON groupMembers(groupId);\nCREATE INDEX IF NOT EXISTS idx_groupMembers_status ON groupMembers(status);\nCREATE INDEX IF NOT EXISTS idx_posts_authorId ON posts(authorId);\nCREATE INDEX IF NOT EXISTS idx_comments_postId ON comments(postId);",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1072 (42000) at line 5: column does not exist: authorId"
+  ]
+}

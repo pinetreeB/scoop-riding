@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO announcements (title, content, type, priority, isActive, createdAt, updatedAt)\nVALUES (\n  '⚠️ 서버 장애 안내',\n  '현재 서버에 장애가 발생하여 일부 기능이 정상적으로 동작하지 않을 수 있습니다.\\n\\n서버 과부하 여부를 확인 중이며, 복구되지 않을 경우 서버 이전을 진행할 예정입니다.\\n\\n이용에 불편을 드려 죄송합니다. 빠른 시일 내에 정상화하겠습니다.',\n  'warning',\n  100,\n  1,\n  NOW(),\n  NOW()\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute INSERT INTO announcements (title, content, type, priority, isActive, createdAt, updatedAt)\nVALUES (\n  '⚠️ 서버 장애 안내',\n  '현재 서버에 장애가 발생하여 일부 기능이 정상적으로 동작하지 않을 수 있습니다.\\n\\n서버 과부하 여부를 확인 중이며, 복구되지 않을 경우 서버 이전을 진행할 예정입니다.\\n\\n이용에 불편을 드려 죄송합니다. 빠른 시일 내에 정상화하겠습니다.',\n  'warning',\n  100,\n  1,\n  NOW(),\n  NOW()\n);",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1265 (01000) at line 1: Data truncated for column 'type' at row 1"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "query": "SELECT COUNT(*) as user_count FROM users; SELECT COUNT(*) as group_count FROM groupSessions WHERE isActive = 1; SELECT COUNT(*) as post_count FROM posts;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT COUNT(*) as user_count FROM users; SELECT COUNT(*) as group_count FROM groupSessions WHERE isActive = 1; SELECT COUNT(*) as post_count FROM posts;",
+  "rows": [
+    {
+      "user_count": "31"
+    },
+    {
+      "user_count": "group_count"
+    },
+    {
+      "user_count": "4"
+    },
+    {
+      "user_count": "post_count"
+    },
+    {
+      "user_count": "5"
+    }
+  ],
+  "messages": [],
+  "stdout": "user_count\n31\ngroup_count\n4\npost_count\n5\n",
+  "stderr": "",
+  "execution_time_ms": 2082
+}
