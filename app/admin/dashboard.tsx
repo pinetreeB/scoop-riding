@@ -21,7 +21,7 @@ import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 
-type TabType = "survey" | "bugs" | "announcements" | "users" | "posts" | "rides";
+type TabType = "survey" | "bugs" | "announcements" | "users" | "posts" | "rides" | "aiUsage";
 
 // Error Boundary for Admin Dashboard
 class AdminErrorBoundary extends Component<
@@ -255,6 +255,7 @@ export default function AdminDashboardScreen() {
     { key: "users", label: "사용자", icon: "people" },
     { key: "posts", label: "게시글", icon: "article" },
     { key: "rides", label: "주행기록", icon: "directions-bike" },
+    { key: "aiUsage", label: "AI 사용량", icon: "smart-toy" },
   ];
 
   // Check for any critical errors
@@ -339,6 +340,7 @@ export default function AdminDashboardScreen() {
         {activeTab === "users" && <UsersTab colors={colors} />}
         {activeTab === "posts" && <PostsTab colors={colors} />}
         {activeTab === "rides" && <RidesTab colors={colors} />}
+        {activeTab === "aiUsage" && <AiUsageTab colors={colors} />}
 
         <View className="h-8" />
       </ScrollView>
@@ -1292,4 +1294,152 @@ function getFeatureLabel(feature: string): string {
     case "stats": return "통계 확인";
     default: return feature;
   }
+}
+
+
+// AI Usage Tab Component - AI 사용량 통계
+function AiUsageTab({ colors }: { colors: any }) {
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  
+  // AI 사용량 통계 조회
+  const { data: aiStats, isLoading, refetch } = trpc.aiUsage.getStats.useQuery(
+    { period },
+    { retry: 2, retryDelay: 1000 }
+  );
+
+  // 예상 비용 계산 (GPT-4 기준 $0.03/1K 토큰)
+  const estimatedCost = aiStats?.totalTokens 
+    ? ((aiStats.totalTokens / 1000) * 0.03).toFixed(4) 
+    : '0.0000';
+  const estimatedCostKRW = aiStats?.totalTokens 
+    ? Math.round((aiStats.totalTokens / 1000) * 0.03 * 1350) 
+    : 0;
+
+  if (isLoading) {
+    return (
+      <View className="items-center justify-center py-12">
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text className="text-muted mt-4">AI 사용량 통계 로딩 중...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View className="gap-4">
+      {/* 기간 선택 */}
+      <View className="flex-row gap-2">
+        {(['daily', 'weekly', 'monthly'] as const).map((p) => (
+          <TouchableOpacity
+            key={p}
+            className={`flex-1 py-2 rounded-lg ${period === p ? 'bg-primary' : 'bg-surface'}`}
+            onPress={() => setPeriod(p)}
+          >
+            <Text className={`text-center font-medium ${period === p ? 'text-white' : 'text-muted'}`}>
+              {p === 'daily' ? '일간' : p === 'weekly' ? '주간' : '월간'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* 통계 카드 */}
+      <View className="bg-surface rounded-xl p-4 border border-border">
+        <View className="flex-row items-center gap-2 mb-4">
+          <MaterialIcons name="smart-toy" size={24} color={colors.primary} />
+          <Text className="text-lg font-bold text-foreground">AI 사용량 요약</Text>
+        </View>
+
+        <View className="flex-row flex-wrap gap-4">
+          {/* 총 호출 횟수 */}
+          <View className="flex-1 min-w-[120px] bg-background rounded-lg p-3">
+            <Text className="text-muted text-xs mb-1">총 호출 횟수</Text>
+            <Text className="text-2xl font-bold text-foreground">{aiStats?.totalCalls || 0}</Text>
+            <Text className="text-muted text-xs">회</Text>
+          </View>
+
+          {/* 총 토큰 사용량 */}
+          <View className="flex-1 min-w-[120px] bg-background rounded-lg p-3">
+            <Text className="text-muted text-xs mb-1">총 토큰 사용량</Text>
+            <Text className="text-2xl font-bold text-foreground">
+              {aiStats?.totalTokens ? (aiStats.totalTokens / 1000).toFixed(1) : '0'}K
+            </Text>
+            <Text className="text-muted text-xs">토큰</Text>
+          </View>
+
+          {/* 예상 비용 */}
+          <View className="flex-1 min-w-[120px] bg-background rounded-lg p-3">
+            <Text className="text-muted text-xs mb-1">예상 비용</Text>
+            <Text className="text-2xl font-bold text-primary">{estimatedCostKRW}</Text>
+            <Text className="text-muted text-xs">원 (${estimatedCost})</Text>
+          </View>
+
+          {/* 활성 사용자 */}
+          <View className="flex-1 min-w-[120px] bg-background rounded-lg p-3">
+            <Text className="text-muted text-xs mb-1">AI 사용 유저</Text>
+            <Text className="text-2xl font-bold text-foreground">{aiStats?.uniqueUsers || 0}</Text>
+            <Text className="text-muted text-xs">명</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* 기능별 사용량 */}
+      <View className="bg-surface rounded-xl p-4 border border-border">
+        <Text className="text-lg font-bold text-foreground mb-4">기능별 사용량</Text>
+        
+        {aiStats?.byFeature && aiStats.byFeature.length > 0 ? (
+          aiStats.byFeature.map((feature: any, index: number) => (
+            <View key={index} className="flex-row items-center justify-between py-3 border-b border-border">
+              <View className="flex-row items-center gap-3">
+                <MaterialIcons 
+                  name={feature.feature === 'chatbot' ? 'chat' : feature.feature === 'ridingAnalysis' ? 'analytics' : 'smart-toy'} 
+                  size={20} 
+                  color={colors.primary} 
+                />
+                <Text className="text-foreground font-medium">
+                  {feature.feature === 'chatbot' ? 'AI 챗봇' : 
+                   feature.feature === 'ridingAnalysis' ? '주행 분석' : 
+                   feature.feature}
+                </Text>
+              </View>
+              <View className="items-end">
+                <Text className="text-foreground font-bold">{feature.calls}회</Text>
+                <Text className="text-muted text-xs">{((feature.tokens || 0) / 1000).toFixed(1)}K 토큰</Text>
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text className="text-muted text-center py-4">데이터가 없습니다</Text>
+        )}
+      </View>
+
+      {/* 월간 제한 현황 */}
+      <View className="bg-surface rounded-xl p-4 border border-border">
+        <Text className="text-lg font-bold text-foreground mb-4">월간 제한 현황</Text>
+        
+        <View className="flex-row items-center justify-between mb-2">
+          <Text className="text-muted">기본 제한</Text>
+          <Text className="text-foreground font-medium">30회/월</Text>
+        </View>
+        
+        <View className="flex-row items-center justify-between mb-2">
+          <Text className="text-muted">제한 도달 사용자</Text>
+          <Text className="text-warning font-medium">{aiStats?.limitReachedUsers || 0}명</Text>
+        </View>
+        
+        <View className="flex-row items-center justify-between">
+          <Text className="text-muted">평균 사용량</Text>
+          <Text className="text-foreground font-medium">
+            {aiStats?.avgUsagePerUser?.toFixed(1) || '0'}회/월
+          </Text>
+        </View>
+      </View>
+
+      {/* 새로고침 버튼 */}
+      <TouchableOpacity
+        className="bg-primary py-3 rounded-xl items-center"
+        onPress={() => refetch()}
+      >
+        <Text className="text-white font-semibold">새로고침</Text>
+      </TouchableOpacity>
+    </View>
+  );
 }

@@ -232,3 +232,98 @@ export async function updateMonthlyLimit(
     return false;
   }
 }
+
+
+/**
+ * 관리자용: AI 사용량 통계 조회
+ */
+export async function getAiUsageStats(period: 'daily' | 'weekly' | 'monthly'): Promise<{
+  totalCalls: number;
+  totalTokens: number;
+  uniqueUsers: number;
+  byFeature: { feature: string; calls: number; tokens: number }[];
+  limitReachedUsers: number;
+  avgUsagePerUser: number;
+}> {
+  const db = await getDb();
+  
+  if (!db) {
+    return {
+      totalCalls: 0,
+      totalTokens: 0,
+      uniqueUsers: 0,
+      byFeature: [],
+      limitReachedUsers: 0,
+      avgUsagePerUser: 0,
+    };
+  }
+
+  try {
+    const yearMonth = getCurrentYearMonth();
+    
+    // 현재 월의 모든 사용량 조회
+    const allUsage = await db
+      .select()
+      .from(aiUsage)
+      .where(eq(aiUsage.yearMonth, yearMonth));
+
+    if (allUsage.length === 0) {
+      return {
+        totalCalls: 0,
+        totalTokens: 0,
+        uniqueUsers: 0,
+        byFeature: [],
+        limitReachedUsers: 0,
+        avgUsagePerUser: 0,
+      };
+    }
+
+    // 통계 계산
+    let totalCalls = 0;
+    let chatbotCalls = 0;
+    let ridingAnalysisCalls = 0;
+    let otherCalls = 0;
+    let limitReachedUsers = 0;
+
+    for (const usage of allUsage) {
+      totalCalls += usage.totalCalls;
+      chatbotCalls += usage.chatbotCalls;
+      ridingAnalysisCalls += usage.ridingAnalysisCalls;
+      otherCalls += usage.otherCalls;
+      
+      if (usage.totalCalls >= usage.monthlyLimit) {
+        limitReachedUsers++;
+      }
+    }
+
+    const uniqueUsers = allUsage.length;
+    const avgUsagePerUser = uniqueUsers > 0 ? totalCalls / uniqueUsers : 0;
+
+    // 토큰 추정 (호출당 평균 175 토큰 가정)
+    const estimatedTokensPerCall = 175;
+    const totalTokens = totalCalls * estimatedTokensPerCall;
+
+    return {
+      totalCalls,
+      totalTokens,
+      uniqueUsers,
+      byFeature: [
+        { feature: 'chatbot', calls: chatbotCalls, tokens: chatbotCalls * estimatedTokensPerCall },
+        { feature: 'ridingAnalysis', calls: ridingAnalysisCalls, tokens: ridingAnalysisCalls * estimatedTokensPerCall },
+        { feature: 'other', calls: otherCalls, tokens: otherCalls * estimatedTokensPerCall },
+      ].filter(f => f.calls > 0),
+      limitReachedUsers,
+      avgUsagePerUser,
+    };
+  } catch (error) {
+    console.error("[AI Usage] Failed to get stats:", error);
+    return {
+      totalCalls: 0,
+      totalTokens: 0,
+      uniqueUsers: 0,
+      byFeature: [],
+      limitReachedUsers: 0,
+      avgUsagePerUser: 0,
+    };
+  }
+}

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { router, protectedProcedure, adminProcedure } from "./_core/trpc";
-import { getAiUsage, canUseAi, incrementAiUsage, updateMonthlyLimit, type AiFeatureType } from "./ai-usage";
+import { getAiUsage, canUseAi, incrementAiUsage, updateMonthlyLimit, getAiUsageStats, type AiFeatureType } from "./ai-usage";
 
 /**
  * AI 사용량 관리 라우터
@@ -35,5 +35,14 @@ export const aiUsageRouter = router({
     .mutation(async ({ input }) => {
       const success = await updateMonthlyLimit(input.userId, input.newLimit);
       return { success };
+    }),
+
+  // 관리자용: AI 사용량 통계 조회
+  getStats: adminProcedure
+    .input(z.object({
+      period: z.enum(["daily", "weekly", "monthly"]),
+    }))
+    .query(async ({ input }) => {
+      return await getAiUsageStats(input.period);
     }),
 });

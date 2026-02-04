@@ -29,9 +29,9 @@ export default function EcoLeaderboardScreen() {
   const [period, setPeriod] = useState<'weekly' | 'monthly' | 'allTime'>('weekly');
   const [refreshing, setRefreshing] = useState(false);
 
-  // tRPC queries
+  // tRPC queries - 상위 10위까지만 공개
   const leaderboardQuery = trpc.ecoLeaderboard.getLeaderboard.useQuery(
-    { period, limit: 50 },
+    { period, limit: 10 },
     { enabled: isAuthenticated }
   );
 
@@ -197,7 +197,12 @@ export default function EcoLeaderboardScreen() {
         </View>
       )}
 
-      {/* 리더보드 */}
+      {/* 리더보드 - 상위 10위까지만 표시 */}
+      <View style={[styles.leaderboardHeader, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.leaderboardHeaderText, { color: colors.muted }]}>
+          🏆 TOP 10 에코 라이더
+        </Text>
+      </View>
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -205,7 +210,7 @@ export default function EcoLeaderboardScreen() {
         </View>
       ) : (
         <FlatList
-          data={leaderboard}
+          data={leaderboard.slice(0, 10)}
           renderItem={renderLeaderboardItem}
           keyExtractor={(item) => String(item.userId)}
           contentContainerStyle={styles.listContent}
@@ -434,5 +439,15 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 18,
+  },
+  leaderboardHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    marginTop: 8,
+  },
+  leaderboardHeaderText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
