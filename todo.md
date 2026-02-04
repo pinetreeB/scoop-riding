@@ -1123,8 +1123,8 @@
 
 
 ## 버그 수정 (2026-02-04 추가) - 관리자 대시보드 오류
-- [ ] 소나무군 계정 관리자 권한 확인
-- [ ] 앱 내 관리자 대시보드 'undefined is not a function' 오류 완전 해결
+- [x] 소나무군 계정 관리자 권한 확인 - DB에서 role='admin' 확인됨
+- [x] 앱 내 관리자 대시보드 'undefined is not a function' 오류 완전 해결 - toFixed, toLocaleString 호출 시 방어 코드 추가
 
 ## 버그 수정 (2026-02-04 긴급) - 그룹 라이딩 오류
 - [x] 그룹 라이딩 방 만들기 "Unable to transform response from server" 오류 수정 - DB 테이블 누락 문제 해결

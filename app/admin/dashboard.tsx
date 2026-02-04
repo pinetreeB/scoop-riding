@@ -1216,7 +1216,7 @@ function RidesTab({ colors }: { colors: any }) {
       <View className="bg-surface rounded-xl p-4 mb-4 border border-border">
         <Text className="text-muted text-sm">전체 주행 기록</Text>
         <Text className="text-2xl font-bold text-foreground">
-          {data?.total?.toLocaleString() || 0}건
+          {(data?.total ?? 0).toLocaleString()}건
         </Text>
       </View>
 
@@ -1471,7 +1471,7 @@ function AiUsageTab({ colors }: { colors: any }) {
         <View className="flex-row items-center justify-between">
           <Text className="text-muted">평균 사용량</Text>
           <Text className="text-foreground font-medium">
-            {aiStats?.avgUsagePerUser?.toFixed(1) || '0'}회/월
+            {(aiStats?.avgUsagePerUser ?? 0).toFixed(1)}회/월
           </Text>
         </View>
       </View>
