@@ -1,0 +1,66 @@
+{
+  "query": "SELECT * FROM posts LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT * FROM posts LIMIT 10;",
+  "rows": [
+    {
+      "id": "60001",
+      "userId": "150001",
+      "title": "내가 왔다갔다!",
+      "content": "기모찌",
+      "postType": "general",
+      "ridingRecordId": "NULL",
+      "likeCount": "1",
+      "commentCount": "0",
+      "viewCount": "4",
+      "createdAt": "2026-01-22 13:05:57",
+      "updatedAt": "2026-02-03 10:08:29",
+      "imageUrls": "[\"https://d2xsxph8kpxj0f.cloudfront.net/108097790/XQsH52MNZAyXrU9qYq4MDw/posts/150001/1769087135665-post_image_1769087135193.jpg\"]"
+    },
+    {
+      "id": "90003",
+      "userId": "120152",
+      "title": "주행기록",
+      "content": "주행디록",
+      "postType": "question",
+      "ridingRecordId": "mkwt6jqvd29rpyl210e",
+      "likeCount": "1",
+      "commentCount": "0",
+      "viewCount": "6",
+      "createdAt": "2026-01-27 16:46:10",
+      "updatedAt": "2026-02-02 14:27:04",
+      "imageUrls": "NULL"
+    },
+    {
+      "id": "150001",
+      "userId": "3547919",
+      "title": "블루입니다",
+      "content": "사진 테스트 테스트 123",
+      "postType": "general",
+      "ridingRecordId": "NULL",
+      "likeCount": "1",
+      "commentCount": "0",
+      "viewCount": "7",
+      "createdAt": "2026-02-02 05:34:09",
+      "updatedAt": "2026-02-03 10:07:29",
+      "imageUrls": "[\"https://d2xsxph8kpxj0f.cloudfront.net/108097790/XQsH52MNZAyXrU9qYq4MDw/posts/3547919/1770010439039-post_image_1770010437359.jpg\"]"
+    },
+    {
+      "id": "180001",
+      "userId": "3690001",
+      "title": "안뇽하세요",
+      "content": "앱좋네요",
+      "postType": "general",
+      "ridingRecordId": "NULL",
+      "likeCount": "1",
+      "commentCount": "0",
+      "viewCount": "3",
+      "createdAt": "2026-02-02 11:50:32",
+      "updatedAt": "2026-02-03 11:08:41",
+      "imageUrls": "[\"https://d2xsxph8kpxj0f.cloudfront.net/108097790/XQsH52MNZAyXrU9qYq4MDw/posts/3690001/1770033031067-post_image_1770033029333.jpg\"]"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\ttitle\tcontent\tpostType\tridingRecordId\tlikeCount\tcommentCount\tviewCount\tcreatedAt\tupdatedAt\timageUrls\n60001\t150001\t내가 왔다갔다!\t기모찌\tgeneral\tNULL\t1\t0\t4\t2026-01-22 13:05:57\t2026-02-03 10:08:29\t[\"https://d2xsxph8kpxj0f.cloudfront.net/108097790/XQsH52MNZAyXrU9qYq4MDw/posts/150001/1769087135665-post_image_1769087135193.jpg\"]\n90003\t120152\t주행기록\t주행디록\tquestion\tmkwt6jqvd29rpyl210e\t1\t0\t6\t2026-01-27 16:46:10\t2026-02-02 14:27:04\tNULL\n150001\t3547919\t블루입니다\t사진 테스트 테스트 123\tgeneral\tNULL\t1\t0\t7\t2026-02-02 05:34:09\t2026-02-03 10:07:29\t[\"https://d2xsxph8kpxj0f.cloudfront.net/108097790/XQsH52MNZAyXrU9qYq4MDw/posts/3547919/1770010439039-post_image_1770010437359.jpg\"]\n180001\t3690001\t안뇽하세요\t앱좋네요\tgeneral\tNULL\t1\t0\t3\t2026-02-02 11:50:32\t2026-02-03 11:08:41\t[\"https://d2xsxph8kpxj0f.cloudfront.net/108097790/XQsH52MNZAyXrU9qYq4MDw/posts/3690001/1770033031067-post_image_1770033029333.jpg\"]\n",
+  "stderr": "",
+  "execution_time_ms": 1517
+}

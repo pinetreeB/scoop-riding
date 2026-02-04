@@ -1,0 +1,58 @@
+{
+  "query": "SELECT * FROM friends LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT * FROM friends LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "userId1": "1",
+      "userId2": "30030",
+      "createdAt": "2026-01-21 18:52:41"
+    },
+    {
+      "id": "30001",
+      "userId1": "1",
+      "userId2": "120081",
+      "createdAt": "2026-01-22 11:33:31"
+    },
+    {
+      "id": "60001",
+      "userId1": "1",
+      "userId2": "120503",
+      "createdAt": "2026-01-22 13:52:55"
+    },
+    {
+      "id": "90001",
+      "userId1": "1",
+      "userId2": "120152",
+      "createdAt": "2026-01-26 14:17:23"
+    },
+    {
+      "id": "120001",
+      "userId1": "1",
+      "userId2": "120051",
+      "createdAt": "2026-01-27 03:29:06"
+    },
+    {
+      "id": "150001",
+      "userId1": "120152",
+      "userId2": "210009",
+      "createdAt": "2026-01-27 16:20:36"
+    },
+    {
+      "id": "150002",
+      "userId1": "120152",
+      "userId2": "1920694",
+      "createdAt": "2026-01-27 16:20:36"
+    },
+    {
+      "id": "180001",
+      "userId1": "3571703",
+      "userId2": "3571734",
+      "createdAt": "2026-02-02 08:42:37"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId1\tuserId2\tcreatedAt\n1\t1\t30030\t2026-01-21 18:52:41\n30001\t1\t120081\t2026-01-22 11:33:31\n60001\t1\t120503\t2026-01-22 13:52:55\n90001\t1\t120152\t2026-01-26 14:17:23\n120001\t1\t120051\t2026-01-27 03:29:06\n150001\t120152\t210009\t2026-01-27 16:20:36\n150002\t120152\t1920694\t2026-01-27 16:20:36\n180001\t3571703\t3571734\t2026-02-02 08:42:37\n",
+  "stderr": "",
+  "execution_time_ms": 1623
+}
