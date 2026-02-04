@@ -1154,3 +1154,9 @@
 - [x] APK 빌드 실행 - 완료 (https://expo.dev/artifacts/eas/qof7MkVvrFciUYxPjMpf3R.apk)
 - [x] 업데이트 공지 DB 등록
 - [x] 앱 버전 DB 등록 (forceUpdate=1)
+
+## 버그 수정 (2026-02-04 긴급) - 그룹 라이딩 전면 수정
+- [x] 그룹 삭제 후에도 "Unable to transform response from server" 오류 발생 - isActive=true 필터 추가
+- [x] 그룹 참가 시 승인 요청 없이 바로 들어가는 문제 - pending 상태 필터링 개선
+- [x] 앱 재시작 시 그룹 데이터가 사라지는 문제 - 삭제된 그룹 필터링 추가
+- [x] 그룹 라이딩 서버 API 및 DB 전면 점검 - getUserGroups 함수 수정 완료

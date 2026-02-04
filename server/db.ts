@@ -2419,15 +2419,18 @@ export async function getUserGroups(userId: number): Promise<{
   if (!db) return [];
 
   try {
-    // Get groups where user is a member
+    // Get groups where user is an approved member (or host)
     const memberOf = await db
-      .select({ groupId: groupMembers.groupId })
+      .select({ groupId: groupMembers.groupId, status: groupMembers.status })
       .from(groupMembers)
       .where(eq(groupMembers.userId, userId));
 
-    if (memberOf.length === 0) return [];
+    // Filter to only approved members or pending (to show pending status to the user)
+    const validMemberships = memberOf.filter(m => m.status === 'approved' || m.status === 'pending');
 
-    const groupIds = memberOf.map(m => m.groupId);
+    if (validMemberships.length === 0) return [];
+
+    const groupIds = validMemberships.map(m => m.groupId);
 
     // Get group details
     const groups = await db
@@ -2442,9 +2445,15 @@ export async function getUserGroups(userId: number): Promise<{
       })
       .from(groupSessions)
       .leftJoin(users, eq(groupSessions.hostId, users.id))
-      .where(sql`${groupSessions.id} IN (${sql.join(groupIds.map(id => sql`${id}`), sql`, `)})`);
+      .where(and(
+        sql`${groupSessions.id} IN (${sql.join(groupIds.map(id => sql`${id}`), sql`, `)})`,
+        eq(groupSessions.isActive, true)
+      ));
 
-    // Get members for each group
+    // Filter out groups that no longer exist (isActive=false)
+    if (groups.length === 0) return [];
+
+    // Get members for each group (only approved members visible to non-hosts)
     const result = await Promise.all(
       groups.map(async (group) => {
         const members = await db

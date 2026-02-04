@@ -1,0 +1,50 @@
+{
+  "query": "SELECT * FROM groupSessions ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT * FROM groupSessions ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "150004",
+      "code": "49LJW3",
+      "name": "소나무군 그룹",
+      "hostId": "1920694",
+      "isActive": "1",
+      "isRiding": "0",
+      "createdAt": "2026-02-04 09:09:39",
+      "updatedAt": "2026-02-04 09:09:39"
+    },
+    {
+      "id": "150003",
+      "code": "ODAMXQ",
+      "name": "소나무군 그룹",
+      "hostId": "1920694",
+      "isActive": "1",
+      "isRiding": "0",
+      "createdAt": "2026-02-04 09:09:28",
+      "updatedAt": "2026-02-04 09:09:28"
+    },
+    {
+      "id": "150002",
+      "code": "MEP0DA",
+      "name": "스쿱모빌리티",
+      "hostId": "30030",
+      "isActive": "1",
+      "isRiding": "0",
+      "createdAt": "2026-02-04 08:35:22",
+      "updatedAt": "2026-02-04 08:35:22"
+    },
+    {
+      "id": "30001",
+      "code": "2HPXYH",
+      "name": "스쿱모빌리티",
+      "hostId": "1",
+      "isActive": "1",
+      "isRiding": "0",
+      "createdAt": "2026-01-27 04:03:36",
+      "updatedAt": "2026-01-27 04:03:36"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcode\tname\thostId\tisActive\tisRiding\tcreatedAt\tupdatedAt\n150004\t49LJW3\t소나무군 그룹\t1920694\t1\t0\t2026-02-04 09:09:39\t2026-02-04 09:09:39\n150003\tODAMXQ\t소나무군 그룹\t1920694\t1\t0\t2026-02-04 09:09:28\t2026-02-04 09:09:28\n150002\tMEP0DA\t스쿱모빌리티\t30030\t1\t0\t2026-02-04 08:35:22\t2026-02-04 08:35:22\n30001\t2HPXYH\t스쿱모빌리티\t1\t1\t0\t2026-01-27 04:03:36\t2026-01-27 04:03:36\n",
+  "stderr": "",
+  "execution_time_ms": 1853
+}
