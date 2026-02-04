@@ -1,0 +1,50 @@
+{
+  "query": "SELECT userId, COUNT(*) as count FROM ridingRecords GROUP BY userId ORDER BY count DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT userId, COUNT(*) as count FROM ridingRecords GROUP BY userId ORDER BY count DESC LIMIT 10;",
+  "rows": [
+    {
+      "userId": "3547919",
+      "count": "14"
+    },
+    {
+      "userId": "30030",
+      "count": "11"
+    },
+    {
+      "userId": "120051",
+      "count": "10"
+    },
+    {
+      "userId": "120152",
+      "count": "9"
+    },
+    {
+      "userId": "120503",
+      "count": "8"
+    },
+    {
+      "userId": "150001",
+      "count": "7"
+    },
+    {
+      "userId": "420001",
+      "count": "4"
+    },
+    {
+      "userId": "1920694",
+      "count": "4"
+    },
+    {
+      "userId": "3840161",
+      "count": "4"
+    },
+    {
+      "userId": "3571703",
+      "count": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "userId\tcount\n3547919\t14\n30030\t11\n120051\t10\n120152\t9\n120503\t8\n150001\t7\n420001\t4\n1920694\t4\n3840161\t4\n3571703\t2\n",
+  "stderr": "",
+  "execution_time_ms": 1492
+}

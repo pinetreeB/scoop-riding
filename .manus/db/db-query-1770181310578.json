@@ -1,0 +1,13 @@
+{
+  "query": "SHOW TABLES LIKE '%riding%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SHOW TABLES LIKE '%riding%';",
+  "rows": [
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%riding%)": "ridingRecords"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%riding%)\nridingRecords\n",
+  "stderr": "",
+  "execution_time_ms": 1517
+}

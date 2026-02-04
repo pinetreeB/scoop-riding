@@ -796,6 +796,7 @@ router.get("/bugs", verifyAdminToken, async (req: Request, res: Response) => {
         screenshotUrls: bugReports.screenshotUrls,
         deviceInfo: bugReports.deviceInfo,
         stepsToReproduce: bugReports.stepsToReproduce,
+        adminNotes: bugReports.adminNotes,
         createdAt: bugReports.createdAt,
         updatedAt: bugReports.updatedAt,
         userName: users.name,
@@ -2277,6 +2278,13 @@ function getAdminDashboardHTML(): string {
           \${b.stepsToReproduce ? '<p class="text-gray-500 text-xs mb-2"><strong>재현 방법:</strong> '+b.stepsToReproduce+'</p>' : ''}
           \${b.deviceInfo ? '<p class="text-gray-400 text-xs mb-2">기기: '+b.deviceInfo+'</p>' : ''}
           \${renderScreenshots(b.screenshotUrls)}
+          \${b.adminNotes ? '<div class="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-200"><p class="text-xs font-semibold text-orange-700 mb-1">관리자 답변:</p><p class="text-sm text-gray-700 whitespace-pre-wrap">'+escapeHtml(b.adminNotes)+'</p></div>' : ''}
+          <div class="mt-3 border-t pt-3">
+            <div class="flex gap-2">
+              <input type="text" id="reply-\${b.id}" placeholder="사용자에게 답변을 작성하세요..." class="flex-1 text-sm px-3 py-2 border rounded-lg">
+              <button onclick="sendBugReply(\${b.id})" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm">답변 전송</button>
+            </div>
+          </div>
           <div class="mt-2 text-xs text-gray-400">
             신고자: \${b.userName || b.userEmail || 'ID:'+b.userId} \u00b7 \${formatDate(b.createdAt)}
           </div>
@@ -2337,6 +2345,38 @@ function getAdminDashboardHTML(): string {
         if (res.ok) { loadBugs(); }
         else { const err = await res.json(); alert(err.error || '상태 변경 실패'); }
       } catch (e) { alert('서버 오류'); }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    async function sendBugReply(bugId) {
+      const input = document.getElementById('reply-'+bugId);
+      const message = input.value.trim();
+      if (!message) {
+        alert('답변 내용을 입력해주세요.');
+        return;
+      }
+      try {
+        const res = await fetch(API_BASE+'/api/admin/bugs/'+bugId+'/reply', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer '+adminToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        if (res.ok) {
+          alert('답변이 전송되었습니다. 사용자에게 알림이 발송됩니다.');
+          input.value = '';
+          loadBugs();
+        } else {
+          const err = await res.json();
+          alert(err.error || '답변 전송 실패');
+        }
+      } catch (e) {
+        console.error(e);
+        alert('서버 오류');
+      }
     }
 
     async function loadPosts() {

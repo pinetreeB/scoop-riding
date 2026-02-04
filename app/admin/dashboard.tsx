@@ -987,7 +987,7 @@ function UsersTab({ colors }: { colors: any }) {
                   </View>
                   <Text className="text-sm text-muted">{user.email}</Text>
                   <Text className="text-xs text-muted mt-1">
-                    주행 {user.totalRides}회 · {(user.totalDistance / 1000).toFixed(1)}km
+                    주행 {user.totalRides || 0}회 · {((user.totalDistance || 0) / 1000).toFixed(1)}km
                   </Text>
                 </View>
                 <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
@@ -1042,25 +1042,25 @@ function UsersTab({ colors }: { colors: any }) {
                   <View className="flex-row justify-between">
                     <View className="items-center">
                       <Text className="text-lg font-bold text-primary">
-                        {userDetails.stats.totalRides}
+                        {userDetails.stats?.totalRides || 0}
                       </Text>
                       <Text className="text-xs text-muted">총 주행</Text>
                     </View>
                     <View className="items-center">
                       <Text className="text-lg font-bold text-primary">
-                        {(userDetails.stats.totalDistance / 1000).toFixed(1)}km
+                        {((userDetails.stats?.totalDistance || 0) / 1000).toFixed(1)}km
                       </Text>
                       <Text className="text-xs text-muted">총 거리</Text>
                     </View>
                     <View className="items-center">
                       <Text className="text-lg font-bold text-primary">
-                        {userDetails.stats.avgSpeed.toFixed(1)}
+                        {(userDetails.stats?.avgSpeed || 0).toFixed(1)}
                       </Text>
                       <Text className="text-xs text-muted">평균 속도</Text>
                     </View>
                     <View className="items-center">
                       <Text className="text-lg font-bold text-primary">
-                        {userDetails.stats.maxSpeed.toFixed(1)}
+                        {(userDetails.stats?.maxSpeed || 0).toFixed(1)}
                       </Text>
                       <Text className="text-xs text-muted">최고 속도</Text>
                     </View>
@@ -1259,7 +1259,7 @@ function RidesTab({ colors }: { colors: any }) {
               <View className="flex-row justify-between bg-background rounded-lg p-3">
                 <View className="items-center">
                   <Text className="text-base font-bold text-primary">
-                    {(record.distance / 1000).toFixed(2)}km
+                    {((record.distance || 0) / 1000).toFixed(2)}km
                   </Text>
                   <Text className="text-xs text-muted">거리</Text>
                 </View>
@@ -1271,13 +1271,13 @@ function RidesTab({ colors }: { colors: any }) {
                 </View>
                 <View className="items-center">
                   <Text className="text-base font-bold text-foreground">
-                    {(record.avgSpeed / 10).toFixed(1)}
+                    {((record.avgSpeed || 0) / 10).toFixed(1)}
                   </Text>
                   <Text className="text-xs text-muted">평균(km/h)</Text>
                 </View>
                 <View className="items-center">
                   <Text className="text-base font-bold text-warning">
-                    {(record.maxSpeed / 10).toFixed(1)}
+                    {((record.maxSpeed || 0) / 10).toFixed(1)}
                   </Text>
                   <Text className="text-xs text-muted">최고(km/h)</Text>
                 </View>
