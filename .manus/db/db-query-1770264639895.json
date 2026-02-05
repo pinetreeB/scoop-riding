@@ -1,0 +1,17 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM users) as users_count,\n  (SELECT COUNT(*) FROM ridingRecords) as riding_records_count,\n  (SELECT COUNT(*) FROM scooters) as scooters_count,\n  (SELECT COUNT(*) FROM posts) as posts_count,\n  (SELECT COUNT(*) FROM comments) as comments_count;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT \n  (SELECT COUNT(*) FROM users) as users_count,\n  (SELECT COUNT(*) FROM ridingRecords) as riding_records_count,\n  (SELECT COUNT(*) FROM scooters) as scooters_count,\n  (SELECT COUNT(*) FROM posts) as posts_count,\n  (SELECT COUNT(*) FROM comments) as comments_count;",
+  "rows": [
+    {
+      "users_count": "32",
+      "riding_records_count": "82",
+      "scooters_count": "31",
+      "posts_count": "5",
+      "comments_count": "4"
+    }
+  ],
+  "messages": [],
+  "stdout": "users_count\triding_records_count\tscooters_count\tposts_count\tcomments_count\n32\t82\t31\t5\t4\n",
+  "stderr": "",
+  "execution_time_ms": 1565
+}

@@ -1207,3 +1207,25 @@
 - [ ] 앱 시작 시 서버 데이터 로딩 지연 원인 분석 (커뮤니티, 공지사항 등)
 - [x] DB 인덱스 통계 업데이트 (ANALYZE TABLE) - PlanetScale 특성상 카디널리티 0 유지
 - [x] getPosts N+1 쿼리 문제 수정 - 1710ms → 641ms (63% 개선)
+
+## GCP Cloud Run 마이그레이션 (2026-02-05)
+- [x] 서버 코드 구조 확인 및 Dockerfile 작성
+- [x] GCP Cloud Run 배포 설정 및 환경 변수 구성
+- [x] Docker 이미지 빌드 및 GCP에 푸시
+- [x] Cloud Run 배포 및 테스트
+- [ ] 앱 클라이언트 API URL 업데이트
+
+## GCP Cloud Run 서버 이전 (2026-02-05)
+- [x] GitHub 저장소에 서버 코드 푸시
+- [x] Dockerfile 및 배포 설정 검토/수정
+- [x] GCP Cloud Run 배포 진행 (서울 리전)
+- [x] 환경변수 설정 (DATABASE_URL, JWT_SECRET 등)
+- [x] 서버 응답 속도 테스트
+
+
+## GCP Cloud SQL 데이터베이스 설정 (2026-02-05)
+- [x] GCP Cloud SQL MySQL 인스턴스 생성 (서울 리전)
+- [x] 데이터베이스 및 사용자 생성
+- [x] 기존 Manus 데이터베이스에서 데이터 마이그레이션 (새 데이터로 시작)
+- [x] Cloud Run 환경변수 설정 (DATABASE_URL 등)
+- [x] 서버 연동 테스트

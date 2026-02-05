@@ -1,0 +1,136 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "adminLogs"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "aiChatHistory"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "aiChatUsage"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "aiUsage"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "announcements"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "appVersions"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "app_versions"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "badges"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "batteryAnalysis"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "batteryAnalysisSummary"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "batteryHealthReports"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "batteryRideLogs"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "bugReports"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "challengeInvitations"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "challengeParticipants"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "challenges"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "chargingRecords"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "comments"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "follows"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "friendRequests"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "friends"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "groupMembers"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "groupMessages"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "groupSessions"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "liveLocations"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "maintenanceItems"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "maintenanceRecords"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "notifications"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "postImages"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "postLikes"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "postViews"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "posts"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "ridingRecords"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "scooters"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "surveyResponses"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "suspiciousUserReports"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "userActivityLogs"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "userAnnouncementReads"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "userBadges"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "userBans"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_XQsH52MNZAyXrU9qYq4MDw\n__drizzle_migrations\nadminLogs\naiChatHistory\naiChatUsage\naiUsage\nannouncements\nappVersions\napp_versions\nbadges\nbatteryAnalysis\nbatteryAnalysisSummary\nbatteryHealthReports\nbatteryRideLogs\nbugReports\nchallengeInvitations\nchallengeParticipants\nchallenges\nchargingRecords\ncomments\nfollows\nfriendRequests\nfriends\ngroupMembers\ngroupMessages\ngroupSessions\nliveLocations\nmaintenanceItems\nmaintenanceRecords\nnotifications\npostImages\npostLikes\npostViews\nposts\nridingRecords\nscooters\nsurveyResponses\nsuspiciousUserReports\nuserActivityLogs\nuserAnnouncementReads\nuserBadges\nuserBans\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1967
+}

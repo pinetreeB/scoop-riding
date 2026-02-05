@@ -1,0 +1,44 @@
+# 노드 모듈
+node_modules
+
+# 빌드 아티팩트
+dist
+.expo
+.next
+out
+
+# 개발 파일
+*.log
+.env.local
+.env.development
+.env.test
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# 테스트
+coverage
+__tests__
+*.test.ts
+*.spec.ts
+
+# 앱 관련 (서버에 불필요)
+app/
+components/
+hooks/
+lib/
+constants/
+assets/
+android/
+ios/
+web/
+
+# 기타
+.git
+.gitignore
+README.md
+*.md
+scripts/
