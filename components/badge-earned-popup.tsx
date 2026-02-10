@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
@@ -41,6 +42,7 @@ interface DisplayBadge {
 
 export function BadgeEarnedPopup() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuth();
   const [visible, setVisible] = useState(false);
   const [currentBadge, setCurrentBadge] = useState<DisplayBadge | null>(null);
@@ -208,7 +210,7 @@ export function BadgeEarnedPopup() {
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <View className="flex-1 bg-black/70 items-center justify-center px-6">
+      <View className="flex-1 bg-black/70 items-center justify-center px-6" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
         <Animated.View
           style={{
             transform: [{ scale: scaleAnim }, { rotate }],

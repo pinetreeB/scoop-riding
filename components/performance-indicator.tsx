@@ -6,6 +6,7 @@
 import { useState, useEffect } from "react";
 import { View, Text, Pressable, Modal, ScrollView, StyleSheet } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/use-colors";
 import { performanceMonitor, type PerformanceMetrics, type PerformanceWarning } from "@/lib/performance-monitor";
 
@@ -21,6 +22,7 @@ export function PerformanceIndicator({
   isBackgroundEnabled,
 }: PerformanceIndicatorProps) {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const [showDetails, setShowDetails] = useState(false);
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
   
@@ -99,7 +101,7 @@ export function PerformanceIndicator({
         onRequestClose={() => setShowDetails(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background, paddingBottom: Math.max(16, insets.bottom + 8) }]}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.foreground }]}>
                 성능 모니터

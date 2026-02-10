@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { trpc } from "@/lib/trpc";
 
 const SURVEY_STORAGE_KEY = "@scoop_alpha_survey_completed";
@@ -34,6 +35,7 @@ export function AlphaTestSurvey() {
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const insets = useSafeAreaInsets();
   const [feedback, setFeedback] = useState<SurveyFeedback>({
     overallRating: 0,
     usabilityRating: 0,
@@ -380,7 +382,7 @@ export function AlphaTestSurvey() {
             </ScrollView>
 
             {/* Footer */}
-            <View className="p-4 border-t border-border">
+            <View className="p-4 border-t border-border" style={{ paddingBottom: Math.max(16, insets.bottom + 8) }}>
               <View className="flex-row gap-3">
                 {step > 1 && (
                   <TouchableOpacity

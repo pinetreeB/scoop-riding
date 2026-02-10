@@ -1229,3 +1229,9 @@
 - [x] 기존 Manus 데이터베이스에서 데이터 마이그레이션 (새 데이터로 시작)
 - [x] Cloud Run 환경변수 설정 (DATABASE_URL 등)
 - [x] 서버 연동 테스트
+
+## v0.1.8 체크포인트 (타 AI 수정, 2026-02-11)
+- [x] SafeArea Modal 수정 (Edge-to-Edge 대응) - 8개 파일 (alpha-test-survey, announcement-popup, badge-earned-popup, battery-optimization-guide, performance-indicator, challenge-detail, compare-routes, user-profile)
+- [x] 관리자 대시보드 크래시 수정 (admin-dashboard.tsx 신규 + admin/dashboard.tsx, admin/index.tsx 리다이렉트)
+- [x] battery-optimization-guide 간소화 (LG 기기 가이드 제거, Samsung만 유지, DeviceTipCard 제거, 앱 설정 열기 버튼 제거)
+- [x] announcement-popup 크래시 방지 (dismiss 순서 변경, null guard 추가)

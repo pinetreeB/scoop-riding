@@ -12,6 +12,7 @@ import {
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as IntentLauncher from "expo-intent-launcher";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/use-colors";
 
 const BATTERY_GUIDE_SHOWN_KEY = "scoop_battery_guide_shown";
@@ -27,6 +28,7 @@ export function BatteryOptimizationGuide({
   onClose,
 }: BatteryOptimizationGuideProps) {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
 
   const openBatterySettings = async () => {
     if (Platform.OS !== "android") {
@@ -52,10 +54,6 @@ export function BatteryOptimizationGuide({
         Linking.openSettings();
       }
     }
-  };
-
-  const openAppSettings = () => {
-    Linking.openSettings();
   };
 
   const handleDontShowAgain = async () => {
@@ -87,9 +85,9 @@ export function BatteryOptimizationGuide({
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             paddingTop: 16,
-            paddingBottom: 40,
+            paddingBottom: Math.max(40, insets.bottom + 16),
             paddingHorizontal: 20,
-            maxHeight: "85%",
+            maxHeight: "80%",
           }}
         >
           {/* Handle bar */}
@@ -169,41 +167,39 @@ export function BatteryOptimizationGuide({
               />
             </View>
 
-            {/* Device-specific tips */}
-            <Text
+            {/* Device-specific tips - Samsung only */}
+            <View
               style={{
-                fontSize: 16,
-                fontWeight: "bold",
-                color: colors.foreground,
-                marginBottom: 12,
+                backgroundColor: colors.surface,
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 24,
               }}
             >
-              기기별 설정 방법
-            </Text>
-
-            {/* Samsung */}
-            <DeviceTipCard
-              brand="Samsung"
-              steps={[
-                "설정 → 배터리 → 백그라운드 사용 제한 → SCOOP 해제",
-                "설정 → 앱 → SCOOP → 배터리 → 제한 없음",
-                "설정 → 디바이스 케어 → 배터리 → 앱 절전 → SCOOP 제외",
-              ]}
-              colors={colors}
-            />
-
-            {/* LG */}
-            <DeviceTipCard
-              brand="LG"
-              steps={[
-                "설정 → 배터리 → 백그라운드 제한 → SCOOP 해제",
-                "설정 → 앱 → SCOOP → 배터리 사용 관리 → 제한 없음",
-              ]}
-              colors={colors}
-            />
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                <MaterialIcons
+                  name="info-outline"
+                  size={18}
+                  color={colors.primary}
+                />
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: colors.foreground,
+                    marginLeft: 8,
+                  }}
+                >
+                  Samsung 기기 설정
+                </Text>
+              </View>
+              <Text style={{ fontSize: 13, color: colors.muted, lineHeight: 20 }}>
+                설정 → 배터리 → 백그라운드 사용 제한 → SCOOP 해제
+              </Text>
+            </View>
 
             {/* Buttons */}
-            <View style={{ gap: 12, marginTop: 8 }}>
+            <View style={{ gap: 12 }}>
               <Pressable
                 onPress={openBatterySettings}
                 style={({ pressed }) => ({
@@ -218,29 +214,6 @@ export function BatteryOptimizationGuide({
                   style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}
                 >
                   배터리 설정 열기
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={openAppSettings}
-                style={({ pressed }) => ({
-                  backgroundColor: colors.surface,
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  alignItems: "center",
-                  opacity: pressed ? 0.8 : 1,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                })}
-              >
-                <Text
-                  style={{
-                    color: colors.foreground,
-                    fontSize: 16,
-                    fontWeight: "500",
-                  }}
-                >
-                  앱 설정 열기
                 </Text>
               </Pressable>
 
@@ -282,58 +255,6 @@ export function BatteryOptimizationGuide({
         </View>
       </View>
     </Modal>
-  );
-}
-
-function DeviceTipCard({
-  brand,
-  steps,
-  colors,
-}: {
-  brand: string;
-  steps: string[];
-  colors: ReturnType<typeof useColors>;
-}) {
-  return (
-    <View
-      style={{
-        backgroundColor: colors.surface,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-      }}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-        <MaterialIcons
-          name="phone-android"
-          size={18}
-          color={colors.primary}
-        />
-        <Text
-          style={{
-            fontSize: 14,
-            fontWeight: "600",
-            color: colors.foreground,
-            marginLeft: 8,
-          }}
-        >
-          {brand}
-        </Text>
-      </View>
-      {steps.map((step, index) => (
-        <Text
-          key={index}
-          style={{
-            fontSize: 13,
-            color: colors.muted,
-            lineHeight: 20,
-            marginLeft: 26,
-          }}
-        >
-          • {step}
-        </Text>
-      ))}
-    </View>
   );
 }
 
@@ -433,28 +354,11 @@ export function useBatteryOptimizationGuide() {
     }
   };
 
-  // Reset dismissed state (for settings screen)
-  const resetDismissed = async () => {
-    try {
-      await AsyncStorage.removeItem(BATTERY_GUIDE_DISMISSED_KEY);
-      setShouldShow(true);
-    } catch (error) {
-      console.log("[BatteryGuide] Error resetting dismissed:", error);
-    }
-  };
-
-  // Force show guide (for settings screen)
-  const forceShow = () => {
-    setIsVisible(true);
-  };
-
   return {
     shouldShow,
     isVisible,
     showGuide,
     hideGuide,
     markAsShown,
-    resetDismissed,
-    forceShow,
   };
 }

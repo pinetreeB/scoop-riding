@@ -1080,7 +1080,7 @@ export default function ProfileScreen() {
                   if (Platform.OS !== "web") {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }
-                  batteryGuide.forceShow();
+                  batteryGuide.showGuide();
                 }}
                 style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
                 className="flex-row items-center p-4 border-b border-border"

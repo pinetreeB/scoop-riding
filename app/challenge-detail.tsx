@@ -14,12 +14,14 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 
 export default function ChallengeDetailScreen() {
   const router = useRouter();
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const challengeId = parseInt(id || "0");
   const utils = trpc.useUtils();
@@ -373,7 +375,7 @@ export default function ChallengeDetailScreen() {
         <View className="flex-1 justify-end" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <View
             className="rounded-t-3xl p-5"
-            style={{ backgroundColor: colors.background, maxHeight: "70%" }}
+            style={{ backgroundColor: colors.background, maxHeight: "70%", paddingBottom: Math.max(20, insets.bottom + 16) }}
           >
             {/* Modal Header */}
             <View className="flex-row items-center justify-between mb-4">

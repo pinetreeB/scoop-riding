@@ -15,6 +15,7 @@ import * as Haptics from "expo-haptics";
 import Svg, { Path, Defs, LinearGradient, Stop, Line, Text as SvgText } from "react-native-svg";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/use-colors";
 import {
   RidingRecord,
@@ -31,6 +32,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 export default function CompareRoutesScreen() {
   const router = useRouter();
   const colors = useColors();
+  const insets = useSafeAreaInsets();
 
   const [records, setRecords] = useState<RidingRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -344,7 +346,7 @@ export default function CompareRoutesScreen() {
         onRequestClose={() => setShowRecordPicker(null)}
       >
         <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-background rounded-t-3xl max-h-[70%]">
+          <View className="bg-background rounded-t-3xl max-h-[70%]" style={{ paddingBottom: Math.max(16, insets.bottom + 8) }}>
             <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
               <Text className="text-lg font-bold text-foreground">
                 {showRecordPicker === "first" ? "기준 기록 선택" : "비교 기록 선택"}

@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 
@@ -37,6 +38,7 @@ export function AnnouncementPopup({
   onDismiss,
 }: AnnouncementPopupProps) {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export function AnnouncementPopup({
   if (!visible || announcements.length === 0) return null;
 
   const currentAnnouncement = announcements[currentIndex];
+  if (!currentAnnouncement) return null;
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -97,8 +100,15 @@ export function AnnouncementPopup({
   };
 
   const handleDismiss = () => {
-    onDismiss(currentAnnouncement.id);
-    handleNext();
+    const id = currentAnnouncement.id;
+    // Close popup first to prevent re-render crash, then dismiss
+    if (currentIndex >= announcements.length - 1) {
+      onClose();
+    } else {
+      setCurrentIndex(currentIndex + 1);
+    }
+    // Fire dismiss after UI update to prevent stale data crash
+    setTimeout(() => onDismiss(id), 100);
   };
 
   return (
@@ -108,7 +118,7 @@ export function AnnouncementPopup({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
         <View style={[styles.container, { backgroundColor: colors.surface }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>

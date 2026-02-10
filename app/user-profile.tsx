@@ -16,12 +16,14 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 
 export default function UserProfileScreen() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string; userId?: string; name?: string; email?: string }>();
   const { isAuthenticated, user: currentUser } = useAuth();
@@ -301,6 +303,7 @@ export default function UserProfileScreen() {
       >
         <Pressable
           className="flex-1 bg-black/50 items-center justify-center px-6"
+          style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
           onPress={() => setShowMessageModal(false)}
         >
           <Pressable
