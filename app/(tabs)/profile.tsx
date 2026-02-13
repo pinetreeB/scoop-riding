@@ -156,7 +156,7 @@ export default function ProfileScreen() {
     }
 
     setIsSyncing(true);
-    setSyncStatus("동기화 중...");
+    setSyncStatus(t('profile.syncing'));
 
     try {
       console.log("[Profile] Starting full sync...");
@@ -167,13 +167,13 @@ export default function ProfileScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
-      let statusMsg = "동기화 완료";
+      let statusMsg = t('profile.syncComplete');
       if (result.uploaded > 0 || result.downloaded > 0) {
-        statusMsg = `동기화 완료: ${result.uploaded}개 업로드, ${result.downloaded}개 다운로드`;
+        statusMsg = t('profile.syncCompleteDetail', { uploaded: result.uploaded, downloaded: result.downloaded });
       } else if (result.failed > 0) {
-        statusMsg = `동기화 완료: ${result.failed}개 실패`;
+        statusMsg = t('profile.syncCompleteFailed', { failed: result.failed });
       } else {
-        statusMsg = "동기화 완료: 모든 데이터가 최신 상태입니다";
+        statusMsg = t('profile.syncCompleteUpToDate');
       }
       setSyncStatus(statusMsg);
       await loadStats();
@@ -188,22 +188,22 @@ export default function ProfileScreen() {
       });
       
       // Provide more helpful error messages based on error type
-      let errorMsg = error?.message || "알 수 없는 오류";
+      let errorMsg = error?.message || t('profile.syncErrorUnknown');
       const errorCode = error?.data?.code || error?.code || '';
       
       if (errorMsg.includes('UNAUTHORIZED') || errorMsg.includes('Invalid session') || errorCode === 'UNAUTHORIZED') {
-        errorMsg = "인증이 만료되었습니다. 다시 로그인해주세요.";
+        errorMsg = t('profile.syncErrorAuth');
       } else if (errorMsg.includes('Network') || errorMsg.includes('fetch') || errorMsg.includes('Failed to fetch')) {
-        errorMsg = "네트워크 연결을 확인해주세요.";
+        errorMsg = t('profile.syncErrorNetwork');
       } else if (errorMsg.includes('timeout') || errorMsg.includes('Timeout')) {
-        errorMsg = "서버 응답 시간 초과. 잠시 후 다시 시도해주세요.";
+        errorMsg = t('profile.syncErrorTimeout');
       } else if (errorMsg.includes('Duplicate') || errorMsg.includes('duplicate')) {
-        errorMsg = "이미 동기화된 기록입니다.";
+        errorMsg = t('profile.syncErrorDuplicate');
       } else if (errorMsg.includes('500') || errorMsg.includes('Internal')) {
-        errorMsg = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        errorMsg = t('profile.syncErrorServer');
       }
       
-      setSyncStatus(`동기화 실패: ${errorMsg}`);
+      setSyncStatus(t('profile.syncFailed', { error: errorMsg }));
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
@@ -219,12 +219,12 @@ export default function ProfileScreen() {
     }
 
     Alert.alert(
-      "로그아웃",
-      "정말 로그아웃 하시겠습니까?",
+      t('profile.logout'),
+      t('profile.logoutConfirm'),
       [
-        { text: "취소", style: "cancel" },
+        { text: t('profile.cancel'), style: "cancel" },
         {
-          text: "로그아웃",
+          text: t('profile.logout'),
           style: "destructive",
           onPress: async () => {
             setIsLoggingOut(true);
@@ -236,7 +236,7 @@ export default function ProfileScreen() {
               // AuthGuard will handle navigation automatically
             } catch (error) {
               console.error("Logout error:", error);
-              Alert.alert("오류", "로그아웃 중 오류가 발생했습니다.");
+              Alert.alert(t('profile.error'), t('profile.logoutError'));
             } finally {
               setIsLoggingOut(false);
             }
@@ -252,12 +252,12 @@ export default function ProfileScreen() {
     }
 
     Alert.alert(
-      "데이터 초기화",
-      "모든 주행 기록이 삭제됩니다. 계속하시겠습니까?",
+      t('profile.dataReset'),
+      t('profile.dataResetConfirm'),
       [
-        { text: "취소", style: "cancel" },
+        { text: t('profile.cancel'), style: "cancel" },
         {
-          text: "삭제",
+          text: t('common.delete'),
           style: "destructive",
           onPress: async () => {
             await clearAllRecords();
@@ -276,7 +276,7 @@ export default function ProfileScreen() {
   // Capture screenshot for bug report
   const handleCaptureScreenshot = async () => {
     if (Platform.OS === "web") {
-      Alert.alert("알림", "웹에서는 스크린샷 기능을 사용할 수 없습니다.");
+      Alert.alert(t('profile.notice'), t('profile.screenshotNotAvailableWeb'));
       return;
     }
 
@@ -300,8 +300,7 @@ export default function ProfileScreen() {
     } catch (error) {
       console.error("Screenshot capture error:", error);
       setShowBugReportModal(true);
-      Alert.alert("오류", "스크린샷을 캡처하는 중 오류가 발생했습니다.");
-    } finally {
+      Alert.alert(t('profile.error'), t('profile.screenshotError'));    } finally {
       setIsCapturingScreen(false);
     }
   };
@@ -309,21 +308,21 @@ export default function ProfileScreen() {
   // Bug Report Email Handler
   const handleSendBugReport = async () => {
     if (!bugReportText.trim()) {
-      Alert.alert("오류", "버그 내용을 입력해주세요.");
+      Alert.alert(t('profile.error'), t('profile.bugReportEmpty'));
       return;
     }
 
     const deviceInfo = [
-      `앱 버전: v${CURRENT_APP_VERSION}`,
-      `플랫폼: ${Platform.OS} ${Platform.Version}`,
-      `사용자 ID: ${user?.id || "비로그인"}`,
-      `사용자 이메일: ${user?.email || "없음"}`,
-      `시간: ${new Date().toISOString()}`,
-      `스크린샷 첨부: ${capturedScreenshot ? "예" : "아니오"}`,
+      `${t('profile.emailAppVersion')}: v${CURRENT_APP_VERSION}`,
+      `${t('profile.emailPlatform')}: ${Platform.OS} ${Platform.Version}`,
+      `${t('profile.emailUserId')}: ${user?.id || t('profile.emailNotLoggedIn')}`,
+      `${t('profile.emailUserEmail')}: ${user?.email || t('profile.emailNone')}`,
+      `${t('profile.emailTime')}: ${new Date().toISOString()}`,
+      `${t('profile.emailScreenshot')}: ${capturedScreenshot ? t('common.yes') : t('common.no')}`,
     ].join("\n");
 
-    const emailBody = `[버그 리포트]\n\n${bugReportText}\n\n--- 기기 정보 ---\n${deviceInfo}${capturedScreenshot ? "\n\n[스크린샷이 첨부되어 있습니다]" : ""}`;
-    const emailSubject = `[SCOOP 버그 리포트] v${CURRENT_APP_VERSION}`;
+    const emailBody = `[${t('profile.bugReport')}]\n\n${bugReportText}\n\n--- ${t('profile.emailDeviceInfo')} ---\n${deviceInfo}${capturedScreenshot ? `\n\n[${t('profile.emailScreenshotAttached')}]` : ""}`;
+    const emailSubject = `[SCOOP ${t('profile.bugReport')}] v${CURRENT_APP_VERSION}`;
     const supportEmail = "scoop@scoopmotor.com";
 
     // If screenshot exists, use sharing API to include it
@@ -333,7 +332,7 @@ export default function ProfileScreen() {
         if (isAvailable) {
           await Sharing.shareAsync(capturedScreenshot, {
             mimeType: "image/jpeg",
-            dialogTitle: "SCOOP 버그 리포트 - 스크린샷 공유",
+            dialogTitle: `SCOOP ${t('profile.bugReport')} - ${t('profile.emailScreenshotShare')}`,
             UTI: "public.jpeg",
           });
           // After sharing screenshot, open email
@@ -366,31 +365,31 @@ export default function ProfileScreen() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       } else {
-        Alert.alert("오류", "이메일 앱을 열 수 없습니다. 이메일 앱이 설치되어 있는지 확인해주세요.");
+        Alert.alert(t('profile.error'), t('profile.emailAppNotFound'));
       }
     } catch (error) {
       console.error("Bug report email error:", error);
-      Alert.alert("오류", "이메일을 보내는 중 오류가 발생했습니다.");
+      Alert.alert(t('profile.error'), t('profile.emailSendError'));
     }
   };
 
   // Feature Request Email Handler
   const handleSendFeatureRequest = async () => {
     if (!featureRequestText.trim()) {
-      Alert.alert("오류", "기능 제안 내용을 입력해주세요.");
+      Alert.alert(t('profile.error'), t('profile.featureRequestEmpty'));
       return;
     }
 
     const deviceInfo = [
-      `앱 버전: v${CURRENT_APP_VERSION}`,
-      `플랫폼: ${Platform.OS} ${Platform.Version}`,
-      `사용자 ID: ${user?.id || "비로그인"}`,
-      `사용자 이메일: ${user?.email || "없음"}`,
-      `시간: ${new Date().toISOString()}`,
+      `${t('profile.emailAppVersion')}: v${CURRENT_APP_VERSION}`,
+      `${t('profile.emailPlatform')}: ${Platform.OS} ${Platform.Version}`,
+      `${t('profile.emailUserId')}: ${user?.id || t('profile.emailNotLoggedIn')}`,
+      `${t('profile.emailUserEmail')}: ${user?.email || t('profile.emailNone')}`,
+      `${t('profile.emailTime')}: ${new Date().toISOString()}`,
     ].join("\n");
 
-    const emailBody = `[기능 제안]\n\n${featureRequestText}\n\n--- 사용자 정보 ---\n${deviceInfo}`;
-    const emailSubject = `[SCOOP 기능 제안] v${CURRENT_APP_VERSION}`;
+    const emailBody = `[${t('profile.featureRequest')}]\n\n${featureRequestText}\n\n--- ${t('profile.emailUserInfo')} ---\n${deviceInfo}`;
+    const emailSubject = `[SCOOP ${t('profile.featureRequest')}] v${CURRENT_APP_VERSION}`;
     const supportEmail = "scoop@scoopmotor.com";
     
     const mailtoUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
@@ -405,18 +404,18 @@ export default function ProfileScreen() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       } else {
-        Alert.alert("오류", "이메일 앱을 열 수 없습니다. 이메일 앱이 설치되어 있는지 확인해주세요.");
+        Alert.alert(t('profile.error'), t('profile.emailAppNotFound'));
       }
     } catch (error) {
       console.error("Feature request email error:", error);
-      Alert.alert("오류", "이메일을 보내는 중 오류가 발생했습니다.");
+      Alert.alert(t('profile.error'), t('profile.emailSendError'));
     }
   };
 
   const getUserDisplayName = () => {
     if (user?.name) return user.name;
     if (user?.email) return user.email.split("@")[0];
-    return "SCOOP 라이더";
+    return t('profile.defaultRiderName');
   };
 
   const getLoginMethodIcon = () => {
@@ -439,7 +438,7 @@ export default function ProfileScreen() {
       >
         {/* Header */}
         <View className="px-5 pt-4 pb-6">
-          <Text className="text-2xl font-bold text-foreground">내 정보</Text>
+          <Text className="text-2xl font-bold text-foreground">{t('profile.myInfo')}</Text>
         </View>
 
         {/* Profile Card */}
@@ -493,7 +492,7 @@ export default function ProfileScreen() {
           {/* Level Progress */}
           <View className="mb-2">
             <View className="flex-row justify-between mb-1">
-              <Text className="text-muted text-xs">레벨 진행도</Text>
+              <Text className="text-muted text-xs">{t('profile.levelProgress')}</Text>
               <Text className="text-muted text-xs">{(stats.levelProgress * 100).toFixed(0)}%</Text>
             </View>
             <View className="h-2 bg-border rounded-full overflow-hidden">
@@ -507,11 +506,11 @@ export default function ProfileScreen() {
             </View>
             <View className="flex-row justify-between mt-1">
               <Text className="text-muted text-xs">
-                현재: {(stats.totalDistance / 1000).toFixed(1)}km
+                {t('profile.currentDistance', { distance: (stats.totalDistance / 1000).toFixed(1) })}
               </Text>
               {stats.level < 7 && (
                 <Text className="text-muted text-xs">
-                  다음 레벨까지 {calculateLevel(stats.totalDistance / 1000).nextLevelDistance.toLocaleString()}km
+                  {t('profile.nextLevel', { distance: calculateLevel(stats.totalDistance / 1000).nextLevelDistance.toLocaleString() })}
                 </Text>
               )}
             </View>
@@ -523,17 +522,17 @@ export default function ProfileScreen() {
           <View className="flex-row items-center justify-between mb-3">
             <View className="flex-row items-center">
               <MaterialIcons name="cloud-sync" size={24} color={colors.primary} />
-              <Text className="text-lg font-bold text-foreground ml-2">클라우드 동기화</Text>
+              <Text className="text-lg font-bold text-foreground ml-2">{t('profile.cloudSync')}</Text>
             </View>
             {stats.unsyncedCount > 0 && (
               <View className="bg-warning px-2 py-1 rounded-full">
-                <Text className="text-white text-xs font-bold">{stats.unsyncedCount}개 미동기화</Text>
+                <Text className="text-white text-xs font-bold">{t('profile.unsyncedCount', { count: stats.unsyncedCount })}</Text>
               </View>
             )}
           </View>
           
           <Text className="text-muted text-sm mb-4">
-            주행 기록을 클라우드에 저장하여 다른 기기에서도 확인할 수 있습니다.
+            {t('profile.loginForSync')}
           </Text>
 
           {syncStatus && (
@@ -558,7 +557,7 @@ export default function ProfileScreen() {
             ) : (
               <>
                 <MaterialIcons name="sync" size={20} color="#FFFFFF" />
-                <Text className="text-white font-bold ml-2">지금 동기화</Text>
+                <Text className="text-white font-bold ml-2">{t('profile.syncNow')}</Text>
               </>
             )}
           </Pressable>
@@ -566,7 +565,7 @@ export default function ProfileScreen() {
 
         {/* Stats Grid */}
         <View className="mx-5 mb-6">
-          <Text className="text-lg font-bold text-foreground mb-3">누적 기록</Text>
+          <Text className="text-lg font-bold text-foreground mb-3">{t('profile.cumulativeRecord')}</Text>
           
           <View className="flex-row flex-wrap">
             {/* Total Distance */}
@@ -574,7 +573,7 @@ export default function ProfileScreen() {
               <View className="bg-surface rounded-xl p-4 border border-border">
                 <View className="flex-row items-center mb-2">
                   <MaterialIcons name="straighten" size={20} color={colors.primary} />
-                  <Text className="text-muted text-xs ml-2">총 거리</Text>
+                  <Text className="text-muted text-xs ml-2">{t('profile.totalDistance')}</Text>
                 </View>
                 <Text className="text-2xl font-bold text-foreground">
                   {(stats.totalDistance / 1000).toFixed(1)}
@@ -588,12 +587,12 @@ export default function ProfileScreen() {
               <View className="bg-surface rounded-xl p-4 border border-border">
                 <View className="flex-row items-center mb-2">
                   <MaterialIcons name="schedule" size={20} color={colors.primary} />
-                  <Text className="text-muted text-xs ml-2">총 시간</Text>
+                  <Text className="text-muted text-xs ml-2">{t('profile.totalTime')}</Text>
                 </View>
                 <Text className="text-2xl font-bold text-foreground">
                   {formatDuration(stats.totalDuration)}
                 </Text>
-                <Text className="text-muted text-xs">시간</Text>
+                <Text className="text-muted text-xs">{t('profile.hours')}</Text>
               </View>
             </View>
 
@@ -602,12 +601,12 @@ export default function ProfileScreen() {
               <View className="bg-surface rounded-xl p-4 border border-border">
                 <View className="flex-row items-center mb-2">
                   <MaterialIcons name="electric-scooter" size={20} color={colors.primary} />
-                  <Text className="text-muted text-xs ml-2">주행 횟수</Text>
+                  <Text className="text-muted text-xs ml-2">{t('profile.rideCount')}</Text>
                 </View>
                 <Text className="text-2xl font-bold text-foreground">
                   {stats.totalRides}
                 </Text>
-                <Text className="text-muted text-xs">회</Text>
+                <Text className="text-muted text-xs">{t('profile.rides')}</Text>
               </View>
             </View>
 
@@ -616,7 +615,7 @@ export default function ProfileScreen() {
               <View className="bg-surface rounded-xl p-4 border border-border">
                 <View className="flex-row items-center mb-2">
                   <MaterialIcons name="speed" size={20} color={colors.primary} />
-                  <Text className="text-muted text-xs ml-2">평균 속도</Text>
+                  <Text className="text-muted text-xs ml-2">{t('profile.avgSpeed')}</Text>
                 </View>
                 <Text className="text-2xl font-bold text-foreground">
                   {stats.avgSpeed.toFixed(1)}
@@ -642,7 +641,7 @@ export default function ProfileScreen() {
                 <View className="flex-1">
                   <View className="flex-row items-center mb-2">
                     <MaterialIcons name="bolt" size={20} color={colors.warning} />
-                    <Text className="text-muted text-xs ml-2">최고 속도</Text>
+                    <Text className="text-muted text-xs ml-2">{t('profile.maxSpeed')}</Text>
                     {stats.maxSpeedRecordId && (
                       <MaterialIcons name="chevron-right" size={16} color={colors.muted} style={{ marginLeft: 4 }} />
                     )}
@@ -659,16 +658,16 @@ export default function ProfileScreen() {
 
         {/* Account Settings */}
         <View className="mx-5 mb-6">
-          <Text className="text-lg font-bold text-foreground mb-3">계정</Text>
+          <Text className="text-lg font-bold text-foreground mb-3">{t('profile.account')}</Text>
           
           <View className="bg-surface rounded-2xl border border-border overflow-hidden">
             {/* Account Info */}
             <View className="flex-row items-center p-4 border-b border-border">
               <MaterialIcons name="account-circle" size={24} color={colors.primary} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">로그인 정보</Text>
+                <Text className="text-foreground font-medium">{t('profile.loginInfo')}</Text>
                 <Text className="text-muted text-xs">
-                  {user?.loginMethod === "google" ? "Google 계정" : "이메일"} 로그인
+                  {user?.loginMethod === "google" ? t('profile.googleAccount') : t('profile.emailLogin')}
                 </Text>
               </View>
             </View>
@@ -682,8 +681,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="logout" size={24} color={colors.error} />
               <View className="flex-1 ml-3">
-                <Text className="text-error font-medium">로그아웃</Text>
-                <Text className="text-muted text-xs">계정에서 로그아웃합니다</Text>
+                <Text className="text-error font-medium">{t('profile.logout')}</Text>
+                <Text className="text-muted text-xs">{t('profile.logoutDesc')}</Text>
               </View>
               {isLoggingOut ? (
                 <ActivityIndicator size="small" color={colors.error} />
@@ -705,8 +704,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="person-remove" size={24} color={colors.error} />
               <View className="flex-1 ml-3">
-                <Text className="text-error font-medium">회원탈퇴</Text>
-                <Text className="text-muted text-xs">계정과 모든 데이터가 삭제됩니다</Text>
+                <Text className="text-error font-medium">{t('profile.deleteAccount')}</Text>
+                <Text className="text-muted text-xs">{t('profile.deleteAccountDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -715,7 +714,7 @@ export default function ProfileScreen() {
 
         {/* Social */}
         <View className="mx-5 mb-6">
-          <Text className="text-lg font-bold text-foreground mb-3">소셜</Text>
+          <Text className="text-lg font-bold text-foreground mb-3">{t('profile.social')}</Text>
           
           <View className="bg-surface rounded-2xl border border-border overflow-hidden">
             {/* Friends */}
@@ -726,8 +725,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="people" size={24} color={colors.primary} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">친구</Text>
-                <Text className="text-muted text-xs">친구 검색 및 관리</Text>
+                <Text className="text-foreground font-medium">{t('profile.friends')}</Text>
+                <Text className="text-muted text-xs">{t('profile.friendsDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -740,8 +739,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="leaderboard" size={24} color={colors.warning} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">랭킹</Text>
-                <Text className="text-muted text-xs">주간/월간 주행 랭킹</Text>
+                <Text className="text-foreground font-medium">{t('profile.ranking')}</Text>
+                <Text className="text-muted text-xs">{t('profile.rankingDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -754,8 +753,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="emoji-events" size={24} color={colors.success} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">챌린지</Text>
-                <Text className="text-muted text-xs">친구들과 함께하는 주행 챌린지</Text>
+                <Text className="text-foreground font-medium">{t('profile.challenges')}</Text>
+                <Text className="text-muted text-xs">{t('profile.challengesDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -768,8 +767,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="notifications" size={24} color={colors.primary} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">알림</Text>
-                <Text className="text-muted text-xs">친구 요청, 댓글, 좋아요 알림</Text>
+                <Text className="text-foreground font-medium">{t('profile.notifications')}</Text>
+                <Text className="text-muted text-xs">{t('profile.notificationsDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -782,8 +781,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="military-tech" size={24} color={colors.warning} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">업적 / 배지</Text>
-                <Text className="text-muted text-xs">획득한 배지 확인</Text>
+                <Text className="text-foreground font-medium">{t('profile.badges')}</Text>
+                <Text className="text-muted text-xs">{t('profile.badgesDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -792,7 +791,7 @@ export default function ProfileScreen() {
 
         {/* My Scooters */}
         <View className="mx-5 mb-6">
-          <Text className="text-lg font-bold text-foreground mb-3">내 기체</Text>
+          <Text className="text-lg font-bold text-foreground mb-3">{t('profile.myScooter')}</Text>
           
           <View className="bg-surface rounded-2xl border border-border overflow-hidden">
             <Pressable
@@ -802,8 +801,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="electric-scooter" size={24} color={colors.primary} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">기체 관리</Text>
-                <Text className="text-muted text-xs">전동킥보드 등록 및 관리</Text>
+                <Text className="text-foreground font-medium">{t('profile.scooterManage')}</Text>
+                <Text className="text-muted text-xs">{t('profile.scooterManageDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -812,7 +811,7 @@ export default function ProfileScreen() {
 
         {/* Goals */}
         <View className="mx-5 mb-6">
-          <Text className="text-lg font-bold text-foreground mb-3">목표</Text>
+          <Text className="text-lg font-bold text-foreground mb-3">{t('profile.goals')}</Text>
           
           <View className="bg-surface rounded-2xl border border-border overflow-hidden">
             <Pressable
@@ -822,8 +821,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="flag" size={24} color={colors.success} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">목표 설정</Text>
-                <Text className="text-muted text-xs">일일/주간 주행 목표 설정</Text>
+                <Text className="text-foreground font-medium">{t('profile.goalSetting')}</Text>
+                <Text className="text-muted text-xs">{t('profile.goalSettingDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -832,7 +831,7 @@ export default function ProfileScreen() {
 
         {/* Settings */}
         <View className="mx-5 mb-6">
-          <Text className="text-lg font-bold text-foreground mb-3">설정</Text>
+          <Text className="text-lg font-bold text-foreground mb-3">{t('profile.settings')}</Text>
           
           <View className="bg-surface rounded-2xl border border-border overflow-hidden">
             {/* Dark Mode Toggle */}
@@ -843,9 +842,9 @@ export default function ProfileScreen() {
                 color={colors.primary} 
               />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">테마</Text>
+                <Text className="text-foreground font-medium">{t('profile.theme')}</Text>
                 <Text className="text-muted text-xs">
-                  {themeMode === "system" ? "시스템 설정 따름" : themeMode === "light" ? "라이트 모드" : "다크 모드"}
+                  {themeMode === "system" ? t('profile.themeSystem') : themeMode === "light" ? t('profile.themeLight') : t('profile.themeDark')}
                 </Text>
               </View>
               <View className="flex-row items-center gap-1">
@@ -860,7 +859,7 @@ export default function ProfileScreen() {
                   className="px-3 py-1 rounded-full"
                 >
                   <View style={{ backgroundColor: themeMode === "system" ? colors.primary : colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
-                    <Text style={{ color: themeMode === "system" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>자동</Text>
+                    <Text style={{ color: themeMode === "system" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>{t('profile.auto')}</Text>
                   </View>
                 </Pressable>
                 <Pressable 
@@ -874,7 +873,7 @@ export default function ProfileScreen() {
                   className="px-3 py-1 rounded-full"
                 >
                   <View style={{ backgroundColor: themeMode === "light" ? colors.primary : colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
-                    <Text style={{ color: themeMode === "light" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>라이트</Text>
+                    <Text style={{ color: themeMode === "light" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>{t('profile.light')}</Text>
                   </View>
                 </Pressable>
                 <Pressable 
@@ -888,7 +887,7 @@ export default function ProfileScreen() {
                   className="px-3 py-1 rounded-full"
                 >
                   <View style={{ backgroundColor: themeMode === "dark" ? colors.primary : colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
-                    <Text style={{ color: themeMode === "dark" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>다크</Text>
+                    <Text style={{ color: themeMode === "dark" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>{t('profile.dark')}</Text>
                   </View>
                 </Pressable>
               </View>
@@ -933,7 +932,7 @@ export default function ProfileScreen() {
                   className="px-3 py-1 rounded-full"
                 >
                   <View style={{ backgroundColor: languagePreference === "ko" ? colors.primary : colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
-                    <Text style={{ color: languagePreference === "ko" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>한국어</Text>
+                    <Text style={{ color: languagePreference === "ko" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>{t('settings.language.korean')}</Text>
                   </View>
                 </Pressable>
                 <Pressable 
@@ -961,8 +960,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="campaign" size={24} color={colors.warning} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">공지사항</Text>
-                <Text className="text-muted text-xs">업데이트 및 공지 확인</Text>
+                <Text className="text-foreground font-medium">{t('profile.announcements')}</Text>
+                <Text className="text-muted text-xs">{t('profile.announcementsDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -984,8 +983,8 @@ export default function ProfileScreen() {
                 color={locationSharingEnabled ? colors.primary : colors.muted} 
               />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">위치 공유</Text>
-                <Text className="text-muted text-xs">주행 중 친구에게 내 위치 공유</Text>
+                <Text className="text-foreground font-medium">{t('profile.locationSharing')}</Text>
+                <Text className="text-muted text-xs">{t('profile.locationSharingDesc')}</Text>
               </View>
               <View 
                 className="w-12 h-7 rounded-full items-center justify-center"
@@ -1011,8 +1010,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="record-voice-over" size={24} color={colors.primary} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">음성 안내</Text>
-                <Text className="text-muted text-xs">주행 중 속도, 거리, 시간 음성 안내</Text>
+                <Text className="text-foreground font-medium">{t('profile.voiceGuidance')}</Text>
+                <Text className="text-muted text-xs">{t('profile.voiceGuidanceDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -1025,8 +1024,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="map" size={24} color={colors.primary} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">저장된 경로</Text>
-                <Text className="text-muted text-xs">GPX 파일 가져오기 및 경로 따라가기</Text>
+                <Text className="text-foreground font-medium">{t('profile.savedRoutes')}</Text>
+                <Text className="text-muted text-xs">{t('profile.savedRoutesDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -1039,8 +1038,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="whatshot" size={24} color={colors.primary} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">주행 히트맵</Text>
-                <Text className="text-muted text-xs">자주 다니는 경로를 시각화</Text>
+                <Text className="text-foreground font-medium">{t('profile.rideHeatmap')}</Text>
+                <Text className="text-muted text-xs">{t('profile.rideHeatmapDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -1053,8 +1052,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="groups" size={24} color={colors.primary} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">그룹 라이딩</Text>
-                <Text className="text-muted text-xs">친구들과 함께 실시간 그룹 주행</Text>
+                <Text className="text-foreground font-medium">{t('profile.groupRiding')}</Text>
+                <Text className="text-muted text-xs">{t('profile.groupRidingDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -1067,8 +1066,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="notifications-none" size={24} color={colors.primary} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">알림 설정</Text>
-                <Text className="text-muted text-xs">주행 완료, 기록 달성 알림</Text>
+                <Text className="text-foreground font-medium">{t('profile.notificationSettings')}</Text>
+                <Text className="text-muted text-xs">{t('profile.notificationSettingsDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -1087,8 +1086,8 @@ export default function ProfileScreen() {
               >
                 <MaterialIcons name="battery-alert" size={24} color={colors.warning} />
                 <View className="flex-1 ml-3">
-                  <Text className="text-foreground font-medium">백그라운드 설정 가이드</Text>
-                  <Text className="text-muted text-xs">화면 꺼짐 시에도 주행 기록 유지</Text>
+                  <Text className="text-foreground font-medium">{t('profile.backgroundGuide')}</Text>
+                  <Text className="text-muted text-xs">{t('profile.backgroundGuideDesc')}</Text>
                 </View>
                 <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
               </Pressable>
@@ -1103,8 +1102,8 @@ export default function ProfileScreen() {
               >
                 <MaterialIcons name="admin-panel-settings" size={24} color={colors.primary} />
                 <View className="flex-1 ml-3">
-                  <Text className="text-foreground font-medium">관리자 대시보드</Text>
-                  <Text className="text-muted text-xs">설문 통계, 버그 리포트 관리</Text>
+                  <Text className="text-foreground font-medium">{t('profile.adminDashboard')}</Text>
+                  <Text className="text-muted text-xs">{t('profile.adminDashboardDesc')}</Text>
                 </View>
                 <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
               </Pressable>
@@ -1115,12 +1114,12 @@ export default function ProfileScreen() {
               onPress={() => {
                 if (appUpdateInfo.hasUpdate && appUpdateInfo.downloadUrl) {
                   Alert.alert(
-                    "새 버전 사용 가능",
-                    `v${appUpdateInfo.latestVersion} 버전이 출시되었습니다.\n\n${appUpdateInfo.releaseNotes || "새로운 기능과 버그 수정이 포함되어 있습니다."}`,
+                    t('profile.newVersionAvailable'),
+                    `v${appUpdateInfo.latestVersion} ${t('profile.versionReleased')}\n\n${appUpdateInfo.releaseNotes || t('profile.newFeaturesIncluded')}`,
                     [
-                      { text: "나중에", style: "cancel" },
+                      { text: t('profile.later'), style: "cancel" },
                       { 
-                        text: "다운로드", 
+                        text: t('profile.download'), 
                         onPress: async () => {
                           const { Linking } = await import("react-native");
                           Linking.openURL(appUpdateInfo.downloadUrl!);
@@ -1129,7 +1128,7 @@ export default function ProfileScreen() {
                     ]
                   );
                 } else {
-                  Alert.alert("앱 정보", `SCOOP Riding v${CURRENT_APP_VERSION}\n\n최신 버전을 사용 중입니다.`);
+                  Alert.alert(t('profile.appInfo'), `SCOOP Riding v${CURRENT_APP_VERSION}\n\n${t('profile.latestVersion')}`);
                 }
               }}
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
@@ -1141,10 +1140,10 @@ export default function ProfileScreen() {
                 color={appUpdateInfo.hasUpdate ? colors.primary : colors.muted} 
               />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">앱 버전</Text>
+                <Text className="text-foreground font-medium">{t('profile.appVersion')}</Text>
                 <Text className={appUpdateInfo.hasUpdate ? "text-primary text-xs font-medium" : "text-muted text-xs"}>
                   {appUpdateInfo.hasUpdate 
-                    ? `새 버전 확인 (v${appUpdateInfo.latestVersion})` 
+                    ? `${t('profile.newVersionCheck')} (v${appUpdateInfo.latestVersion})` 
                     : `SCOOP Riding v${CURRENT_APP_VERSION}`}
                 </Text>
               </View>
@@ -1170,8 +1169,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="bug-report" size={24} color={colors.primary} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">버그 리포트</Text>
-                <Text className="text-muted text-xs">스크린샷 첨부 가능! 문제점을 알려주세요</Text>
+                <Text className="text-foreground font-medium">{t('profile.bugReport')}</Text>
+                <Text className="text-muted text-xs">{t('profile.bugReportDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -1189,8 +1188,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="lightbulb" size={24} color={colors.warning} />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">기능 제안</Text>
-                <Text className="text-muted text-xs">원하는 기능이나 아이디어를 알려주세요</Text>
+                <Text className="text-foreground font-medium">{t('profile.featureRequest')}</Text>
+                <Text className="text-muted text-xs">{t('profile.featureRequestDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -1203,8 +1202,8 @@ export default function ProfileScreen() {
             >
               <MaterialIcons name="delete-outline" size={24} color={colors.error} />
               <View className="flex-1 ml-3">
-                <Text className="text-error font-medium">데이터 초기화</Text>
-                <Text className="text-muted text-xs">모든 주행 기록 삭제</Text>
+                <Text className="text-error font-medium">{t('profile.dataReset')}</Text>
+                <Text className="text-muted text-xs">{t('profile.dataResetDesc')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
             </Pressable>
@@ -1240,7 +1239,7 @@ export default function ProfileScreen() {
             <View className="items-center mb-4">
               <MaterialIcons name="emoji-events" size={48} color={colors.warning} />
               <Text className="text-2xl font-bold text-foreground mt-2">
-                최고 속도 기록
+                {t('profile.maxSpeedRecord')}
               </Text>
             </View>
 
@@ -1257,7 +1256,7 @@ export default function ProfileScreen() {
               <View className="bg-surface rounded-xl p-4 border border-border mb-4">
                 <View className="flex-row items-center mb-2">
                   <MaterialIcons name="calendar-today" size={18} color={colors.primary} />
-                  <Text className="text-muted text-sm ml-2">기록 날짜</Text>
+                  <Text className="text-muted text-sm ml-2">{t('profile.recordDate')}</Text>
                 </View>
                 <Text className="text-foreground font-medium">
                   {formatDateFull(stats.maxSpeedRecordDate)}
@@ -1275,7 +1274,7 @@ export default function ProfileScreen() {
               className="bg-primary rounded-xl py-3 items-center mb-3"
               style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
             >
-              <Text className="text-background font-semibold">해당 주행 기록 보기</Text>
+              <Text className="text-background font-semibold">{t('profile.viewRideRecord')}</Text>
             </Pressable>
 
             <Pressable
@@ -1283,7 +1282,7 @@ export default function ProfileScreen() {
               className="py-3 items-center"
               style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
             >
-              <Text className="text-muted font-medium">닫기</Text>
+              <Text className="text-muted font-medium">{t('profile.close')}</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -1311,20 +1310,19 @@ export default function ProfileScreen() {
             <View className="flex-row items-center mb-4">
               <MaterialIcons name="bug-report" size={28} color={colors.primary} />
               <Text className="text-xl font-bold text-foreground ml-2">
-                버그 리포트
+                {t('profile.bugReport')}
               </Text>
             </View>
 
             <Text className="text-muted text-sm mb-4">
-              발견한 문제점이나 개선 사항을 알려주세요.{"\n"}
-              기기 정보와 앱 버전이 자동으로 포함됩니다.
+              {t('profile.bugReportModalDesc')}
             </Text>
 
             <View className="bg-surface rounded-xl border border-border mb-4">
               <TextInput
                 value={bugReportText}
                 onChangeText={setBugReportText}
-                placeholder="어떤 문제가 있나요? 자세히 설명해주세요..."
+                placeholder={t('profile.bugReportPlaceholder')}
                 placeholderTextColor={colors.muted}
                 multiline
                 numberOfLines={5}
@@ -1342,7 +1340,7 @@ export default function ProfileScreen() {
             {capturedScreenshot && (
               <View className="mb-4">
                 <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-foreground font-medium text-sm">첨부된 스크린샷</Text>
+                  <Text className="text-foreground font-medium text-sm">{t('profile.attachedScreenshot')}</Text>
                   <Pressable
                     onPress={() => setCapturedScreenshot(null)}
                     style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
@@ -1373,7 +1371,7 @@ export default function ProfileScreen() {
                     <MaterialIcons name="screenshot" size={20} color={colors.primary} />
                   )}
                   <Text className="text-primary font-medium ml-2">
-                    {capturedScreenshot ? "스크린샷 다시 캡처" : "현재 화면 스크린샷 첨부"}
+                    {capturedScreenshot ? t('profile.recaptureScreenshot') : t('profile.attachScreenshot')}
                   </Text>
                 </View>
               </Pressable>
@@ -1381,7 +1379,7 @@ export default function ProfileScreen() {
 
             <View className="bg-surface/50 rounded-xl p-3 mb-4 border border-border">
               <Text className="text-muted text-xs">
-                포함되는 정보: 앱 버전 v{CURRENT_APP_VERSION}, {Platform.OS} {Platform.Version}
+                {t('profile.includedInfo')}: v{CURRENT_APP_VERSION}, {Platform.OS} {Platform.Version}
               </Text>
             </View>
 
@@ -1393,7 +1391,7 @@ export default function ProfileScreen() {
               <View className="flex-row items-center">
                 <MaterialIcons name="email" size={20} color="#FFFFFF" />
                 <Text className="text-background font-semibold ml-2">
-                  {capturedScreenshot ? "스크린샷과 함께 보내기" : "이메일로 보내기"}
+                  {capturedScreenshot ? t('profile.sendWithScreenshot') : t('profile.sendByEmail')}
                 </Text>
               </View>
             </Pressable>
@@ -1407,7 +1405,7 @@ export default function ProfileScreen() {
               className="py-3 items-center"
               style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
             >
-              <Text className="text-muted font-medium">취소</Text>
+              <Text className="text-muted font-medium">{t('profile.cancel')}</Text>
               </Pressable>
             </Pressable>
           </Pressable>
@@ -1436,20 +1434,19 @@ export default function ProfileScreen() {
             <View className="flex-row items-center mb-4">
               <MaterialIcons name="lightbulb" size={28} color={colors.warning} />
               <Text className="text-xl font-bold text-foreground ml-2">
-                기능 제안
+                {t('profile.featureRequest')}
               </Text>
             </View>
 
             <Text className="text-muted text-sm mb-4">
-              원하는 기능이나 아이디어를 알려주세요.{"\n"}
-              여러분의 의견이 SCOOP을 더 좋게 만듭니다.
+              {t('profile.featureRequestModalDesc')}
             </Text>
 
             <View className="bg-surface rounded-xl border border-border mb-4">
               <TextInput
                 value={featureRequestText}
                 onChangeText={setFeatureRequestText}
-                placeholder="어떤 기능이 있으면 좋겠나요? 자세히 설명해주세요..."
+                placeholder={t('profile.featureRequestPlaceholder')}
                 placeholderTextColor={colors.muted}
                 multiline
                 numberOfLines={5}
@@ -1470,7 +1467,7 @@ export default function ProfileScreen() {
             >
               <View className="flex-row items-center">
                 <MaterialIcons name="email" size={20} color="#FFFFFF" />
-                <Text className="text-white font-semibold ml-2">이메일로 보내기</Text>
+                <Text className="text-white font-semibold ml-2">{t('profile.sendByEmail')}</Text>
               </View>
             </Pressable>
 
@@ -1482,7 +1479,7 @@ export default function ProfileScreen() {
               className="py-3 items-center"
               style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
             >
-              <Text className="text-muted font-medium">취소</Text>
+              <Text className="text-muted font-medium">{t('profile.cancel')}</Text>
               </Pressable>
             </Pressable>
           </Pressable>
@@ -1510,29 +1507,29 @@ export default function ProfileScreen() {
               <View className="flex-row items-center mb-4">
                 <MaterialIcons name="warning" size={28} color={colors.error} />
                 <Text className="text-xl font-bold text-foreground ml-2">
-                  회원탈퇴
+                  {t('profile.deleteAccount')}
                 </Text>
               </View>
 
               <Text className="text-foreground mb-4">
-                회원탈퇴 시 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
+                {t('profile.deleteAccountWarning')}
               </Text>
 
               <View className="bg-surface rounded-xl p-4 border border-border mb-4">
-                <Text className="text-muted text-sm mb-2">삭제되는 데이터:</Text>
-                <Text className="text-foreground text-sm">• 모든 주행 기록</Text>
-                <Text className="text-foreground text-sm">• 등록된 기체 정보</Text>
-                <Text className="text-foreground text-sm">• 친구 및 소셜 데이터</Text>
-                <Text className="text-foreground text-sm">• 커뮤니티 게시글 및 댓글</Text>
-                <Text className="text-foreground text-sm">• 모든 설정 및 환경설정</Text>
+                <Text className="text-muted text-sm mb-2">{t('profile.dataToBeDeleted')}</Text>
+                <Text className="text-foreground text-sm">{t('profile.deleteItem1')}</Text>
+                <Text className="text-foreground text-sm">{t('profile.deleteItem2')}</Text>
+                <Text className="text-foreground text-sm">{t('profile.deleteItem3')}</Text>
+                <Text className="text-foreground text-sm">{t('profile.deleteItem4')}</Text>
+                <Text className="text-foreground text-sm">{t('profile.deleteItem5')}</Text>
               </View>
 
-              <Text className="text-muted text-sm mb-2">탈퇴 사유 (선택사항)</Text>
+              <Text className="text-muted text-sm mb-2">{t('profile.deleteReason')}</Text>
               <View className="bg-surface rounded-xl border border-border mb-4">
                 <TextInput
                   value={deleteReason}
                   onChangeText={setDeleteReason}
-                  placeholder="탈퇴 사유를 알려주세요..."
+                  placeholder={t('profile.deleteReasonPlaceholder')}
                   placeholderTextColor={colors.muted}
                   multiline
                   numberOfLines={2}
@@ -1547,13 +1544,13 @@ export default function ProfileScreen() {
               </View>
 
               <Text className="text-muted text-sm mb-2">
-                탈퇴를 확인하려면 '회원탈퇴'를 입력하세요
+                {t('profile.deleteConfirmInstruction')}
               </Text>
               <View className="bg-surface rounded-xl border border-border mb-4">
                 <TextInput
                   value={deleteConfirmText}
                   onChangeText={setDeleteConfirmText}
-                  placeholder="회원탈퇴"
+                  placeholder={t('profile.deleteAccount')}
                   placeholderTextColor={colors.muted}
                   style={{
                     padding: 12,
@@ -1565,18 +1562,18 @@ export default function ProfileScreen() {
 
               <Pressable
                 onPress={async () => {
-                  if (deleteConfirmText !== "회원탈퇴") {
-                    Alert.alert("오류", "'회원탈퇴'를 정확히 입력해주세요.");
+                  if (deleteConfirmText !== t('profile.deleteAccount')) {
+                    Alert.alert(t('profile.error'), t('profile.deleteConfirmError'));
                     return;
                   }
 
                   Alert.alert(
-                    "최종 확인",
-                    "정말로 회원탈퇴를 진행하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+                    t('profile.finalConfirm'),
+                    t('profile.finalConfirmMessage'),
                     [
-                      { text: "취소", style: "cancel" },
+                      { text: t('profile.cancel'), style: "cancel" },
                       {
-                        text: "탈퇴",
+                        text: t('profile.withdraw'),
                         style: "destructive",
                         onPress: async () => {
                           setIsDeleting(true);
@@ -1591,11 +1588,11 @@ export default function ProfileScreen() {
                                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                               }
                               Alert.alert(
-                                "회원탈퇴 완료",
-                                "계정이 성공적으로 삭제되었습니다. 그동안 SCOOP을 이용해주셔서 감사합니다.",
+                                t('profile.deleteComplete'),
+                                t('profile.deleteCompleteMessage'),
                                 [
                                   {
-                                    text: "확인",
+                                    text: t('profile.confirm'),
                                     onPress: () => {
                                       setShowDeleteAccountModal(false);
                                       logout();
@@ -1604,11 +1601,11 @@ export default function ProfileScreen() {
                                 ]
                               );
                             } else {
-                              Alert.alert("오류", result.error || "회원탈퇴 중 오류가 발생했습니다.");
+                              Alert.alert(t('profile.error'), result.error || t('profile.deleteError'));
                             }
                           } catch (error: any) {
                             console.error("Delete account error:", error);
-                            Alert.alert("오류", error.message || "회원탈퇴 중 오류가 발생했습니다.");
+                            Alert.alert(t('profile.error'), error.message || t('profile.deleteError'));
                           } finally {
                             setIsDeleting(false);
                           }
@@ -1617,17 +1614,17 @@ export default function ProfileScreen() {
                     ]
                   );
                 }}
-                disabled={isDeleting || deleteConfirmText !== "회원탈퇴"}
+                disabled={isDeleting || deleteConfirmText !== t('profile.deleteAccount')}
                 className="rounded-xl py-3 items-center mb-3"
                 style={({ pressed }) => [{
-                  backgroundColor: deleteConfirmText === "회원탈퇴" ? colors.error : colors.border,
+                  backgroundColor: deleteConfirmText === t('profile.deleteAccount') ? colors.error : colors.border,
                   opacity: pressed || isDeleting ? 0.8 : 1,
                 }]}
               >
                 {isDeleting ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text className="text-white font-semibold">회원탈퇴 진행</Text>
+                  <Text className="text-white font-semibold">{t('profile.proceedDelete')}</Text>
                 )}
               </Pressable>
 
@@ -1640,7 +1637,7 @@ export default function ProfileScreen() {
                 className="py-3 items-center"
                 style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
               >
-                <Text className="text-muted font-medium">취소</Text>
+                <Text className="text-muted font-medium">{t('profile.cancel')}</Text>
               </Pressable>
             </Pressable>
           </Pressable>

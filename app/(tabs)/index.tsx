@@ -381,8 +381,8 @@ export default function HomeScreen() {
               )}
               <Text className="text-yellow-600 ml-2 flex-1 text-sm">
                 {isSyncing 
-                  ? "동기화 중..." 
-                  : `동기화 대기 중 ${syncStatus?.pendingCount}개 - 터치하여 동기화`
+                  ? t('home.syncing') 
+                  : t('home.syncPending', { count: syncStatus?.pendingCount })
                 }
               </Text>
               {!isSyncing && (
@@ -469,7 +469,7 @@ export default function HomeScreen() {
                   {(stats.weeklyDistance / 1000).toFixed(1)} km
                 </Text>
                 <View className="flex-row items-center mt-1">
-                  <Text className="text-white/70 text-xs">{stats.weeklyRides}회 주행</Text>
+                  <Text className="text-white/70 text-xs">{t('home.stats.rides', { count: stats.weeklyRides })}</Text>
                   <Text className="text-white/50 text-xs mx-1">·</Text>
                   <Text className="text-white/70 text-xs">{formatDuration(stats.weeklyDuration)}</Text>
                 </View>
@@ -490,7 +490,7 @@ export default function HomeScreen() {
                   {(stats.monthlyDistance / 1000).toFixed(1)} km
                 </Text>
                 <View className="flex-row items-center mt-1">
-                  <Text className="text-muted text-xs">{stats.monthlyRides}회 주행</Text>
+                  <Text className="text-muted text-xs">{t('home.stats.rides', { count: stats.monthlyRides })}</Text>
                   <Text className="text-muted text-xs mx-1">·</Text>
                   <Text className="text-muted text-xs">{formatDuration(stats.monthlyDuration)}</Text>
                 </View>
@@ -544,7 +544,7 @@ export default function HomeScreen() {
                 <Text className="text-foreground text-lg font-bold">
                   {(stats.totalDistance / 1000).toFixed(1)} km
                 </Text>
-                <Text className="text-muted text-xs">전체 {stats.totalRides}회 주행</Text>
+                <Text className="text-muted text-xs">{t('home.stats.totalRidesCount', { count: stats.totalRides })}</Text>
               </View>
             </View>
           </View>
@@ -607,8 +607,8 @@ export default function HomeScreen() {
                 <View className="flex-row justify-between items-center mb-2">
                   <Text className="text-muted text-sm">
                     {levelInfo.nextLevelDistance > 0 
-                      ? `다음 레벨까지 ${formatLevelDistance(levelInfo.nextLevelDistance)} 남았습니다.`
-                      : "최고 레벨 달성!"}
+                      ? t('home.nextLevelRemaining', { distance: formatLevelDistance(levelInfo.nextLevelDistance) })
+                      : t('home.maxLevelReached')}
                   </Text>
                   <Pressable
                     onPress={() => {
@@ -662,7 +662,7 @@ export default function HomeScreen() {
                   return (
                     <Pressable
                       key={item.userId}
-                      onPress={() => router.push(`/user-profile?userId=${item.userId}&name=${encodeURIComponent(item.name || "​익명 라이더")}` as any)}
+                      onPress={() => router.push(`/user-profile?userId=${item.userId}&name=${encodeURIComponent(item.name || t('home.anonymousRider'))}` as any)}
                       style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
                     >
                       <View
@@ -702,7 +702,7 @@ export default function HomeScreen() {
                               </View>
                             )}
                           </View>
-                          <Text className="text-muted text-xs">{item.totalRides}회 주행</Text>
+                          <Text className="text-muted text-xs">{t('home.stats.rides', { count: item.totalRides })}</Text>
                         </View>
 
                         {/* Distance */}
@@ -739,14 +739,16 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
                   <View className="flex-row items-center mb-2">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: colors.primary + '20' }}>
                       <MaterialIcons name="flag" size={20} color={colors.primary} />
                     </View>
                   </View>
-                  <Text className="text-foreground font-bold">{t('home.quickActions.challenges')}</Text>
-                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.competeFriends')}</Text>
+                  <View>
+                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.challenges')}</Text>
+                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.competeFriends')}</Text>
+                  </View>
                 </View>
               </Pressable>
 
@@ -760,14 +762,16 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
                   <View className="flex-row items-center mb-2">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: colors.success + '20' }}>
                       <MaterialIcons name="track-changes" size={20} color={colors.success} />
                     </View>
                   </View>
-                  <Text className="text-foreground font-bold">{t('home.quickActions.goals')}</Text>
-                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.setGoals')}</Text>
+                  <View>
+                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.goals')}</Text>
+                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.setGoals')}</Text>
+                  </View>
                 </View>
               </Pressable>
 
@@ -781,14 +785,16 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
                   <View className="flex-row items-center mb-2">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#F59E0B' + '20' }}>
                       <MaterialIcons name="military-tech" size={20} color="#F59E0B" />
                     </View>
                   </View>
-                  <Text className="text-foreground font-bold">{t('home.quickActions.badges')}</Text>
-                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.checkAchievements')}</Text>
+                  <View>
+                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.badges')}</Text>
+                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.checkAchievements')}</Text>
+                  </View>
                 </View>
               </Pressable>
             </View>
@@ -805,14 +811,16 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
                   <View className="flex-row items-center mb-2">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#4A90D9' + '20' }}>
                       <MaterialIcons name="wb-cloudy" size={20} color="#4A90D9" />
                     </View>
                   </View>
-                  <Text className="text-foreground font-bold">{t('home.quickActions.weatherStats')}</Text>
-                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.weatherAnalysis')}</Text>
+                  <View>
+                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.weatherStats')}</Text>
+                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.weatherAnalysis')}</Text>
+                  </View>
                 </View>
               </Pressable>
 
@@ -826,14 +834,16 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
                   <View className="flex-row items-center mb-2">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#22C55E' + '20' }}>
                       <MaterialIcons name="calendar-today" size={18} color="#22C55E" />
                     </View>
                   </View>
-                  <Text className="text-foreground font-bold">{t('home.quickActions.monthlyReport')}</Text>
-                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.monthlyWeatherAnalysis')}</Text>
+                  <View>
+                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.monthlyReport')}</Text>
+                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.monthlyWeatherAnalysis')}</Text>
+                  </View>
                 </View>
               </Pressable>
 
@@ -847,14 +857,16 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 110 }}>
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
                   <View className="flex-row items-center mb-2">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#10B981' + '20' }}>
                       <MaterialIcons name="eco" size={20} color="#10B981" />
                     </View>
                   </View>
-                  <Text className="text-foreground font-bold">{t('home.quickActions.ecoLeaderboard')}</Text>
-                  <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.ecoRanking')}</Text>
+                  <View>
+                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.ecoLeaderboard')}</Text>
+                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.ecoRanking')}</Text>
+                  </View>
                 </View>
               </Pressable>
             </View>
@@ -922,11 +934,11 @@ export default function HomeScreen() {
           >
             <View className="flex-row items-center mb-4">
               <MaterialIcons name="emoji-events" size={28} color={colors.primary} />
-              <Text className="text-xl font-bold text-foreground ml-2">레벨 시스템</Text>
+              <Text className="text-xl font-bold text-foreground ml-2">{t('home.levelSystem')}</Text>
             </View>
             
             <Text className="text-foreground mb-4">
-              주행 거리에 따라 레벨이 상승합니다. 더 많이 주행하여 높은 레벨을 달성해보세요!
+              {t('home.levelSystemDesc')}
             </Text>
 
             <ScrollView className="max-h-[300px]">
@@ -943,7 +955,7 @@ export default function HomeScreen() {
                       <Text className="text-foreground font-medium">{levelDef.title}</Text>
                       <Text className="text-muted text-xs">
                         {levelDef.maxDistance === Infinity 
-                          ? `${formatLevelDistance(levelDef.minDistance)} 이상`
+                          ? t('home.levelDistanceAbove', { distance: formatLevelDistance(levelDef.minDistance) })
                           : `${formatLevelDistance(levelDef.minDistance)} ~ ${formatLevelDistance(levelDef.maxDistance)}`}
                       </Text>
                     </View>
@@ -957,7 +969,7 @@ export default function HomeScreen() {
               className="bg-primary rounded-xl py-3 items-center"
               style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
             >
-              <Text className="text-white font-semibold">확인</Text>
+              <Text className="text-white font-semibold">{t('common.confirm')}</Text>
             </Pressable>
           </Pressable>
         </Pressable>
