@@ -1261,3 +1261,8 @@
 - [x] BUG: 영어 버전 홈 화면 카드 비율이 맞지 않음 (텍스트 길이 차이로 높이 불균일) - minHeight 고정, numberOfLines 제한, justify-between 레이아웃 적용
 - [x] BUG: 홈 화면(index.tsx) 하드코딩된 한국어 텍스트 i18n 미적용 - 동기화 상태, 레벨 시스템, 주행횟수 등 11개 텍스트 t() 함수로 교체, ko.json/en.json에 번역 키 추가
 - [x] BUG: 영어 설정 시 설정 화면 항목들이 한국어로 표시됨 (i18n 미적용) - profile.tsx의 하드코딩된 한국어 78개 텍스트를 t() 함수로 교체, ko.json/en.json에 번역 키 추가 완료
+
+## 기능 개선 (2026-02-13) - 5차
+- [x] 스켈레톤 UI 컴포넌트 생성 및 홈 화면 적용 (통계 카드, 날씨 위젯, 랭킹 등 로딩 시 뼈대 화면) - Skeleton, StatCardSkeleton, WeatherWidgetSkeleton, RankingSectionSkeleton, AiCoachingSkeleton, AiReportSkeleton 컴포넌트 생성
+- [x] AI 주행 코칭 기능 - 주행 완료 후 AI가 주행 데이터 분석하여 맞춤형 피드백 제공 - analyzeRide 시스템 프롬프트에 coaching 필드 추가, ride-analysis-modal.tsx에 코칭 카드 UI 구현
+- [x] AI 주간/월간 리포트 자동 생성 - 주행 데이터 기반 자연어 분석 리포트 생성 - app/ai-report.tsx 화면 생성, generateAiReport 서버 프로시저 추가, 홈 화면에 AI 리포트 카드 추가, ko.json/en.json 번역 완료

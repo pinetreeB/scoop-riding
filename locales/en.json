@@ -60,7 +60,8 @@
       "badges": "Badges",
       "weatherStats": "Weather Stats",
       "monthlyReport": "Monthly Report",
-      "ecoLeaderboard": "Eco Leaderboard"
+      "ecoLeaderboard": "Eco Leaderboard",
+      "aiReport": "AI Report"
     },
     "trackingReport": "My Tracking Report",
     "weeklyRanking": "Weekly Ranking",
@@ -86,7 +87,8 @@
     "levelSystemDesc": "Your level increases with riding distance. Ride more to reach higher levels!",
     "maxLevelReached": "Max level reached!",
     "nextLevelRemaining": "{{distance}} remaining to next level.",
-    "levelDistanceAbove": "{{distance}} and above"
+    "levelDistanceAbove": "{{distance}} and above",
+    "aiReportDesc": "AI Ride Analysis"
   },
   "riding": {
     "title": "Riding",
@@ -137,7 +139,7 @@
       "syncNoticeMessage": "Ride record saved locally. Server sync will be attempted on next connection.",
       "unexpectedError": "Error Occurred",
       "unexpectedErrorMessage": "An unexpected error occurred while saving the ride record.",
-      "badgeEarned": "\ud83c\udfc6 Badge Earned!",
+      "badgeEarned": "🏆 Badge Earned!",
       "badgeEarnedMessage": "You earned the \"{{name}}\" badge!\n{{description}}",
       "destinationArrival": "Destination Reached",
       "destinationArrivalMessage": "You have arrived at {{name}}!",
@@ -472,11 +474,11 @@
     "emailSendError": "An error occurred while sending the email.",
     "deleteAccountWarning": "Deleting your account will permanently remove all data and cannot be undone.",
     "dataToBeDeleted": "Data to be deleted:",
-    "deleteItem1": "\u2022 All ride records",
-    "deleteItem2": "\u2022 Profile information",
-    "deleteItem3": "\u2022 Badges and achievements",
-    "deleteItem4": "\u2022 Friends list",
-    "deleteItem5": "\u2022 Community posts and comments",
+    "deleteItem1": "• All ride records",
+    "deleteItem2": "• Profile information",
+    "deleteItem3": "• Badges and achievements",
+    "deleteItem4": "• Friends list",
+    "deleteItem5": "• Community posts and comments",
     "deleteReason": "Reason for leaving (optional)",
     "deleteReasonPlaceholder": "Please tell us why you're leaving...",
     "deleteConfirmInstruction": "To confirm, please type 'Delete Account' below.",
@@ -518,7 +520,7 @@
       "noScootersDesc": "Register your electric scooter and manage your ride records.",
       "default": "Default",
       "rides": "rides",
-      "tapToViewStats": "Tap to view stats \u2022 Long press to edit",
+      "tapToViewStats": "Tap to view stats • Long press to edit",
       "deleteConfirm": "Delete \"{{name}}\"?",
       "deleteTitle": "Delete Scooter",
       "saveError": "An error occurred while saving the scooter.",
@@ -637,7 +639,7 @@
     "noData": "No ranking data yet.",
     "noDataDesc": "Start riding!"
   },
-"badge": {
+  "badge": {
     "title": "Achievements / Badges",
     "earned": "Earned Badges",
     "notEarned": "Locked Badges",
@@ -783,5 +785,48 @@
     "hoursAgo": "{{hours}} hours ago",
     "minutesAgo": "{{minutes}} minutes ago",
     "justNow": "Just now"
+  },
+  "analysis": {
+    "title": "Ride Analysis Report",
+    "rideTime": "Ride Time",
+    "avgSpeed": "Avg Speed",
+    "maxSpeed": "Max Speed",
+    "aiCoaching": "AI Coaching",
+    "aiSummary": "AI Analysis Summary",
+    "safetyScore": "Safety Score",
+    "efficiency": "Efficiency",
+    "ridingStyle": "Riding Style",
+    "batteryStatus": "Battery Status",
+    "comparisonTitle": "Comparison Analysis",
+    "efficiencyTip": "Efficiency Tip",
+    "highlights": "Highlights",
+    "tips": "Improvement Tips",
+    "nextGoal": "Next Goal",
+    "errorMessage": "Unable to load analysis results.",
+    "analyzing": "AI is analyzing your ride..."
+  },
+  "aiReport": {
+    "title": "AI Report",
+    "weekly": "Weekly Report",
+    "monthly": "Monthly Report",
+    "thisWeek": "This Week Summary",
+    "thisMonth": "This Month Summary",
+    "rides": "Rides",
+    "rideTime": "Ride Time",
+    "generateReport": "Generate AI Report",
+    "noRidesHint": "You need ride records to generate a report",
+    "overallGrade": "Overall Grade",
+    "distanceChange": "Distance Change",
+    "ridesChange": "Ride Frequency",
+    "safetyAnalysis": "Safety Analysis",
+    "efficiencyAnalysis": "Efficiency Analysis",
+    "consistencyAnalysis": "Consistency Analysis",
+    "topAchievement": "Top Achievement",
+    "improvementArea": "Improvement Area",
+    "suggestedGoal": "Suggested Goal",
+    "regenerate": "Regenerate",
+    "loginRequired": "Login is required.",
+    "noRides": "No ride records for this period.",
+    "generateError": "An error occurred while generating the report."
   }
 }

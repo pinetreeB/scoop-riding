@@ -36,6 +36,7 @@ import { LEVEL_DEFINITIONS, calculateLevel, getLevelTitle, formatLevelDistance }
 import { AnnouncementPopup } from "@/components/announcement-popup";
 import { AlphaTestBanner } from "@/components/alpha-test-survey";
 import { WeatherWidget } from "@/components/weather-widget";
+import { RankingSectionSkeleton, RideItemSkeleton } from "@/components/skeleton";
 import { useTranslation } from "@/hooks/use-translation";
 
 export default function HomeScreen() {
@@ -651,9 +652,7 @@ export default function HomeScreen() {
 
             <View className="bg-surface rounded-2xl border border-border overflow-hidden">
               {weeklyRankingQuery.isLoading ? (
-                <View className="py-8 items-center">
-                  <ActivityIndicator size="small" color={colors.primary} />
-                </View>
+                <RankingSectionSkeleton />
               ) : weeklyRankingQuery.data && weeklyRankingQuery.data.length > 0 ? (
                 weeklyRankingQuery.data.map((item, index) => {
                   const isCurrentUser = user?.id === item.userId;
@@ -824,25 +823,25 @@ export default function HomeScreen() {
                 </View>
               </Pressable>
 
-              {/* Monthly Weather Report */}
+              {/* AI Report */}
               <Pressable
                 onPress={() => {
                   if (Platform.OS !== "web") {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }
-                  router.push("/monthly-weather-report" as any);
+                  router.push("/ai-report" as any);
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
                 <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
                   <View className="flex-row items-center mb-2">
-                    <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#22C55E' + '20' }}>
-                      <MaterialIcons name="calendar-today" size={18} color="#22C55E" />
+                    <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#8B5CF6' + '20' }}>
+                      <MaterialIcons name="auto-awesome" size={20} color="#8B5CF6" />
                     </View>
                   </View>
                   <View>
-                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.monthlyReport')}</Text>
-                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.monthlyWeatherAnalysis')}</Text>
+                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.aiReport')}</Text>
+                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.aiReportDesc')}</Text>
                   </View>
                 </View>
               </Pressable>

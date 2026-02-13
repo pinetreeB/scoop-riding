@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useColors } from "@/hooks/use-colors";
+import { useTranslation } from "@/hooks/use-translation";
+import { AiCoachingSkeleton } from "./skeleton";
 
 export interface RideAnalysis {
   summary: string;
@@ -17,6 +19,12 @@ export interface RideAnalysis {
   batteryStatus: "좋음" | "보통" | "주의필요" | string | null;
   tips: string[];
   highlights: string[];
+  // AI Coaching fields (new)
+  coachingMessage?: string;
+  safetyScore?: number; // 0-100
+  efficiencyTip?: string;
+  comparisonWithAvg?: string;
+  nextGoalSuggestion?: string;
 }
 
 interface RideAnalysisModalProps {
@@ -37,8 +45,11 @@ interface RideAnalysisModalProps {
 }
 
 const getScoreColor = (score: string, colors: any) => {
+  // Support both Korean and English score values
+  const lowerScore = score.toLowerCase();
   switch (score) {
     case "좋음":
+    case "안정적":
       return colors.success;
     case "보통":
       return colors.warning;
@@ -46,14 +57,17 @@ const getScoreColor = (score: string, colors: any) => {
     case "주의필요":
     case "공격적":
       return colors.error;
-    case "안정적":
-      return colors.success;
     default:
+      // English fallback
+      if (lowerScore === "good" || lowerScore === "stable" || lowerScore === "excellent") return colors.success;
+      if (lowerScore === "average" || lowerScore === "normal" || lowerScore === "moderate") return colors.warning;
+      if (lowerScore === "needs improvement" || lowerScore === "caution" || lowerScore === "aggressive") return colors.error;
       return colors.muted;
   }
 };
 
 const getScoreIcon = (score: string): string => {
+  const lowerScore = score.toLowerCase();
   switch (score) {
     case "좋음":
     case "안정적":
@@ -65,8 +79,17 @@ const getScoreIcon = (score: string): string => {
     case "공격적":
       return "sentiment-dissatisfied";
     default:
+      if (lowerScore === "good" || lowerScore === "stable" || lowerScore === "excellent") return "sentiment-satisfied";
+      if (lowerScore === "average" || lowerScore === "normal" || lowerScore === "moderate") return "sentiment-neutral";
+      if (lowerScore === "needs improvement" || lowerScore === "caution" || lowerScore === "aggressive") return "sentiment-dissatisfied";
       return "help-outline";
   }
+};
+
+const getSafetyScoreColor = (score: number, colors: any) => {
+  if (score >= 80) return colors.success;
+  if (score >= 50) return colors.warning;
+  return colors.error;
 };
 
 export function RideAnalysisModal({
@@ -77,11 +100,12 @@ export function RideAnalysisModal({
   rideStats,
 }: RideAnalysisModalProps) {
   const colors = useColors();
+  const { t } = useTranslation();
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}분 ${secs}초`;
+    return `${mins}${t('units.min')} ${secs}${t('units.sec')}`;
   };
 
   const formatDistance = (meters: number) => {
@@ -102,7 +126,7 @@ export function RideAnalysisModal({
           style={{ borderBottomColor: colors.border }}
         >
           <Text className="text-xl font-bold" style={{ color: colors.foreground }}>
-            주행 분석 리포트
+            {t('analysis.title')}
           </Text>
           <Pressable
             onPress={onClose}
@@ -137,7 +161,7 @@ export function RideAnalysisModal({
                   {formatDuration(rideStats.duration)}
                 </Text>
                 <Text className="text-xs" style={{ color: colors.muted }}>
-                  주행시간
+                  {t('analysis.rideTime')}
                 </Text>
               </View>
             </View>
@@ -147,7 +171,7 @@ export function RideAnalysisModal({
                   {rideStats.avgSpeed.toFixed(1)} km/h
                 </Text>
                 <Text className="text-xs" style={{ color: colors.muted }}>
-                  평균속도
+                  {t('analysis.avgSpeed')}
                 </Text>
               </View>
               <View className="items-center flex-1">
@@ -155,7 +179,7 @@ export function RideAnalysisModal({
                   {rideStats.maxSpeed.toFixed(1)} km/h
                 </Text>
                 <Text className="text-xs" style={{ color: colors.muted }}>
-                  최고속도
+                  {t('analysis.maxSpeed')}
                 </Text>
               </View>
             </View>
@@ -181,19 +205,35 @@ export function RideAnalysisModal({
             )}
           </View>
 
-          {/* Loading State */}
-          {isLoading && (
-            <View className="items-center py-8">
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text className="mt-4" style={{ color: colors.muted }}>
-                AI가 주행을 분석하고 있습니다...
-              </Text>
-            </View>
-          )}
+          {/* Loading State - Skeleton */}
+          {isLoading && <AiCoachingSkeleton />}
 
           {/* Analysis Results */}
           {!isLoading && analysis && (
             <>
+              {/* AI Coaching Message */}
+              {analysis.coachingMessage && (
+                <View
+                  className="rounded-2xl p-4 mb-4"
+                  style={{ backgroundColor: `${colors.primary}10` }}
+                >
+                  <View className="flex-row items-center mb-2">
+                    <View
+                      className="w-8 h-8 rounded-full items-center justify-center"
+                      style={{ backgroundColor: colors.primary }}
+                    >
+                      <MaterialIcons name="psychology" size={20} color="#FFFFFF" />
+                    </View>
+                    <Text className="ml-2 font-bold text-base" style={{ color: colors.primary }}>
+                      {t('analysis.aiCoaching')}
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.foreground, lineHeight: 22, fontSize: 15 }}>
+                    {analysis.coachingMessage}
+                  </Text>
+                </View>
+              )}
+
               {/* Summary */}
               <View
                 className="rounded-2xl p-4 mb-4"
@@ -202,7 +242,7 @@ export function RideAnalysisModal({
                 <View className="flex-row items-center mb-2">
                   <MaterialIcons name="auto-awesome" size={20} color={colors.primary} />
                   <Text className="ml-2 font-bold" style={{ color: colors.foreground }}>
-                    AI 분석 요약
+                    {t('analysis.aiSummary')}
                   </Text>
                 </View>
                 <Text style={{ color: colors.foreground, lineHeight: 22 }}>
@@ -210,15 +250,49 @@ export function RideAnalysisModal({
                 </Text>
               </View>
 
+              {/* Safety Score */}
+              {analysis.safetyScore !== undefined && (
+                <View
+                  className="rounded-2xl p-4 mb-4"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <View className="flex-row items-center mb-3">
+                    <MaterialIcons name="shield" size={20} color={getSafetyScoreColor(analysis.safetyScore, colors)} />
+                    <Text className="ml-2 font-bold" style={{ color: colors.foreground }}>
+                      {t('analysis.safetyScore')}
+                    </Text>
+                  </View>
+                  <View className="items-center mb-2">
+                    <Text
+                      className="text-4xl font-bold"
+                      style={{ color: getSafetyScoreColor(analysis.safetyScore, colors) }}
+                    >
+                      {analysis.safetyScore}
+                    </Text>
+                    <Text className="text-sm" style={{ color: colors.muted }}>/ 100</Text>
+                  </View>
+                  {/* Progress bar */}
+                  <View className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: colors.border }}>
+                    <View
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${analysis.safetyScore}%`,
+                        backgroundColor: getSafetyScoreColor(analysis.safetyScore, colors),
+                      }}
+                    />
+                  </View>
+                </View>
+              )}
+
               {/* Scores */}
-              <View className="flex-row mb-4">
+              <View className="flex-row mb-4" style={{ gap: 8 }}>
                 {/* Efficiency Score */}
                 <View
-                  className="flex-1 rounded-xl p-3 mr-2"
+                  className="flex-1 rounded-xl p-3"
                   style={{ backgroundColor: colors.surface }}
                 >
                   <Text className="text-xs mb-1" style={{ color: colors.muted }}>
-                    연비
+                    {t('analysis.efficiency')}
                   </Text>
                   <View className="flex-row items-center">
                     <MaterialIcons
@@ -237,11 +311,11 @@ export function RideAnalysisModal({
 
                 {/* Riding Style */}
                 <View
-                  className="flex-1 rounded-xl p-3 ml-2"
+                  className="flex-1 rounded-xl p-3"
                   style={{ backgroundColor: colors.surface }}
                 >
                   <Text className="text-xs mb-1" style={{ color: colors.muted }}>
-                    주행 스타일
+                    {t('analysis.ridingStyle')}
                   </Text>
                   <View className="flex-row items-center">
                     <MaterialIcons
@@ -266,7 +340,7 @@ export function RideAnalysisModal({
                   style={{ backgroundColor: colors.surface }}
                 >
                   <Text className="text-xs mb-1" style={{ color: colors.muted }}>
-                    배터리 상태
+                    {t('analysis.batteryStatus')}
                   </Text>
                   <View className="flex-row items-center">
                     <MaterialIcons
@@ -284,6 +358,42 @@ export function RideAnalysisModal({
                 </View>
               )}
 
+              {/* Comparison with Average */}
+              {analysis.comparisonWithAvg && (
+                <View
+                  className="rounded-2xl p-4 mb-4"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <View className="flex-row items-center mb-2">
+                    <MaterialIcons name="compare-arrows" size={20} color={colors.primary} />
+                    <Text className="ml-2 font-bold" style={{ color: colors.foreground }}>
+                      {t('analysis.comparisonTitle')}
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.foreground, lineHeight: 22 }}>
+                    {analysis.comparisonWithAvg}
+                  </Text>
+                </View>
+              )}
+
+              {/* Efficiency Tip */}
+              {analysis.efficiencyTip && (
+                <View
+                  className="rounded-2xl p-4 mb-4"
+                  style={{ backgroundColor: `${colors.success}10` }}
+                >
+                  <View className="flex-row items-center mb-2">
+                    <MaterialIcons name="eco" size={20} color={colors.success} />
+                    <Text className="ml-2 font-bold" style={{ color: colors.success }}>
+                      {t('analysis.efficiencyTip')}
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.foreground, lineHeight: 22 }}>
+                    {analysis.efficiencyTip}
+                  </Text>
+                </View>
+              )}
+
               {/* Highlights */}
               {analysis.highlights.length > 0 && (
                 <View
@@ -293,7 +403,7 @@ export function RideAnalysisModal({
                   <View className="flex-row items-center mb-3">
                     <MaterialIcons name="thumb-up" size={18} color={colors.success} />
                     <Text className="ml-2 font-bold" style={{ color: colors.foreground }}>
-                      잘한 점
+                      {t('analysis.highlights')}
                     </Text>
                   </View>
                   {analysis.highlights.map((highlight, index) => (
@@ -316,7 +426,7 @@ export function RideAnalysisModal({
                   <View className="flex-row items-center mb-3">
                     <MaterialIcons name="lightbulb" size={18} color={colors.warning} />
                     <Text className="ml-2 font-bold" style={{ color: colors.foreground }}>
-                      개선 팁
+                      {t('analysis.tips')}
                     </Text>
                   </View>
                   {analysis.tips.map((tip, index) => (
@@ -329,6 +439,24 @@ export function RideAnalysisModal({
                   ))}
                 </View>
               )}
+
+              {/* Next Goal Suggestion */}
+              {analysis.nextGoalSuggestion && (
+                <View
+                  className="rounded-2xl p-4 mb-4"
+                  style={{ backgroundColor: `${colors.primary}10` }}
+                >
+                  <View className="flex-row items-center mb-2">
+                    <MaterialIcons name="flag" size={20} color={colors.primary} />
+                    <Text className="ml-2 font-bold" style={{ color: colors.primary }}>
+                      {t('analysis.nextGoal')}
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.foreground, lineHeight: 22 }}>
+                    {analysis.nextGoalSuggestion}
+                  </Text>
+                </View>
+              )}
             </>
           )}
 
@@ -337,7 +465,7 @@ export function RideAnalysisModal({
             <View className="items-center py-8">
               <MaterialIcons name="error-outline" size={48} color={colors.muted} />
               <Text className="mt-4 text-center" style={{ color: colors.muted }}>
-                분석 결과를 불러올 수 없습니다.
+                {t('analysis.errorMessage')}
               </Text>
             </View>
           )}
@@ -355,7 +483,7 @@ export function RideAnalysisModal({
             ]}
             className="py-4 rounded-xl items-center"
           >
-            <Text className="text-white font-bold text-base">확인</Text>
+            <Text className="text-white font-bold text-base">{t('common.confirm')}</Text>
           </Pressable>
         </View>
       </View>

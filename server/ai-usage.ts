@@ -3,7 +3,7 @@ import { aiUsage } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
 // AI 기능 타입 정의
-export type AiFeatureType = "chatbot" | "ridingAnalysis" | "other";
+export type AiFeatureType = "chatbot" | "ridingAnalysis" | "aiReport" | "other";
 
 // 기본 월간 제한
 const DEFAULT_MONTHLY_LIMIT = 30;

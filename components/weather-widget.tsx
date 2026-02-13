@@ -6,6 +6,7 @@ import * as Haptics from "expo-haptics";
 
 import { useColors } from "@/hooks/use-colors";
 import { WeatherIcon } from "./weather-icon";
+import { WeatherWidgetSkeleton } from "./skeleton";
 import { trpc } from "@/lib/trpc";
 
 interface WeatherData {
@@ -132,14 +133,7 @@ export function WeatherWidget() {
   const recommendation = weather ? getRidingRecommendation(weather) : null;
 
   if (isLoading) {
-    return (
-      <View className="bg-surface rounded-2xl p-4 mx-4 mb-4 border border-border">
-        <View className="flex-row items-center justify-center py-4">
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text className="text-muted ml-2">날씨 정보 로딩 중...</Text>
-        </View>
-      </View>
-    );
+    return <WeatherWidgetSkeleton />;
   }
 
   if (error) {

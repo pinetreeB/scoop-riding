@@ -550,30 +550,34 @@ export const appRouter = router({
 - GPS 포인트: ${input.gpsPointsCount || 0}개${scooterInfo}${energyInfo}${efficiencyInfo}${historyInfo}${weatherInfo}${drivingAnalysisInfo}${elevationInfo}
 `;
 
-          const systemPrompt = `당신은 전동킥보드 주행 분석 AI입니다. 사용자의 주행 데이터를 분석하여 간결한 리포트를 제공합니다.
+          const systemPrompt = `당신은 전동킥보드 주행 코칭 AI입니다. 사용자의 주행 데이터를 분석하여 맞춤형 코칭 리포트를 제공합니다.
 
 응답 형식 (JSON):
 {
   "summary": "주행 요약 (1-2문장)",
+  "coaching_message": "개인 맞춤 코칭 메시지 (2-3문장, 구체적인 수치 포함. 예: '오늘 급가속이 3회 감지되었습니다. 부드러운 가속을 유지하면 배터리 효율이 약 15% 향상됩니다.')",
+  "safety_score": 85,
   "efficiency_score": "연비 평가 (좋음/보통/개선필요)",
   "riding_style": "주행 스타일 평가 (안정적/보통/공격적)",
   "battery_status": "배터리 상태 평가 (좋음/보통/주의필요) - 배터리 데이터 없으면 null",
-  "weather_impact": "날씨가 주행에 미친 영향 (1문장, 날씨 데이터 없으면 null)",
-  "driving_safety": "주행 안전성 평가 (좋음/보통/주의필요) - 급가속/급감속 기반",
-  "terrain_analysis": "지형 분석 (1문장, 고도 데이터 없으면 null)",
-  "tips": ["개선 팁 1", "개선 팁 2"],
+  "efficiency_tip": "연비 개선을 위한 구체적 팁 (1-2문장, 수치 포함)",
+  "comparison_with_avg": "이전 주행 또는 평균 대비 비교 분석 (1-2문장)",
+  "next_goal_suggestion": "다음 주행 목표 제안 (1문장, 구체적 수치 포함. 예: '다음에는 평균속도 20km/h를 유지해보세요!')",
+  "tips": ["개선 팁 1", "개선 팁 2", "개선 팁 3"],
   "highlights": ["좋았던 점 1", "좋았던 점 2"]
 }
 
 주의사항:
-- 한국어로 친근하게 작성
-- 각 항목은 간결하게 (20자 이내)
-- tips와 highlights는 각각 2개씩
+- 한국어로 친근하고 격려하는 톤으로 작성 (코치처럼)
+- coaching_message는 가장 중요한 필드로, 구체적 수치와 실용적 조언 포함
+- safety_score는 0-100 정수 (급가속/급감속 많으면 감점, 적정 속도 유지 시 가점)
+- tips는 2-3개, highlights는 2개
 - 배터리 데이터가 없으면 battery_status는 null로
-- 날씨 데이터가 있으면 연비와 안전에 미치는 영향을 분석 (weather_impact)
-- 비/눈 오는 날씨는 안전 주의 강조, 강풍은 연비 영향 언급
-- 급가속/급감속 횟수가 많으면 driving_safety를 '주의필요'로 평가
-- 고도 변화가 크면 terrain_analysis에 언덕 주행 언급, 연비 영향 분석
+- efficiency_tip은 연비 관련 구체적 수치 포함 (예: 'Wh/km 기준으로...')
+- comparison_with_avg는 과거 데이터가 있으면 비교, 없으면 일반적 평균과 비교
+- next_goal_suggestion은 달성 가능한 현실적 목표 제안
+- 날씨 데이터가 있으면 coaching_message에 날씨 영향 포함
+- 급가속/급감속 횟수가 많으면 safety_score를 낮게 평가
 - 반드시 유효한 JSON만 출력`;
 
           // Call LLM
@@ -611,6 +615,11 @@ export const appRouter = router({
                 batteryStatus: analysis.battery_status || null,
                 tips: analysis.tips || [],
                 highlights: analysis.highlights || [],
+                coachingMessage: analysis.coaching_message || null,
+                safetyScore: typeof analysis.safety_score === 'number' ? analysis.safety_score : undefined,
+                efficiencyTip: analysis.efficiency_tip || null,
+                comparisonWithAvg: analysis.comparison_with_avg || null,
+                nextGoalSuggestion: analysis.next_goal_suggestion || null,
               },
               monthlyRemaining: monthlyResult.remaining,
             };
@@ -634,6 +643,142 @@ export const appRouter = router({
           return {
             success: false,
             error: "AI 분석 중 오류가 발생했습니다.",
+          };
+        }
+      }),
+
+    // AI Weekly/Monthly Report Generation
+    generateAiReport: protectedProcedure
+      .input(z.object({
+        period: z.enum(["weekly", "monthly"]),
+        totalDistance: z.number(),
+        totalDuration: z.number(),
+        totalRides: z.number(),
+        avgSpeed: z.number(),
+        maxSpeed: z.number(),
+        ridesData: z.array(z.object({
+          distance: z.number(),
+          duration: z.number(),
+          avgSpeed: z.number(),
+          maxSpeed: z.number(),
+          date: z.string(),
+        })),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          // Check AI usage limit
+          const { canUseAi, incrementAiUsage } = await import("./ai-usage");
+          const usageCheck = await canUseAi(ctx.user.id);
+          if (!usageCheck.allowed) {
+            return {
+              success: false,
+              error: usageCheck.message || `이번 달 AI 사용 횟수(${usageCheck.monthlyLimit}회)를 초과했습니다. 남은 횟수: ${usageCheck.remaining}회`,
+            };
+          }
+
+          const periodLabel = input.period === "weekly" ? "주간" : "월간";
+          const ridesSummary = input.ridesData.map((r, i) => 
+            `${i+1}. ${r.date.slice(0,10)} - ${(r.distance/1000).toFixed(1)}km, 평균${r.avgSpeed.toFixed(1)}km/h, 최고${r.maxSpeed.toFixed(1)}km/h, ${Math.floor(r.duration/60)}분`
+          ).join("\n");
+
+          const reportData = `
+${periodLabel} 리포트 생성 요청:
+- 총 주행거리: ${(input.totalDistance / 1000).toFixed(2)} km
+- 총 주행시간: ${Math.floor(input.totalDuration / 3600)}시간 ${Math.floor((input.totalDuration % 3600) / 60)}분
+- 총 주행횟수: ${input.totalRides}회
+- 평균 속도: ${input.avgSpeed.toFixed(1)} km/h
+- 최고 속도: ${input.maxSpeed.toFixed(1)} km/h
+
+개별 주행 기록:
+${ridesSummary}
+`;
+
+          const systemPrompt = `당신은 전동킥보드 ${periodLabel} 리포트를 생성하는 AI 코치입니다. 사용자의 주행 데이터를 종합 분석하여 격려와 개선점을 포함한 리포트를 생성합니다.
+
+응답 형식 (JSON):
+{
+  "summary": "${periodLabel} 주행 종합 요약 (2-3문장, 핵심 성과와 특징)",
+  "distance_change": "거리 변화 분석 (예: '지난주 대비 20% 증가' 또는 '꾸준한 주행 유지')",
+  "rides_change": "주행 빈도 분석 (예: '주 5회 꾸준한 라이딩')",
+  "overall_grade": "종합 등급 (S/A+/A/B+/B/C 중 하나)",
+  "safety_analysis": "안전성 분석 (2-3문장, 속도 패턴과 안전 습관 평가)",
+  "efficiency_analysis": "효율성 분석 (2-3문장, 연비와 주행 효율 평가)",
+  "consistency_analysis": "꾸준함 분석 (2-3문장, 주행 빈도와 패턴 평가)",
+  "top_achievement": "이번 ${periodLabel}의 최고 성과 (1-2문장)",
+  "improvement_area": "개선이 필요한 부분 (1-2문장, 구체적 조언)",
+  "weekly_goal": "다음 ${periodLabel} 목표 제안 (1-2문장, 달성 가능한 구체적 목표)",
+  "motivational_message": "격려 메시지 (2-3문장, 개인화된 동기부여)"
+}
+
+주의사항:
+- 한국어로 친근하고 격려하는 톤으로 작성
+- 구체적 수치를 활용하여 분석 (예: '평균 속도 18.5km/h로 안정적')
+- overall_grade는 주행 빈도, 안전성, 효율성을 종합 평가
+- 주행 횟수가 적어도 긍정적으로 평가하되 더 자주 타도록 격려
+- motivational_message는 사용자의 실제 데이터를 반영한 개인화 메시지
+- 반드시 유효한 JSON만 출력`;
+
+          const { invokeLLM } = await import("./_core/llm");
+          const response = await invokeLLM({
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: reportData },
+            ],
+          });
+
+          const rawContent = response.choices[0]?.message?.content;
+          const aiResponse = typeof rawContent === "string" ? rawContent : "{}";
+
+          try {
+            let jsonStr = aiResponse;
+            const jsonMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)```/);
+            if (jsonMatch) {
+              jsonStr = jsonMatch[1].trim();
+            }
+
+            const parsed = JSON.parse(jsonStr);
+            await incrementAiUsage(ctx.user.id, "aiReport");
+
+            return {
+              success: true,
+              report: {
+                summary: parsed.summary || "리포트를 생성했습니다.",
+                distanceChange: parsed.distance_change || "데이터 부족",
+                ridesChange: parsed.rides_change || "데이터 부족",
+                overallGrade: parsed.overall_grade || "B",
+                safetyAnalysis: parsed.safety_analysis || "안전 분석 데이터가 부족합니다.",
+                efficiencyAnalysis: parsed.efficiency_analysis || "효율성 분석 데이터가 부족합니다.",
+                consistencyAnalysis: parsed.consistency_analysis || "꾸준함 분석 데이터가 부족합니다.",
+                topAchievement: parsed.top_achievement || "주행을 완료했습니다!",
+                improvementArea: parsed.improvement_area || "더 자주 라이딩해보세요.",
+                weeklyGoal: parsed.weekly_goal || "이번 주도 안전하게 라이딩하세요!",
+                motivationalMessage: parsed.motivational_message || "꾸준한 라이딩이 실력을 만듭니다!",
+              },
+            };
+          } catch (parseError) {
+            console.error("[rides.generateAiReport] JSON parse error:", parseError);
+            return {
+              success: true,
+              report: {
+                summary: `${periodLabel} ${input.totalRides}회 주행, 총 ${(input.totalDistance/1000).toFixed(1)}km를 달렸습니다.`,
+                distanceChange: "분석 중",
+                ridesChange: `${input.totalRides}회 주행`,
+                overallGrade: "B",
+                safetyAnalysis: `평균 속도 ${input.avgSpeed.toFixed(1)}km/h로 안정적인 주행을 했습니다.`,
+                efficiencyAnalysis: "주행 효율을 분석하고 있습니다.",
+                consistencyAnalysis: `${input.totalRides}회의 주행 기록이 있습니다.`,
+                topAchievement: `총 ${(input.totalDistance/1000).toFixed(1)}km를 주행했습니다!`,
+                improvementArea: "더 자주 라이딩하면 실력이 향상됩니다.",
+                weeklyGoal: "다음에도 안전하게 라이딩하세요!",
+                motivationalMessage: "꾸준한 라이딩이 최고의 실력을 만듭니다. 화이팅!",
+              },
+            };
+          }
+        } catch (error: any) {
+          console.error("[rides.generateAiReport] Error:", error);
+          return {
+            success: false,
+            error: "AI 리포트 생성 중 오류가 발생했습니다.",
           };
         }
       }),
