@@ -1235,3 +1235,13 @@
 - [x] 관리자 대시보드 크래시 수정 (admin-dashboard.tsx 신규 + admin/dashboard.tsx, admin/index.tsx 리다이렉트)
 - [x] battery-optimization-guide 간소화 (LG 기기 가이드 제거, Samsung만 유지, DeviceTipCard 제거, 앱 설정 열기 버튼 제거)
 - [x] announcement-popup 크래시 방지 (dismiss 순서 변경, null guard 추가)
+
+## SCOOP → Loop 통합 전략 (2026-02-13)
+- [x] Loop 기획 문서 분석 (WHY, WHO, HOW, API Spec)
+- [x] SCOOP → Loop 통합 로드맵 문서 작성 (LOOP_ROADMAP.md)
+- [x] Loop 기획 원본 문서 프로젝트 내 보관 (docs/loop-planning/)
+- [ ] Phase 1: 마켓플레이스 기능 추가 (부품 호환성 DB, 상품 검색, 장바구니, 결제)
+- [ ] Phase 2: 정비 관리 시스템 (자동 정비 알림, 정비 이력, 정비소 검색)
+- [ ] Phase 3: 실시간 기능 강화 (WebSocket 채팅, 실시간 위치 공유)
+- [ ] Phase 4: 판매자 시스템 (판매자 대시보드, 주문 관리, 정산)
+- [ ] Phase 5: 글로벌 확장 (다국어, 해외 결제, 지역별 커스터마이징)
