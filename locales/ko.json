@@ -390,7 +390,8 @@
       "title": "언어",
       "korean": "한국어",
       "english": "English",
-      "systemDefault": "시스템 기본값"
+      "systemDefault": "시스템 기본값",
+      "auto": "자동"
     },
     "theme": {
       "title": "테마",

@@ -902,9 +902,9 @@ export default function ProfileScreen() {
                 color={colors.primary} 
               />
               <View className="flex-1 ml-3">
-                <Text className="text-foreground font-medium">{t('settings.language')}</Text>
+                <Text className="text-foreground font-medium">{t('settings.language.title')}</Text>
                 <Text className="text-muted text-xs">
-                  {languagePreference === "system" ? t('settings.languageSystem') : languagePreference === "ko" ? t('settings.languageKorean') : t('settings.languageEnglish')}
+                  {languagePreference === "system" ? t('settings.language.systemDefault') : languagePreference === "ko" ? t('settings.language.korean') : t('settings.language.english')}
                 </Text>
               </View>
               <View className="flex-row items-center gap-1">
@@ -919,7 +919,7 @@ export default function ProfileScreen() {
                   className="px-3 py-1 rounded-full"
                 >
                   <View style={{ backgroundColor: languagePreference === "system" ? colors.primary : colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
-                    <Text style={{ color: languagePreference === "system" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>{t('settings.auto')}</Text>
+                    <Text style={{ color: languagePreference === "system" ? '#FFFFFF' : colors.muted, fontSize: 11 }}>{t('settings.language.auto')}</Text>
                   </View>
                 </Pressable>
                 <Pressable 
