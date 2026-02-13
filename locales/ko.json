@@ -298,7 +298,10 @@
     "confirmDeleteMessage": "이 게시글을 삭제하시겠습니까?",
     "cancel": "취소",
     "delete": "삭제",
-    "shareMessage": "[SCOOP 커뮤니티] {{title}}\n\n{{content}}\n\n- {{author}}님의 글"
+    "shareMessage": "[SCOOP 커뮤니티] {{title}}\n\n{{content}}\n\n- {{author}}님의 글",
+    "loadError": "게시글을 불러올 수 없습니다",
+    "tryAgain": "네트워크 연결을 확인하고 다시 시도해주세요",
+    "retry": "다시 시도"
   },
   "aiHelper": {
     "title": "AI 도우미",

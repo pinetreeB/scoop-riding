@@ -1,0 +1,28 @@
+{
+  "query": "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND (TABLE_NAME LIKE '%noti%' OR TABLE_NAME LIKE '%announce%' OR TABLE_NAME LIKE '%notice%' OR TABLE_NAME LIKE '%post%' OR TABLE_NAME LIKE '%news%');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND (TABLE_NAME LIKE '%noti%' OR TABLE_NAME LIKE '%announce%' OR TABLE_NAME LIKE '%notice%' OR TABLE_NAME LIKE '%post%' OR TABLE_NAME LIKE '%news%');",
+  "rows": [
+    {
+      "TABLE_NAME": "postLikes"
+    },
+    {
+      "TABLE_NAME": "posts"
+    },
+    {
+      "TABLE_NAME": "postImages"
+    },
+    {
+      "TABLE_NAME": "postViews"
+    },
+    {
+      "TABLE_NAME": "notifications"
+    },
+    {
+      "TABLE_NAME": "announcements"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\npostLikes\nposts\npostImages\npostViews\nnotifications\nannouncements\n",
+  "stderr": "",
+  "execution_time_ms": 1537
+}

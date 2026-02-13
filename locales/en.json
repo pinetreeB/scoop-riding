@@ -298,7 +298,10 @@
     "confirmDeleteMessage": "Are you sure you want to delete this post?",
     "cancel": "Cancel",
     "delete": "Delete",
-    "shareMessage": "[SCOOP Community] {{title}}\n\n{{content}}\n\n- Posted by {{author}}"
+    "shareMessage": "[SCOOP Community] {{title}}\n\n{{content}}\n\n- Posted by {{author}}",
+    "loadError": "Unable to load posts",
+    "tryAgain": "Check your network connection and try again",
+    "retry": "Retry"
   },
   "aiHelper": {
     "title": "AI Helper",

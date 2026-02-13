@@ -359,7 +359,7 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
             </View>
             <View className="flex-1 bg-surface rounded-xl p-4 border border-border">
               <Text className="text-muted text-sm">추천율</Text>
-              <Text className="text-2xl font-bold text-success">{surveyStats.recommendRate.toFixed(0)}%</Text>
+              <Text className="text-2xl font-bold text-success">{Number(surveyStats.recommendRate || 0).toFixed(0)}%</Text>
             </View>
           </View>
 
@@ -369,22 +369,22 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
               <View className="flex-row items-center justify-between">
                 <Text className="text-muted">전반적 만족도</Text>
                 <View className="flex-row items-center">
-                  {renderStars(Math.round(surveyStats.avgOverall))}
-                  <Text className="text-foreground font-semibold ml-2">{surveyStats.avgOverall.toFixed(1)}</Text>
+                  {renderStars(Math.round(Number(surveyStats.avgOverall || 0)))}
+                  <Text className="text-foreground font-semibold ml-2">{Number(surveyStats.avgOverall || 0).toFixed(1)}</Text>
                 </View>
               </View>
               <View className="flex-row items-center justify-between">
                 <Text className="text-muted">사용 편의성</Text>
                 <View className="flex-row items-center">
-                  {renderStars(Math.round(surveyStats.avgUsability))}
-                  <Text className="text-foreground font-semibold ml-2">{surveyStats.avgUsability.toFixed(1)}</Text>
+                  {renderStars(Math.round(Number(surveyStats.avgUsability || 0)))}
+                  <Text className="text-foreground font-semibold ml-2">{Number(surveyStats.avgUsability || 0).toFixed(1)}</Text>
                 </View>
               </View>
               <View className="flex-row items-center justify-between">
                 <Text className="text-muted">기능 완성도</Text>
                 <View className="flex-row items-center">
-                  {renderStars(Math.round(surveyStats.avgFeature))}
-                  <Text className="text-foreground font-semibold ml-2">{surveyStats.avgFeature.toFixed(1)}</Text>
+                  {renderStars(Math.round(Number(surveyStats.avgFeature || 0)))}
+                  <Text className="text-foreground font-semibold ml-2">{Number(surveyStats.avgFeature || 0).toFixed(1)}</Text>
                 </View>
               </View>
             </View>
@@ -392,7 +392,7 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
 
           <View className="bg-surface rounded-xl p-4 border border-border mb-4">
             <Text className="text-base font-semibold text-foreground mb-3">가장 많이 사용한 기능</Text>
-            {surveyStats.featureUsage.map((item: any, index: number) => (
+            {(surveyStats.featureUsage || []).map((item: any, index: number) => (
               <View key={item.feature} className="flex-row items-center justify-between py-2">
                 <View className="flex-row items-center">
                   <Text className="text-muted w-6">{index + 1}.</Text>
@@ -404,7 +404,7 @@ function SurveyTab({ surveyStats, surveyResponses, loadingSurveyStats, renderSta
           </View>
 
           <Text className="text-base font-semibold text-foreground mb-3">최근 응답</Text>
-          {surveyResponses?.responses.map((response: any) => (
+          {(surveyResponses?.responses || []).map((response: any) => (
             <View key={response.id} className="bg-surface rounded-xl p-4 border border-border mb-3">
               <View className="flex-row items-center justify-between mb-2">
                 <Text className="text-foreground font-medium">{response.userName || "익명"}</Text>
@@ -504,7 +504,7 @@ function BugsTab({ bugReports, loadingBugReports, showStatusOptions, getStatusCo
                 <View className="flex-row items-center mt-2">
                   <Ionicons name="images-outline" size={14} color={colors.muted} />
                   <Text className="text-muted text-xs ml-1">
-                    스크린샷 {JSON.parse(bug.screenshotUrls).length}장
+                    스크린샷 {(() => { try { return JSON.parse(bug.screenshotUrls).length; } catch { return 0; } })()}장
                   </Text>
                 </View>
               )}
@@ -941,7 +941,7 @@ function UsersTab({ colors }: { colors: any }) {
                   </View>
                   <Text className="text-sm text-muted">{user.email}</Text>
                   <Text className="text-xs text-muted mt-1">
-                    주행 {user.totalRides}회 · {(user.totalDistance / 1000).toFixed(1)}km
+                    주행 {user.totalRides}회 · {(Number(user.totalDistance || 0) / 1000).toFixed(1)}km
                   </Text>
                 </View>
                 <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
@@ -1002,19 +1002,19 @@ function UsersTab({ colors }: { colors: any }) {
                     </View>
                     <View className="items-center">
                       <Text className="text-lg font-bold text-primary">
-                        {(userDetails.stats.totalDistance / 1000).toFixed(1)}km
+                        {(Number(userDetails.stats.totalDistance || 0) / 1000).toFixed(1)}km
                       </Text>
                       <Text className="text-xs text-muted">총 거리</Text>
                     </View>
                     <View className="items-center">
                       <Text className="text-lg font-bold text-primary">
-                        {userDetails.stats.avgSpeed.toFixed(1)}
+                        {Number(userDetails.stats.avgSpeed || 0).toFixed(1)}
                       </Text>
                       <Text className="text-xs text-muted">평균 속도</Text>
                     </View>
                     <View className="items-center">
                       <Text className="text-lg font-bold text-primary">
-                        {userDetails.stats.maxSpeed.toFixed(1)}
+                        {Number(userDetails.stats.maxSpeed || 0).toFixed(1)}
                       </Text>
                       <Text className="text-xs text-muted">최고 속도</Text>
                     </View>
@@ -1100,7 +1100,7 @@ function PostsTab({ colors }: { colors: any }) {
               <View className="flex-row items-start justify-between">
                 <View className="flex-1">
                   <Text className="text-sm text-muted mb-1">
-                    {post.author?.name || "익명"} · {new Date(post.createdAt).toLocaleDateString("ko-KR")}
+                    {post.authorName || "익명"} · {new Date(post.createdAt).toLocaleDateString("ko-KR")}
                   </Text>
                   <Text className="text-base text-foreground" numberOfLines={2}>
                     {post.content}
@@ -1170,7 +1170,7 @@ function RidesTab({ colors }: { colors: any }) {
       <View className="bg-surface rounded-xl p-4 mb-4 border border-border">
         <Text className="text-muted text-sm">전체 주행 기록</Text>
         <Text className="text-2xl font-bold text-foreground">
-          {data?.total?.toLocaleString() || 0}건
+          {Number(data?.total || 0).toLocaleString()}건
         </Text>
       </View>
 
@@ -1213,7 +1213,7 @@ function RidesTab({ colors }: { colors: any }) {
               <View className="flex-row justify-between bg-background rounded-lg p-3">
                 <View className="items-center">
                   <Text className="text-base font-bold text-primary">
-                    {(record.distance / 1000).toFixed(2)}km
+                    {(Number(record.distance || 0) / 1000).toFixed(2)}km
                   </Text>
                   <Text className="text-xs text-muted">거리</Text>
                 </View>
@@ -1225,13 +1225,13 @@ function RidesTab({ colors }: { colors: any }) {
                 </View>
                 <View className="items-center">
                   <Text className="text-base font-bold text-foreground">
-                    {(record.avgSpeed / 10).toFixed(1)}
+                    {(Number(record.avgSpeed || 0) / 10).toFixed(1)}
                   </Text>
                   <Text className="text-xs text-muted">평균(km/h)</Text>
                 </View>
                 <View className="items-center">
                   <Text className="text-base font-bold text-warning">
-                    {(record.maxSpeed / 10).toFixed(1)}
+                    {(Number(record.maxSpeed || 0) / 10).toFixed(1)}
                   </Text>
                   <Text className="text-xs text-muted">최고(km/h)</Text>
                 </View>

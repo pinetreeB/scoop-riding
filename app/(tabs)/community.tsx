@@ -11,6 +11,8 @@ import {
   Dimensions,
   Share,
   Alert,
+  StyleSheet,
+  TouchableOpacity,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -54,7 +56,11 @@ export default function CommunityScreen() {
   const trpcUtils = trpc.useUtils();
   const postsQuery = trpc.community.getPosts.useQuery(
     { limit: 50, offset: 0 },
-    { enabled: isAuthenticated }
+    { 
+      enabled: isAuthenticated,
+      retry: 2,
+      retryDelay: 1000,
+    }
   );
 
   // Filter posts by selected category
@@ -187,15 +193,13 @@ export default function CommunityScreen() {
           <Text className="text-muted text-center mt-2">
             다른 라이더들과 주행 기록을 공유하고 소통해보세요
           </Text>
-          <Pressable
+          <TouchableOpacity
             onPress={() => router.push("/login")}
-            style={({ pressed }) => [
-              { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
-            ]}
-            className="mt-6 px-8 py-3 rounded-xl"
+            style={[styles.loginButton, { backgroundColor: colors.primary }]}
+            activeOpacity={0.8}
           >
             <Text className="text-white font-bold">로그인하기</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </ScreenContainer>
     );
@@ -207,17 +211,17 @@ export default function CommunityScreen() {
     const hasImages = images.length > 0;
 
     return (
-      <Pressable
+      <TouchableOpacity
         onPress={() => router.push(`/post-detail?id=${item.id}` as any)}
-        style={({ pressed }) => [{ opacity: pressed ? 0.98 : 1 }]}
-        className="bg-background border-b border-border"
+        activeOpacity={0.98}
+        style={[styles.postContainer, { backgroundColor: colors.background, borderBottomColor: colors.border }]}
       >
         {/* Author Header - Instagram Style */}
         <View className="flex-row items-center px-4 py-3">
-          <Pressable
+          <TouchableOpacity
             onPress={() => router.push(`/user-profile?id=${item.userId}&name=${encodeURIComponent(item.authorName || "")}&email=${encodeURIComponent(item.authorEmail || "")}` as any)}
-            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-            className="flex-row items-center flex-1"
+            activeOpacity={0.7}
+            style={styles.authorRow}
           >
             {/* Avatar */}
             <View
@@ -240,8 +244,8 @@ export default function CommunityScreen() {
               </View>
               <Text className="text-muted text-xs">{formatDate(item.createdAt)}</Text>
             </View>
-          </Pressable>
-          <Pressable
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => {
               if (Platform.OS !== "web") {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -268,17 +272,18 @@ export default function CommunityScreen() {
                 ].filter(Boolean) as any
               );
             }}
-            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-            className="p-2"
+            activeOpacity={0.7}
+            style={styles.moreButton}
           >
             <MaterialIcons name="more-horiz" size={20} color={colors.muted} />
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         {/* Images - Instagram Style */}
         {hasImages && (
-          <Pressable
+          <TouchableOpacity
             onPress={() => router.push(`/post-detail?id=${item.id}` as any)}
+            activeOpacity={1}
           >
             {images.length === 1 ? (
               <Image
@@ -310,30 +315,30 @@ export default function CommunityScreen() {
                 ))}
               </View>
             )}
-          </Pressable>
+          </TouchableOpacity>
         )}
 
         {/* Action Buttons - Instagram Style */}
         <View className="flex-row items-center px-4 py-3">
-          <Pressable
+          <TouchableOpacity
             onPress={() => handleLike(item.id, item.isLiked)}
-            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-            className="mr-4"
+            activeOpacity={0.7}
+            style={styles.actionButton}
           >
             <MaterialIcons
               name={item.isLiked ? "favorite" : "favorite-border"}
               size={26}
               color={item.isLiked ? "#EF4444" : colors.foreground}
             />
-          </Pressable>
-          <Pressable
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => router.push(`/post-detail?id=${item.id}` as any)}
-            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-            className="mr-4"
+            activeOpacity={0.7}
+            style={styles.actionButton}
           >
             <MaterialIcons name="chat-bubble-outline" size={24} color={colors.foreground} />
-          </Pressable>
-          <Pressable
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={async () => {
               if (Platform.OS !== "web") {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -346,11 +351,11 @@ export default function CommunityScreen() {
                 console.error("Share error:", error);
               }
             }}
-            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-            className="mr-4"
+            activeOpacity={0.7}
+            style={styles.actionButton}
           >
             <MaterialIcons name="share" size={24} color={colors.foreground} />
-          </Pressable>
+          </TouchableOpacity>
           <View className="flex-1" />
           <View className="flex-row items-center">
             <MaterialIcons name="visibility" size={18} color={colors.muted} />
@@ -368,9 +373,10 @@ export default function CommunityScreen() {
         )}
 
         {/* Content */}
-        <Pressable
+        <TouchableOpacity
           onPress={() => router.push(`/post-detail?id=${item.id}` as any)}
-          className="px-4 pb-2"
+          activeOpacity={0.9}
+          style={styles.contentArea}
         >
           <Text className="text-foreground font-semibold text-base mb-1">
             {item.title}
@@ -381,23 +387,24 @@ export default function CommunityScreen() {
           {item.content.length > 150 && (
             <Text className="text-muted text-sm mt-1">{t("community.seeMore")}</Text>
           )}
-        </Pressable>
+        </TouchableOpacity>
 
         {/* Comments Preview */}
         {item.commentCount > 0 && (
-          <Pressable
+          <TouchableOpacity
             onPress={() => router.push(`/post-detail?id=${item.id}` as any)}
-            className="px-4 pb-3"
+            activeOpacity={0.7}
+            style={styles.commentsPreview}
           >
             <Text className="text-muted text-sm">
               {t("community.commentsCount", { count: item.commentCount })}
             </Text>
-          </Pressable>
+          </TouchableOpacity>
         )}
 
         {/* Spacer */}
-        <View className="h-2" />
-      </Pressable>
+        <View style={{ height: 8 }} />
+      </TouchableOpacity>
     );
   };
 
@@ -407,23 +414,21 @@ export default function CommunityScreen() {
       <View className="flex-row items-center justify-between px-5 pt-4 pb-3 border-b border-border">
         <Text className="text-2xl font-bold text-foreground">{t("community.title")}</Text>
         <View className="flex-row items-center">
-          <Pressable
+          <TouchableOpacity
             onPress={() => router.push("/friends" as any)}
-            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-            className="p-2 mr-2"
+            activeOpacity={0.7}
+            style={styles.headerIconButton}
           >
             <MaterialIcons name="people" size={24} color={colors.foreground} />
-          </Pressable>
-          <Pressable
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={handleCreatePost}
-            style={({ pressed }) => [
-              { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
-            ]}
-            className="flex-row items-center px-4 py-2 rounded-full"
+            activeOpacity={0.8}
+            style={[styles.writeButton, { backgroundColor: colors.primary }]}
           >
             <MaterialIcons name="add" size={20} color="#FFFFFF" />
             <Text className="text-white font-medium ml-1">{t("community.writePost")}</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -440,10 +445,10 @@ export default function CommunityScreen() {
             const tabColor = item.key === "all" ? colors.primary : 
               POST_TYPE_LABELS[item.key]?.color || colors.primary;
             return (
-              <Pressable
+              <TouchableOpacity
                 onPress={() => handleCategoryChange(item.key)}
-                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-                className="px-3 py-3 mr-1"
+                activeOpacity={0.7}
+                style={styles.categoryTab}
               >
                 <View className="flex-row items-center">
                   <MaterialIcons
@@ -460,11 +465,10 @@ export default function CommunityScreen() {
                 </View>
                 {isSelected && (
                   <View
-                    className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full"
-                    style={{ backgroundColor: tabColor }}
+                    style={[styles.categoryIndicator, { backgroundColor: tabColor }]}
                   />
                 )}
-              </Pressable>
+              </TouchableOpacity>
             );
           }}
         />
@@ -487,6 +491,19 @@ export default function CommunityScreen() {
           <View className="flex-1 items-center justify-center py-20">
             {postsQuery.isLoading ? (
               <ActivityIndicator size="large" color={colors.primary} />
+            ) : postsQuery.isError ? (
+              <>
+                <MaterialIcons name="cloud-off" size={48} color={colors.muted} />
+                <Text className="text-muted mt-4">{t("community.loadError") || "게시글을 불러올 수 없습니다"}</Text>
+                <Text className="text-muted text-sm mt-1">{t("community.tryAgain") || "네트워크 연결을 확인하고 다시 시도해주세요"}</Text>
+                <TouchableOpacity
+                  onPress={() => postsQuery.refetch()}
+                  activeOpacity={0.8}
+                  style={[styles.retryButton, { backgroundColor: colors.primary }]}
+                >
+                  <Text className="text-white font-medium">{t("community.retry") || "다시 시도"}</Text>
+                </TouchableOpacity>
+              </>
             ) : (
               <>
                 <MaterialIcons name="forum" size={48} color={colors.muted} />
@@ -500,3 +517,64 @@ export default function CommunityScreen() {
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  loginButton: {
+    marginTop: 24,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  postContainer: {
+    borderBottomWidth: 1,
+  },
+  authorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  moreButton: {
+    padding: 8,
+  },
+  actionButton: {
+    marginRight: 16,
+  },
+  contentArea: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  commentsPreview: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  headerIconButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  writeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  categoryTab: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginRight: 4,
+  },
+  categoryIndicator: {
+    position: "absolute",
+    bottom: 0,
+    left: 12,
+    right: 12,
+    height: 2,
+    borderRadius: 999,
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+});

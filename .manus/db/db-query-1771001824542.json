@@ -1,0 +1,214 @@
+{
+  "query": "SELECT id, name, email, role FROM users ORDER BY id",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, name, email, role FROM users ORDER BY id",
+  "rows": [
+    {
+      "id": "30030",
+      "name": "스쿱 모빌리티",
+      "email": "scoop@scoopmotor.com",
+      "role": "admin"
+    },
+    {
+      "id": "120051",
+      "name": "음사",
+      "email": "jjg920228@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "120152",
+      "name": "이용구",
+      "email": "1226lyg@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "120503",
+      "name": "shark",
+      "email": "design__j@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "150001",
+      "name": "감자",
+      "email": "gustjrfjf369@gmail.com",
+      "role": "user"
+    },
+    {
+      "id": "210009",
+      "name": "양승균",
+      "email": "ojjksj1234@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "330874",
+      "name": "ㅇㅇ(118.235)",
+      "email": "abc@abc.com",
+      "role": "user"
+    },
+    {
+      "id": "420001",
+      "name": "김정훈",
+      "email": "goxoaos646@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "570001",
+      "name": "별의고리",
+      "email": "jmk3517@gmail.com",
+      "role": "user"
+    },
+    {
+      "id": "1920694",
+      "name": "소나무군",
+      "email": "tmd7221@gmail.com",
+      "role": "admin"
+    },
+    {
+      "id": "2790182",
+      "name": "JB",
+      "email": "wlqja25@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3545973",
+      "name": "김승현",
+      "email": "zc3513@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3546138",
+      "name": "명월",
+      "email": "cardj0989@gmail.com",
+      "role": "user"
+    },
+    {
+      "id": "3546319",
+      "name": "간헐적 정상인",
+      "email": "en966@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3546359",
+      "name": "유프리",
+      "email": "twiny76@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3546629",
+      "name": "강희건",
+      "email": "gnlrjsx11@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3546747",
+      "name": "강희건",
+      "email": "gmlrjsc11@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3547106",
+      "name": "임연수",
+      "email": "hiasins35@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3547701",
+      "name": "미친 드러머",
+      "email": "cjaookcy@gmail.com",
+      "role": "user"
+    },
+    {
+      "id": "3547822",
+      "name": "하마119",
+      "email": "ehxogud0@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3547919",
+      "name": "블루",
+      "email": "whdqls1020@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3548194",
+      "name": "yuki11",
+      "email": "lehoss@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3548336",
+      "name": "릴로",
+      "email": "gusdbgusdb@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3570423",
+      "name": "만두",
+      "email": "jeaseung1999@gmail.com",
+      "role": "user"
+    },
+    {
+      "id": "3571703",
+      "name": "전주",
+      "email": "wndel119@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3571734",
+      "name": "어린이",
+      "email": "dnjs1329@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3690001",
+      "name": "Ssi",
+      "email": "twincartt@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3690477",
+      "name": "목사아들",
+      "email": "gjdbwjs@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3840161",
+      "name": "로버",
+      "email": "youdkgood@gmail.com",
+      "role": "user"
+    },
+    {
+      "id": "3961721",
+      "name": "민트초코",
+      "email": "test1215@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "3961751",
+      "name": "누구여",
+      "email": "dodo5087270@gmail.com",
+      "role": "user"
+    },
+    {
+      "id": "4530402",
+      "name": "Gminimotors",
+      "email": "wlalsrh@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "7020001",
+      "name": "김민석",
+      "email": "enensxkr123@naver.com",
+      "role": "user"
+    },
+    {
+      "id": "7020809",
+      "name": "박용민",
+      "email": "wawoo4248@naver.com",
+      "role": "user"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\trole\n30030\t스쿱 모빌리티\tscoop@scoopmotor.com\tadmin\n120051\t음사\tjjg920228@naver.com\tuser\n120152\t이용구\t1226lyg@naver.com\tuser\n120503\tshark\tdesign__j@naver.com\tuser\n150001\t감자\tgustjrfjf369@gmail.com\tuser\n210009\t양승균\tojjksj1234@naver.com\tuser\n330874\tㅇㅇ(118.235)\tabc@abc.com\tuser\n420001\t김정훈\tgoxoaos646@naver.com\tuser\n570001\t별의고리\tjmk3517@gmail.com\tuser\n1920694\t소나무군\ttmd7221@gmail.com\tadmin\n2790182\tJB\twlqja25@naver.com\tuser\n3545973\t김승현\tzc3513@naver.com\tuser\n3546138\t명월\tcardj0989@gmail.com\tuser\n3546319\t간헐적 정상인\ten966@naver.com\tuser\n3546359\t유프리\ttwiny76@naver.com\tuser\n3546629\t강희건\tgnlrjsx11@naver.com\tuser\n3546747\t강희건\tgmlrjsc11@naver.com\tuser\n3547106\t임연수\thiasins35@naver.com\tuser\n3547701\t미친 드러머\tcjaookcy@gmail.com\tuser\n3547822\t하마119\tehxogud0@naver.com\tuser\n3547919\t블루\twhdqls1020@naver.com\tuser\n3548194\tyuki11\tlehoss@naver.com\tuser\n3548336\t릴로\tgusdbgusdb@naver.com\tuser\n3570423\t만두\tjeaseung1999@gmail.com\tuser\n3571703\t전주\twndel119@naver.com\tuser\n3571734\t어린이\tdnjs1329@naver.com\tuser\n3690001\tSsi\ttwincartt@naver.com\tuser\n3690477\t목사아들\tgjdbwjs@naver.com\tuser\n3840161\t로버\tyoudkgood@gmail.com\tuser\n3961721\t민트초코\ttest1215@naver.com\tuser\n3961751\t누구여\tdodo5087270@gmail.com\tuser\n4530402\tGminimotors\twlalsrh@naver.com\tuser\n7020001\t김민석\tenensxkr123@naver.com\tuser\n7020809\t박용민\twawoo4248@naver.com\tuser\n",
+  "stderr": "",
+  "execution_time_ms": 1525
+}

@@ -1,0 +1,8 @@
+{
+  "query": "SELECT u.id, u.name, u.email, u.role, (SELECT COUNT(*) FROM posts WHERE userId = u.id) as postCount, (SELECT COUNT(*) FROM postLikes WHERE userId = u.id) as likeCount FROM users WHERE name LIKE '%소나무%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT u.id, u.name, u.email, u.role, (SELECT COUNT(*) FROM posts WHERE userId = u.id) as postCount, (SELECT COUNT(*) FROM postLikes WHERE userId = u.id) as likeCount FROM users WHERE name LIKE '%소나무%';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'u.id' in 'field list'"
+  ]
+}

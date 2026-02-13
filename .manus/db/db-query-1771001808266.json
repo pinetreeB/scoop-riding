@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, name, email, role FROM users WHERE name LIKE '%소나무%' OR name LIKE '%scoop%' OR email LIKE '%pinetree%' LIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, name, email, role FROM users WHERE name LIKE '%소나무%' OR name LIKE '%scoop%' OR email LIKE '%pinetree%' LIMIT 10",
+  "rows": [
+    {
+      "id": "1920694",
+      "name": "소나무군",
+      "email": "tmd7221@gmail.com",
+      "role": "admin"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\trole\n1920694\t소나무군\ttmd7221@gmail.com\tadmin\n",
+  "stderr": "",
+  "execution_time_ms": 1568
+}

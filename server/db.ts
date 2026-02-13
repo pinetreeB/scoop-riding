@@ -3289,7 +3289,7 @@ export async function getAllUsersAdmin(page: number = 1, limit: number = 50): Pr
 
     // Get total count
     const countResult = await db.select({ count: sql<number>`count(*)` }).from(users);
-    const total = countResult[0]?.count ?? 0;
+    const total = Number(countResult[0]?.count ?? 0);
 
     // Get users with ride stats
     const result = await db
@@ -3322,8 +3322,8 @@ export async function getAllUsersAdmin(page: number = 1, limit: number = 50): Pr
 
         return {
           ...user,
-          totalRides: rideStats[0]?.totalRides ?? 0,
-          totalDistance: rideStats[0]?.totalDistance ?? 0,
+          totalRides: Number(rideStats[0]?.totalRides ?? 0),
+          totalDistance: Number(rideStats[0]?.totalDistance ?? 0),
           isBanned: banStatus.banned,
         };
       })
@@ -3406,11 +3406,11 @@ export async function getUserDetailsAdmin(userId: number): Promise<{
     return {
       user: userResult[0],
       stats: {
-        totalRides: statsResult[0]?.totalRides ?? 0,
-        totalDistance: statsResult[0]?.totalDistance ?? 0,
-        totalDuration: statsResult[0]?.totalDuration ?? 0,
-        avgSpeed: statsResult[0]?.avgSpeed ?? 0,
-        maxSpeed: statsResult[0]?.maxSpeed ?? 0,
+        totalRides: Number(statsResult[0]?.totalRides ?? 0),
+        totalDistance: Number(statsResult[0]?.totalDistance ?? 0),
+        totalDuration: Number(statsResult[0]?.totalDuration ?? 0),
+        avgSpeed: Number(statsResult[0]?.avgSpeed ?? 0),
+        maxSpeed: Number(statsResult[0]?.maxSpeed ?? 0),
       },
       recentRides,
       banStatus,
@@ -3550,8 +3550,8 @@ export async function getSurveyStatistics(): Promise<{
       })
       .from(surveyResponses);
 
-    const total = statsResult[0]?.total ?? 0;
-    const recommendCount = statsResult[0]?.recommendCount ?? 0;
+    const total = Number(statsResult[0]?.total ?? 0);
+    const recommendCount = Number(statsResult[0]?.recommendCount ?? 0);
 
     // Get feature usage breakdown
     const featureResult = await db
@@ -3564,12 +3564,12 @@ export async function getSurveyStatistics(): Promise<{
       .orderBy(desc(sql`COUNT(*)`));
 
     return {
-      totalResponses: total,
-      avgOverall: statsResult[0]?.avgOverall ?? 0,
-      avgUsability: statsResult[0]?.avgUsability ?? 0,
-      avgFeature: statsResult[0]?.avgFeature ?? 0,
-      recommendRate: total > 0 ? (recommendCount / total) * 100 : 0,
-      featureUsage: featureResult.map(r => ({ feature: r.feature, count: r.count })),
+      totalResponses: Number(total),
+      avgOverall: Number(statsResult[0]?.avgOverall ?? 0),
+      avgUsability: Number(statsResult[0]?.avgUsability ?? 0),
+      avgFeature: Number(statsResult[0]?.avgFeature ?? 0),
+      recommendRate: total > 0 ? (Number(recommendCount) / Number(total)) * 100 : 0,
+      featureUsage: featureResult.map(r => ({ feature: r.feature, count: Number(r.count) })),
     };
   } catch (error) {
     console.error("[Database] Failed to get survey statistics:", error);
@@ -3677,10 +3677,10 @@ export async function getAllBugReports(
 
     return {
       reports: reports as (BugReport & { userName: string | null; userEmail: string | null })[],
-      total: countResult[0]?.total ?? 0,
-      openCount: countResult[0]?.openCount ?? 0,
-      inProgressCount: countResult[0]?.inProgressCount ?? 0,
-      resolvedCount: countResult[0]?.resolvedCount ?? 0,
+      total: Number(countResult[0]?.total ?? 0),
+      openCount: Number(countResult[0]?.openCount ?? 0),
+      inProgressCount: Number(countResult[0]?.inProgressCount ?? 0),
+      resolvedCount: Number(countResult[0]?.resolvedCount ?? 0),
     };
   } catch (error) {
     console.error("[Database] Failed to get bug reports:", error);
@@ -5150,7 +5150,7 @@ export async function getAllRidingRecordsAdmin(
     const countResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(ridingRecords);
-    const total = countResult[0]?.count ?? 0;
+    const total = Number(countResult[0]?.count ?? 0);
 
     // Get records with user info
     const result = await db

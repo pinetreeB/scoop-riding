@@ -1,0 +1,19 @@
+{
+  "query": "SELECT COUNT(*) as total_posts FROM posts; SELECT COUNT(*) as total_likes FROM postLikes;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT COUNT(*) as total_posts FROM posts; SELECT COUNT(*) as total_likes FROM postLikes;",
+  "rows": [
+    {
+      "total_posts": "7"
+    },
+    {
+      "total_posts": "total_likes"
+    },
+    {
+      "total_posts": "8"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_posts\n7\ntotal_likes\n8\n",
+  "stderr": "",
+  "execution_time_ms": 1877
+}

@@ -1,0 +1,37 @@
+{
+  "query": "SHOW TABLES LIKE '%noti%'; SHOW TABLES LIKE '%announce%'; SHOW TABLES LIKE '%notice%'; SHOW TABLES LIKE '%post%'; SHOW TABLES LIKE '%news%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SHOW TABLES LIKE '%noti%'; SHOW TABLES LIKE '%announce%'; SHOW TABLES LIKE '%notice%'; SHOW TABLES LIKE '%post%'; SHOW TABLES LIKE '%news%';",
+  "rows": [
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%noti%)": "notifications"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%noti%)": "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%announce%)"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%noti%)": "announcements"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%noti%)": "userAnnouncementReads"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%noti%)": "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%post%)"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%noti%)": "postImages"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%noti%)": "postLikes"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%noti%)": "postViews"
+    },
+    {
+      "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%noti%)": "posts"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_XQsH52MNZAyXrU9qYq4MDw (%noti%)\nnotifications\nTables_in_XQsH52MNZAyXrU9qYq4MDw (%announce%)\nannouncements\nuserAnnouncementReads\nTables_in_XQsH52MNZAyXrU9qYq4MDw (%post%)\npostImages\npostLikes\npostViews\nposts\n",
+  "stderr": "",
+  "execution_time_ms": 2368
+}

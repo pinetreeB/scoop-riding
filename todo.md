@@ -1267,3 +1267,7 @@
 - [x] AI 주행 코칭 기능 - 주행 완료 후 AI가 주행 데이터 분석하여 맞춤형 피드백 제공 - analyzeRide 시스템 프롬프트에 coaching 필드 추가, ride-analysis-modal.tsx에 코칭 카드 UI 구현
 - [x] AI 주간/월간 리포트 자동 생성 - 주행 데이터 기반 자연어 분석 리포트 생성 - app/ai-report.tsx 화면 생성, generateAiReport 서버 프로시저 추가, 홈 화면에 AI 리포트 카드 추가, ko.json/en.json 번역 완료
 - [x] BUG: 홈 화면 Quick Actions 카드 크기(높이) 불균일 - 1행(챌린지, 나의 목표, 배지)과 2행(날씨별 통계, AI 리포트, 에코 리더보드) 카드 높이가 다름 - 모든 카드 height: 130 고정, numberOfLines: 1 제한, 텍스트 크기 text-xs 통일
+
+## 버그 수정 (2026-02-14)
+- [x] BUG: 관리자 대시보드 진입 불가 (undefined is not a function 에러) - MySQL 결과 Number() 변환, post.author?.name → post.authorName 수정
+- [x] BUG: Galaxy S25 소나무군 계정에서 커뮤니티 화면 안 뜸 - Pressable className→TouchableOpacity style 전환, 에러 핸들링 추가, retry 기능 추가

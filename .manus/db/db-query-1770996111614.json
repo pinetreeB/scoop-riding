@@ -1,0 +1,31 @@
+{
+  "query": "SELECT id, version, versionCode, downloadUrl, isActive FROM appVersions ORDER BY id DESC LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, version, versionCode, downloadUrl, isActive FROM appVersions ORDER BY id DESC LIMIT 3;",
+  "rows": [
+    {
+      "id": "390001",
+      "version": "0.1.7",
+      "versionCode": "7",
+      "downloadUrl": "https://expo.dev/artifacts/eas/8X6BB21pwuoQSvy8oKmr2H.apk",
+      "isActive": "1"
+    },
+    {
+      "id": "360001",
+      "version": "0.1.6",
+      "versionCode": "26",
+      "downloadUrl": "https://expo.dev/artifacts/eas/qof7MkVvrFciUYxPjMpf3R.apk",
+      "isActive": "1"
+    },
+    {
+      "id": "330001",
+      "version": "0.1.4",
+      "versionCode": "23",
+      "downloadUrl": "https://expo.dev/artifacts/eas/vHXrXnJXz9ENTh5nyTUujC.apk",
+      "isActive": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tversion\tversionCode\tdownloadUrl\tisActive\n390001\t0.1.7\t7\thttps://expo.dev/artifacts/eas/8X6BB21pwuoQSvy8oKmr2H.apk\t1\n360001\t0.1.6\t26\thttps://expo.dev/artifacts/eas/qof7MkVvrFciUYxPjMpf3R.apk\t1\n330001\t0.1.4\t23\thttps://expo.dev/artifacts/eas/vHXrXnJXz9ENTh5nyTUujC.apk\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1563
+}
