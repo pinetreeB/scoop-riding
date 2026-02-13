@@ -738,15 +738,15 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
-                  <View className="flex-row items-center mb-2">
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ height: 130, justifyContent: 'space-between' }}>
+                  <View className="flex-row items-center">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: colors.primary + '20' }}>
                       <MaterialIcons name="flag" size={20} color={colors.primary} />
                     </View>
                   </View>
                   <View>
-                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.challenges')}</Text>
-                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.competeFriends')}</Text>
+                    <Text className="text-foreground font-bold text-xs" numberOfLines={1}>{t('home.quickActions.challenges')}</Text>
+                    <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>{t('home.competeFriends')}</Text>
                   </View>
                 </View>
               </Pressable>
@@ -761,15 +761,15 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
-                  <View className="flex-row items-center mb-2">
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ height: 130, justifyContent: 'space-between' }}>
+                  <View className="flex-row items-center">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: colors.success + '20' }}>
                       <MaterialIcons name="track-changes" size={20} color={colors.success} />
                     </View>
                   </View>
                   <View>
-                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.goals')}</Text>
-                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.setGoals')}</Text>
+                    <Text className="text-foreground font-bold text-xs" numberOfLines={1}>{t('home.quickActions.goals')}</Text>
+                    <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>{t('home.setGoals')}</Text>
                   </View>
                 </View>
               </Pressable>
@@ -784,15 +784,15 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
-                  <View className="flex-row items-center mb-2">
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ height: 130, justifyContent: 'space-between' }}>
+                  <View className="flex-row items-center">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#F59E0B' + '20' }}>
                       <MaterialIcons name="military-tech" size={20} color="#F59E0B" />
                     </View>
                   </View>
                   <View>
-                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.badges')}</Text>
-                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.checkAchievements')}</Text>
+                    <Text className="text-foreground font-bold text-xs" numberOfLines={1}>{t('home.quickActions.badges')}</Text>
+                    <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>{t('home.checkAchievements')}</Text>
                   </View>
                 </View>
               </Pressable>
@@ -810,15 +810,15 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
-                  <View className="flex-row items-center mb-2">
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ height: 130, justifyContent: 'space-between' }}>
+                  <View className="flex-row items-center">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#4A90D9' + '20' }}>
                       <MaterialIcons name="wb-cloudy" size={20} color="#4A90D9" />
                     </View>
                   </View>
                   <View>
-                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.weatherStats')}</Text>
-                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.weatherAnalysis')}</Text>
+                    <Text className="text-foreground font-bold text-xs" numberOfLines={1}>{t('home.quickActions.weatherStats')}</Text>
+                    <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>{t('home.weatherAnalysis')}</Text>
                   </View>
                 </View>
               </Pressable>
@@ -833,15 +833,15 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
-                  <View className="flex-row items-center mb-2">
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ height: 130, justifyContent: 'space-between' }}>
+                  <View className="flex-row items-center">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#8B5CF6' + '20' }}>
                       <MaterialIcons name="auto-awesome" size={20} color="#8B5CF6" />
                     </View>
                   </View>
                   <View>
-                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.aiReport')}</Text>
-                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.aiReportDesc')}</Text>
+                    <Text className="text-foreground font-bold text-xs" numberOfLines={1}>{t('home.quickActions.aiReport')}</Text>
+                    <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>{t('home.aiReportDesc')}</Text>
                   </View>
                 </View>
               </Pressable>
@@ -856,15 +856,15 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
-                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ minHeight: 120, justifyContent: 'space-between' }}>
-                  <View className="flex-row items-center mb-2">
+                <View className="bg-surface rounded-2xl p-4 border border-border" style={{ height: 130, justifyContent: 'space-between' }}>
+                  <View className="flex-row items-center">
                     <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: '#10B981' + '20' }}>
                       <MaterialIcons name="eco" size={20} color="#10B981" />
                     </View>
                   </View>
                   <View>
-                    <Text className="text-foreground font-bold" numberOfLines={2}>{t('home.quickActions.ecoLeaderboard')}</Text>
-                    <Text className="text-muted text-xs mt-1" numberOfLines={2}>{t('home.ecoRanking')}</Text>
+                    <Text className="text-foreground font-bold text-xs" numberOfLines={1}>{t('home.quickActions.ecoLeaderboard')}</Text>
+                    <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>{t('home.ecoRanking')}</Text>
                   </View>
                 </View>
               </Pressable>

@@ -1266,3 +1266,4 @@
 - [x] 스켈레톤 UI 컴포넌트 생성 및 홈 화면 적용 (통계 카드, 날씨 위젯, 랭킹 등 로딩 시 뼈대 화면) - Skeleton, StatCardSkeleton, WeatherWidgetSkeleton, RankingSectionSkeleton, AiCoachingSkeleton, AiReportSkeleton 컴포넌트 생성
 - [x] AI 주행 코칭 기능 - 주행 완료 후 AI가 주행 데이터 분석하여 맞춤형 피드백 제공 - analyzeRide 시스템 프롬프트에 coaching 필드 추가, ride-analysis-modal.tsx에 코칭 카드 UI 구현
 - [x] AI 주간/월간 리포트 자동 생성 - 주행 데이터 기반 자연어 분석 리포트 생성 - app/ai-report.tsx 화면 생성, generateAiReport 서버 프로시저 추가, 홈 화면에 AI 리포트 카드 추가, ko.json/en.json 번역 완료
+- [x] BUG: 홈 화면 Quick Actions 카드 크기(높이) 불균일 - 1행(챌린지, 나의 목표, 배지)과 2행(날씨별 통계, AI 리포트, 에코 리더보드) 카드 높이가 다름 - 모든 카드 height: 130 고정, numberOfLines: 1 제한, 텍스트 크기 text-xs 통일
