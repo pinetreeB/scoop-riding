@@ -1250,3 +1250,6 @@
 - [x] BUG: 주행 중 주행 라인(경로)이 지도에 표시되지 않음 - validation과 별도로 polyline용 좌표 추가, 상태 업데이트 빈도 개선
 - [x] BUG: 주행 중 현재 속도가 0 km/h로 고정됨 - GPS speed null일 때 좌표 간 거리/시간으로 fallback 속도 계산
 - [x] BUG: 관리자 대시보드 흰 화면 크래시 - _layout.tsx에 admin-dashboard 스크린 등록, Pressable className→style 변경
+
+## 버그 수정 (2026-02-13) - 2차
+- [x] BUG: 백그라운드에서 주행 시 주행시간이 올라가지 않음 - AppState 리스너 추가, startTime 기준 실제 경과시간으로 보정

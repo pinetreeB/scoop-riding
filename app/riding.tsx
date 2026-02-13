@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Text, View, Pressable, Alert, BackHandler, Platform, Dimensions } from "react-native";
+import { Text, View, Pressable, Alert, BackHandler, Platform, Dimensions, AppState, AppStateStatus } from "react-native";
 import { useRouter } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
@@ -346,6 +346,12 @@ export default function RidingScreen() {
   const rideIdRef = useRef<string>(generateId());
   const [isRecoveredSession, setIsRecoveredSession] = useState(false);
 
+  // 백그라운드 시간 보정 관련
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const backgroundEnteredAtRef = useRef<number | null>(null);
+  const totalPausedTimeRef = useRef<number>(0); // 총 일시정지 누적 시간 (초)
+  const pauseStartedAtRef = useRef<number | null>(null); // 일시정지 시작 시점 (ms timestamp)
+
   useEffect(() => {
     isRunningRef.current = isRunning;
   }, [isRunning]);
@@ -367,10 +373,93 @@ export default function RidingScreen() {
     isBackgroundEnabledRef.current = isBackgroundEnabled;
   }, [isBackgroundEnabled]);
 
-  // isAutoPaused 상태를 ref에도 동기화
+  // isAutoPaused 상태를 ref에도 동기화 + 일시정지 시간 추적
   useEffect(() => {
     isAutoPausedRef.current = isAutoPaused;
+    if (isAutoPaused) {
+      // 일시정지 시작 시점 기록
+      if (!pauseStartedAtRef.current) {
+        pauseStartedAtRef.current = Date.now();
+      }
+    } else {
+      // 일시정지 해제 시 누적 시간 추가
+      if (pauseStartedAtRef.current) {
+        const pausedSeconds = Math.floor((Date.now() - pauseStartedAtRef.current) / 1000);
+        totalPausedTimeRef.current += pausedSeconds;
+        pauseStartedAtRef.current = null;
+      }
+    }
   }, [isAutoPaused]);
+
+  // 수동 일시정지 시간 추적
+  useEffect(() => {
+    if (!isRunning) {
+      // 수동 일시정지 시작
+      if (!pauseStartedAtRef.current) {
+        pauseStartedAtRef.current = Date.now();
+      }
+    } else {
+      // 수동 일시정지 해제
+      if (pauseStartedAtRef.current) {
+        const pausedSeconds = Math.floor((Date.now() - pauseStartedAtRef.current) / 1000);
+        totalPausedTimeRef.current += pausedSeconds;
+        pauseStartedAtRef.current = null;
+      }
+    }
+  }, [isRunning]);
+
+  // 백그라운드→포그라운드 복귀 시 주행시간 보정
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState: AppStateStatus) => {
+      const prevState = appStateRef.current;
+      
+      if (prevState === "active" && (nextAppState === "background" || nextAppState === "inactive")) {
+        // 백그라운드로 전환
+        backgroundEnteredAtRef.current = Date.now();
+        console.log("[Riding] App went to background at:", new Date().toISOString());
+      }
+      
+      if ((prevState === "background" || prevState === "inactive") && nextAppState === "active") {
+        // 포그라운드로 복귀
+        console.log("[Riding] App returned to foreground");
+        
+        // 실제 경과 시간 기반으로 duration 보정
+        const now = Date.now();
+        const startMs = startTimeRef.current.getTime();
+        const totalElapsedSeconds = Math.floor((now - startMs) / 1000);
+        
+        // 현재 일시정지 중이면 현재까지의 일시정지 시간도 포함
+        let currentPausedTime = totalPausedTimeRef.current;
+        if (pauseStartedAtRef.current) {
+          currentPausedTime += Math.floor((now - pauseStartedAtRef.current) / 1000);
+        }
+        
+        // 주행시간 = 총 경과시간 - 일시정지 시간
+        const correctedDuration = Math.max(0, totalElapsedSeconds - currentPausedTime);
+        
+        console.log(`[Riding] Time correction: elapsed=${totalElapsedSeconds}s, paused=${currentPausedTime}s, corrected=${correctedDuration}s, prev duration=${durationRef.current}s`);
+        
+        // 보정된 시간이 현재 시간보다 크면 업데이트 (시간이 더 지났으므로)
+        if (correctedDuration > durationRef.current) {
+          setDuration(correctedDuration);
+          durationRef.current = correctedDuration;
+          
+          // 휴식 시간도 보정
+          if (currentPausedTime > 0) {
+            setRestTime(currentPausedTime);
+          }
+        }
+        
+        backgroundEnteredAtRef.current = null;
+      }
+      
+      appStateRef.current = nextAppState;
+    });
+    
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   // Load selected scooter and start voltage on mount
   useEffect(() => {
