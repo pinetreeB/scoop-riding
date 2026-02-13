@@ -887,6 +887,23 @@ export default function RidingScreen() {
     }
   };
 
+  // 이전 좌표 기반 속도 계산 (GPS speed가 null일 때 fallback)
+  const lastLocationForSpeedRef = useRef<{ latitude: number; longitude: number; timestamp: number } | null>(null);
+
+  const calculateSpeedFromDistance = (latitude: number, longitude: number, timestamp: number): number => {
+    const prev = lastLocationForSpeedRef.current;
+    if (!prev) {
+      lastLocationForSpeedRef.current = { latitude, longitude, timestamp };
+      return 0;
+    }
+    const timeDiffSec = (timestamp - prev.timestamp) / 1000;
+    if (timeDiffSec <= 0.1) return 0; // 너무 짧은 시간 간격 무시
+    const dist = calculateDistance(prev.latitude, prev.longitude, latitude, longitude);
+    lastLocationForSpeedRef.current = { latitude, longitude, timestamp };
+    const speedMs = dist / timeDiffSec;
+    return msToKmh(speedMs);
+  };
+
   const smoothSpeed = (rawSpeedKmh: number): number => {
     if (rawSpeedKmh < GPS_CONSTANTS.MIN_SPEED_THRESHOLD) {
       speedHistoryRef.current = [];
@@ -931,7 +948,16 @@ export default function RidingScreen() {
       accuracy: locAccuracy ?? null,
     };
 
-    const rawSpeedKmh = speed !== null && speed >= 0 ? msToKmh(speed) : 0;
+    // GPS speed가 null이면 좌표 간 거리/시간으로 속도 계산 (fallback)
+    let rawSpeedKmh: number;
+    if (speed !== null && speed >= 0) {
+      rawSpeedKmh = msToKmh(speed);
+      // 거리 기반 속도도 업데이트 (다음 fallback을 위해)
+      calculateSpeedFromDistance(latitude, longitude, timestamp);
+    } else {
+      // GPS speed가 null인 경우 - 좌표 간 거리로 속도 추정
+      rawSpeedKmh = calculateSpeedFromDistance(latitude, longitude, timestamp);
+    }
     const displaySpeed = smoothSpeed(rawSpeedKmh);
     setCurrentSpeed(displaySpeed);
 
@@ -1007,16 +1033,20 @@ export default function RidingScreen() {
 
     const validation = validateGpsPoint(gpsPoint, lastValidPointRef.current, lastBearingRef.current);
 
-    if (validation.isValid) {
-      // 메모리 최적화: GPS 포인트가 너무 많으면 다운샘플링
-      const MAX_GPS_POINTS = 3600; // 최대 3600개 (약 1시간 분량)
-      const DOWNSAMPLE_THRESHOLD = 3000; // 3000개 이상이면 다운샘플링 시작
-      
+    // 주행 라인 표시: validation 결과와 무관하게 이동 중이면 경로에 추가
+    // (validation은 거리/속도 계산의 정확도를 위한 것이고, 라인 표시는 별도로 처리)
+    const isMoving = rawSpeedKmh >= GPS_CONSTANTS.MIN_SPEED_THRESHOLD || displaySpeed >= GPS_CONSTANTS.MIN_SPEED_THRESHOLD;
+    const hasMinAccuracy = locAccuracy === null || locAccuracy <= GPS_CONSTANTS.MIN_ACCURACY_THRESHOLD;
+    
+    if (isMoving && hasMinAccuracy) {
+      // 이동 중이고 GPS 정확도가 충분하면 경로 포인트에 추가 (라인 표시용)
       gpsPointsRef.current.push(gpsPoint);
       
-      // 실시간 다운샘플링: 포인트가 많아지면 중간 포인트 제거
+      // 메모리 최적화: GPS 포인트가 너무 많으면 다운샘플링
+      const MAX_GPS_POINTS = 3600;
+      const DOWNSAMPLE_THRESHOLD = 3000;
+      
       if (gpsPointsRef.current.length > DOWNSAMPLE_THRESHOLD) {
-        // 매 2번째 포인트만 유지 (처음과 끝은 항상 유지)
         const downsampled = gpsPointsRef.current.filter((_, index) => 
           index === 0 || 
           index === gpsPointsRef.current.length - 1 || 
@@ -1025,9 +1055,7 @@ export default function RidingScreen() {
         gpsPointsRef.current = downsampled;
       }
       
-      // 최대 포인트 수 제한
       if (gpsPointsRef.current.length > MAX_GPS_POINTS) {
-        // 처음 100개와 마지막 100개는 유지, 중간은 다운샘플링
         const first100 = gpsPointsRef.current.slice(0, 100);
         const last100 = gpsPointsRef.current.slice(-100);
         const middle = gpsPointsRef.current.slice(100, -100);
@@ -1035,12 +1063,21 @@ export default function RidingScreen() {
         gpsPointsRef.current = [...first100, ...middleDownsampled, ...last100];
       }
       
-      // 상태 업데이트 빈도 줄이기 (메모리 절약)
-      // 매번 새 배열 생성 대신 10번에 1번만 업데이트
-      if (gpsPointsRef.current.length % 10 === 0 || gpsPointsRef.current.length < 10) {
+      // 상태 업데이트 빈도: 5번에 1번 또는 초기 20개까지는 매번 업데이트
+      if (gpsPointsRef.current.length % 5 === 0 || gpsPointsRef.current.length < 20) {
         setGpsPoints([...gpsPointsRef.current]);
       }
       setGpsPointCount(gpsPointsRef.current.length);
+    } else if (validation.isValid) {
+      // 이동 중이 아니지만 validation 통과한 경우에도 추가
+      gpsPointsRef.current.push(gpsPoint);
+      if (gpsPointsRef.current.length % 5 === 0 || gpsPointsRef.current.length < 20) {
+        setGpsPoints([...gpsPointsRef.current]);
+      }
+      setGpsPointCount(gpsPointsRef.current.length);
+    }
+
+    if (validation.isValid) {
 
       // Update live location for friends to see
       const isStarting = isFirstLocationRef.current;

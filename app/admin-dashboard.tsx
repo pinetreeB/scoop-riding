@@ -633,13 +633,13 @@ function AnnouncementsTab({ colors }: { colors: any }) {
                 <View className="flex-row gap-2">
                   <Pressable
                     onPress={() => setEditingAnnouncement(announcement)}
-                    className="p-2"
+                    style={{ padding: 8 }}
                   >
                     <MaterialIcons name="edit" size={20} color={colors.primary} />
                   </Pressable>
                   <Pressable
                     onPress={() => handleDelete(announcement.id)}
-                    className="p-2"
+                    style={{ padding: 8 }}
                   >
                     <MaterialIcons name="delete" size={20} color={colors.error} />
                   </Pressable>
@@ -766,7 +766,7 @@ function AnnouncementModal({
                 { key: "event", label: "이벤트" },
                 { key: "maintenance", label: "점검" },
               ].map((t) => (
-                <Pressable
+                <TouchableOpacity
                   key={t.key}
                   onPress={() => setType(t.key as any)}
                   className={`px-4 py-2 rounded-full ${
@@ -778,7 +778,7 @@ function AnnouncementModal({
                   >
                     {t.label}
                   </Text>
-                </Pressable>
+                </TouchableOpacity>
               ))}
             </View>
 
@@ -805,7 +805,7 @@ function AnnouncementModal({
 
             <View className="flex-row items-center justify-between py-3 border-t border-border">
               <Text className="text-foreground">팝업으로 표시</Text>
-              <Pressable
+              <TouchableOpacity
                 onPress={() => setShowPopup(!showPopup)}
                 className={`w-12 h-7 rounded-full ${
                   showPopup ? "bg-primary" : "bg-gray-300"
@@ -816,12 +816,12 @@ function AnnouncementModal({
                     showPopup ? "ml-6" : "ml-1"
                   }`}
                 />
-              </Pressable>
+              </TouchableOpacity>
             </View>
 
             <View className="flex-row items-center justify-between py-3 border-t border-border mb-10">
               <Text className="text-foreground">활성화</Text>
-              <Pressable
+              <TouchableOpacity
                 onPress={() => setIsActive(!isActive)}
                 className={`w-12 h-7 rounded-full ${
                   isActive ? "bg-primary" : "bg-gray-300"
@@ -832,7 +832,7 @@ function AnnouncementModal({
                     isActive ? "ml-6" : "ml-1"
                   }`}
                 />
-              </Pressable>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </View>
@@ -912,7 +912,7 @@ function UsersTab({ colors }: { colors: any }) {
             총 {data?.total || 0}명의 사용자
           </Text>
           {filteredUsers?.map((user) => (
-            <Pressable
+            <TouchableOpacity
               key={user.id}
               onPress={() => setSelectedUser(user.id)}
               className="bg-surface rounded-xl p-4 mb-3 border border-border"
@@ -946,7 +946,7 @@ function UsersTab({ colors }: { colors: any }) {
                 </View>
                 <MaterialIcons name="chevron-right" size={24} color={colors.muted} />
               </View>
-            </Pressable>
+            </TouchableOpacity>
           ))}
 
           {(!filteredUsers || filteredUsers.length === 0) && (
@@ -1034,14 +1034,14 @@ function UsersTab({ colors }: { colors: any }) {
 
                 <View className="flex-row gap-3 mb-10">
                   {!userDetails.banStatus.banned && (
-                    <Pressable
+                    <TouchableOpacity
                       onPress={() =>
                         handleBan(userDetails.user!.id, userDetails.user!.name || "사용자")
                       }
                       className="flex-1 bg-red-500 py-3 rounded-xl items-center"
                     >
                       <Text className="text-white font-semibold">사용자 차단</Text>
-                    </Pressable>
+                    </TouchableOpacity>
                   )}
                 </View>
               </ScrollView>
@@ -1111,7 +1111,7 @@ function PostsTab({ colors }: { colors: any }) {
                     </Text>
                   </View>
                 </View>
-                <Pressable onPress={() => handleDelete(post.id)} className="p-2">
+                <Pressable onPress={() => handleDelete(post.id)} style={{ padding: 8 }}>
                   <MaterialIcons name="delete" size={20} color={colors.error} />
                 </Pressable>
               </View>
@@ -1257,23 +1257,23 @@ function RidesTab({ colors }: { colors: any }) {
           {/* Pagination */}
           {totalPages > 1 && (
             <View className="flex-row items-center justify-center gap-4 mt-4 mb-8">
-              <Pressable
+              <TouchableOpacity
                 onPress={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
                 className={`px-4 py-2 rounded-lg ${page === 1 ? "bg-gray-200" : "bg-primary"}`}
               >
                 <Text className={page === 1 ? "text-gray-500" : "text-white"}>이전</Text>
-              </Pressable>
+              </TouchableOpacity>
               <Text className="text-foreground">
                 {page} / {totalPages}
               </Text>
-              <Pressable
+              <TouchableOpacity
                 onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 className={`px-4 py-2 rounded-lg ${page === totalPages ? "bg-gray-200" : "bg-primary"}`}
               >
                 <Text className={page === totalPages ? "text-gray-500" : "text-white"}>다음</Text>
-              </Pressable>
+              </TouchableOpacity>
             </View>
           )}
         </>

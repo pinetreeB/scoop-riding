@@ -1245,3 +1245,8 @@
 - [ ] Phase 3: 실시간 기능 강화 (WebSocket 채팅, 실시간 위치 공유)
 - [ ] Phase 4: 판매자 시스템 (판매자 대시보드, 주문 관리, 정산)
 - [ ] Phase 5: 글로벌 확장 (다국어, 해외 결제, 지역별 커스터마이징)
+
+## 버그 수정 (2026-02-13)
+- [x] BUG: 주행 중 주행 라인(경로)이 지도에 표시되지 않음 - validation과 별도로 polyline용 좌표 추가, 상태 업데이트 빈도 개선
+- [x] BUG: 주행 중 현재 속도가 0 km/h로 고정됨 - GPS speed null일 때 좌표 간 거리/시간으로 fallback 속도 계산
+- [x] BUG: 관리자 대시보드 흰 화면 크래시 - _layout.tsx에 admin-dashboard 스크린 등록, Pressable className→style 변경
