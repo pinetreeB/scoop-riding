@@ -1,0 +1,19 @@
+{
+  "query": "SELECT s.id as scooterId, s.name, s.totalDistance, s.totalRides, s.userId, (SELECT COUNT(*) FROM ridingRecords r WHERE r.scooterId = s.id) as ridesWithScooter, (SELECT GROUP_CONCAT(r.id, ':', r.distance, ':', r.scooterId ORDER BY r.id DESC SEPARATOR ', ') FROM ridingRecords r WHERE r.userId = s.userId ORDER BY r.id DESC LIMIT 5) as recentRides FROM scooters s WHERE s.name LIKE '%하코%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT s.id as scooterId, s.name, s.totalDistance, s.totalRides, s.userId, (SELECT COUNT(*) FROM ridingRecords r WHERE r.scooterId = s.id) as ridesWithScooter, (SELECT GROUP_CONCAT(r.id, ':', r.distance, ':', r.scooterId ORDER BY r.id DESC SEPARATOR ', ') FROM ridingRecords r WHERE r.userId = s.userId ORDER BY r.id DESC LIMIT 5) as recentRides FROM scooters s WHERE s.name LIKE '%하코%';",
+  "rows": [
+    {
+      "scooterId": "330001",
+      "name": "하코",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "1920694",
+      "ridesWithScooter": "0",
+      "recentRides": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "scooterId\tname\ttotalDistance\ttotalRides\tuserId\tridesWithScooter\trecentRides\n330001\t하코\t0\t0\t1920694\t0\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1542
+}

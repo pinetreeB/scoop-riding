@@ -63,6 +63,7 @@ export function WeatherWidget() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [locationName, setLocationName] = useState<string | null>(null);
 
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const weatherQuery = trpc.weather.getCurrent.useQuery(
@@ -93,6 +94,29 @@ export function WeatherWidget() {
         lat: location.coords.latitude,
         lon: location.coords.longitude,
       });
+
+      // 역지오코딩으로 지역명 가져오기
+      try {
+        const geocode = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+        if (geocode && geocode.length > 0) {
+          const place = geocode[0];
+          // 한국 주소 형식: 시/도 + 구/군 또는 city + district
+          const parts: string[] = [];
+          if (place.region) parts.push(place.region); // 시/도
+          if (place.city && place.city !== place.region) parts.push(place.city); // 시/군/구
+          if (place.district && place.district !== place.city) parts.push(place.district); // 동/읍/면
+          if (place.subregion && parts.length === 0) parts.push(place.subregion);
+          
+          const name = parts.length > 0 ? parts.join(" ") : (place.name || null);
+          setLocationName(name);
+        }
+      } catch (geoErr) {
+        console.log("Reverse geocode error:", geoErr);
+        // 지역명 실패해도 날씨는 계속 표시
+      }
     } catch (err) {
       console.error("Weather fetch error:", err);
       setError("날씨 정보를 가져올 수 없습니다");
@@ -156,11 +180,13 @@ export function WeatherWidget() {
 
   return (
     <View className="bg-surface rounded-2xl p-4 mx-4 mb-4 border border-border">
-      {/* 헤더 */}
+      {/* 헤더 - 지역명 표시 */}
       <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center">
+        <View className="flex-row items-center flex-1">
           <MaterialIcons name="wb-sunny" size={18} color={colors.primary} />
-          <Text className="text-sm font-semibold text-foreground ml-1">현재 날씨</Text>
+          <Text className="text-sm font-semibold text-foreground ml-1" numberOfLines={1}>
+            {locationName ? `${locationName} 날씨` : "현재 날씨"}
+          </Text>
         </View>
         <Pressable
           onPress={handleRefresh}

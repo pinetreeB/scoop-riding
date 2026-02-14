@@ -1,0 +1,9 @@
+{
+  "query": "SELECT s.id, s.name, s.totalDistance, s.totalRides, s.userId, (SELECT COUNT(*) FROM ridingRecords r WHERE r.scooterId = s.id AND r.userId = s.userId) as actualRides, (SELECT COALESCE(SUM(r.distance), 0) FROM ridingRecords r WHERE r.scooterId = s.id AND r.userId = s.userId) as actualDistance FROM scooters s WHERE s.totalDistance = 0 AND (SELECT COUNT(*) FROM ridingRecords r WHERE r.scooterId = s.id AND r.userId = s.userId) > 0 LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT s.id, s.name, s.totalDistance, s.totalRides, s.userId, (SELECT COUNT(*) FROM ridingRecords r WHERE r.scooterId = s.id AND r.userId = s.userId) as actualRides, (SELECT COALESCE(SUM(r.distance), 0) FROM ridingRecords r WHERE r.scooterId = s.id AND r.userId = s.userId) as actualDistance FROM scooters s WHERE s.totalDistance = 0 AND (SELECT COUNT(*) FROM ridingRecords r WHERE r.scooterId = s.id AND r.userId = s.userId) > 0 LIMIT 10;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1544
+}

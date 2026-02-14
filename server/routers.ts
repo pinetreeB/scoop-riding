@@ -787,6 +787,8 @@ ${ridesSummary}
   // Scooter (기체) management (protected - requires login)
   scooters: router({
     list: protectedProcedure.query(async ({ ctx }) => {
+      // 기체 목록 조회 시 자동으로 stats 재계산 (주행거리 0 버그 수정)
+      await db.recalculateAllScooterStats(ctx.user.id);
       return db.getUserScooters(ctx.user.id);
     }),
 

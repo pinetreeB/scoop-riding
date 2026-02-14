@@ -1271,3 +1271,10 @@
 ## 버그 수정 (2026-02-14)
 - [x] BUG: 관리자 대시보드 진입 불가 (undefined is not a function 에러) - MySQL 결과 Number() 변환, post.author?.name → post.authorName 수정
 - [x] BUG: Galaxy S25 소나무군 계정에서 커뮤니티 화면 안 뜸 - Pressable className→TouchableOpacity style 전환, 에러 핸들링 추가, retry 기능 추가
+
+## 버그 수정 (2026-02-14 #2)
+- [x] BUG: 장거리 주행(1시간42분, 151km) 후 "저장 오류" 발생 - GPS 다운샘플링 강화(2000개 제한), 저장 실패 시 GPS 없이 재시도, 서버 sync 시 GPS 크기 제한
+- [x] BUG: 기체(하코) 주행거리 0km, 0회 주행으로 표시 - scooters.list에서 자동 recalculate 후 반환하도록 수정
+- [x] BUG: 날씨 카드에 지역명 미표시 - reverseGeocodeAsync로 지역명 표시 추가
+- [x] BUG: Quick Actions 카드 내용 글씨 안 보임 - numberOfLines 2로 확대, 텍스트 크기 text-sm으로 키움
+- [x] BUG: 관리자 대시보드 상단 절반 흰 화면 - ScrollView 내부 flex-1 제거로 레이아웃 수정

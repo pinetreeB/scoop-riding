@@ -179,8 +179,8 @@ export async function saveRidingRecord(record: RidingRecord, retryCount = 0): Pr
     
     // Save GPS points separately to avoid storage limits (user-specific)
     if (record.gpsPoints && record.gpsPoints.length > 0) {
-      // Downsample if too many points (more than 1 hour of 1-second intervals)
-      const optimizedPoints = downsampleGpsPoints(record.gpsPoints, 3600);
+      // Downsample if too many points - 장거리 주행 시 저장 실패 방지를 위해 2000개로 제한
+      const optimizedPoints = downsampleGpsPoints(record.gpsPoints, 2000);
       
       // Use chunked storage for large datasets
       if (optimizedPoints.length > 1000) {

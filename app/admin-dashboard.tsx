@@ -565,7 +565,7 @@ function AnnouncementsTab({ colors }: { colors: any }) {
   };
 
   return (
-    <View className="flex-1 p-4">
+    <View className="p-4">
       {isLoading ? (
         <ActivityIndicator size="large" color={colors.primary} />
       ) : (
@@ -884,7 +884,7 @@ function UsersTab({ colors }: { colors: any }) {
   };
 
   return (
-    <View className="flex-1 p-4">
+    <View className="p-4">
       <View className="flex-row items-center bg-surface border border-border rounded-xl px-4 mb-4">
         <MaterialIcons name="search" size={20} color={colors.muted} />
         <TextInput
@@ -1079,7 +1079,7 @@ function PostsTab({ colors }: { colors: any }) {
   };
 
   return (
-    <View className="flex-1 p-4">
+    <View className="p-4">
       {isLoading ? (
         <ActivityIndicator size="large" color={colors.primary} />
       ) : error ? (
@@ -1165,7 +1165,7 @@ function RidesTab({ colors }: { colors: any }) {
   const totalPages = data ? Math.ceil(data.total / 50) : 1;
 
   return (
-    <View className="flex-1 p-4">
+    <View className="p-4">
       {/* Summary */}
       <View className="bg-surface rounded-xl p-4 mb-4 border border-border">
         <Text className="text-muted text-sm">전체 주행 기록</Text>

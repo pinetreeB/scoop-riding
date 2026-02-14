@@ -1591,13 +1591,27 @@ export default function RidingScreen() {
         await clearRideSessionBackup();
         console.log("[Riding] Session backup cleared after successful save");
       } catch (saveError) {
-        console.error("[Riding] Failed to save record:", saveError);
-        Alert.alert(
-          "저장 오류",
-          "주행 기록을 저장하는 중 오류가 발생했습니다. 다시 시도해주세요.",
-          [{ text: "확인" }]
-        );
-        return;
+        console.error("[Riding] Failed to save record (with GPS):", saveError);
+        
+        // 장거리 주행 시 GPS 데이터가 너무 커서 저장 실패할 수 있음
+        // GPS 포인트 없이 재시도
+        try {
+          console.log("[Riding] Retrying save without GPS points...");
+          const recordWithoutGps = { ...recordWithVoltage };
+          delete recordWithoutGps.gpsPoints;
+          recordWithoutGps.gpsPoints = [];
+          await saveRidingRecord(recordWithoutGps);
+          console.log("[Riding] Record saved without GPS points");
+          await clearRideSessionBackup();
+        } catch (retryError) {
+          console.error("[Riding] Failed to save record even without GPS:", retryError);
+          Alert.alert(
+            "저장 오류",
+            "주행 기록을 저장하는 중 오류가 발생했습니다. 다시 시도해주세요.",
+            [{ text: "확인" }]
+          );
+          return;
+        }
       }
 
       // Voice announcement for ride completion
@@ -1627,6 +1641,18 @@ export default function RidingScreen() {
           );
           console.log(`[Riding] GPS compressed: ${stats.originalCount} → ${stats.compressedCount} points (${stats.compressionRatio}% saved)`);
           compressedGpsPointsJson = JSON.stringify(compressedPoints);
+          
+          // 장거리 주행 시 GPS JSON이 너무 크면 추가 다운샘플링 (5MB 제한)
+          const MAX_GPS_JSON_SIZE = 5 * 1024 * 1024; // 5MB
+          if (compressedGpsPointsJson.length > MAX_GPS_JSON_SIZE) {
+            console.log(`[Riding] GPS JSON too large (${(compressedGpsPointsJson.length / 1024 / 1024).toFixed(1)}MB), further downsampling...`);
+            const ratio = Math.ceil(compressedPoints.length / 1000);
+            const furtherReduced = compressedPoints.filter((_: any, i: number) => 
+              i === 0 || i === compressedPoints.length - 1 || i % ratio === 0
+            );
+            compressedGpsPointsJson = JSON.stringify(furtherReduced);
+            console.log(`[Riding] Further reduced to ${furtherReduced.length} points (${(compressedGpsPointsJson.length / 1024).toFixed(0)}KB)`);
+          }
         }
         
         const syncResult = await syncToServer.mutateAsync({

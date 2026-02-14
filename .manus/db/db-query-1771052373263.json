@@ -1,0 +1,118 @@
+{
+  "query": "SELECT r.id, r.distance, r.date, r.scooterId, s.name as scooterName, s.totalDistance, s.totalRides FROM ridingRecords r LEFT JOIN scooters s ON r.scooterId = s.id WHERE r.userId = (SELECT userId FROM scooters WHERE name LIKE '%하코%' LIMIT 1) ORDER BY r.id DESC LIMIT 15;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT r.id, r.distance, r.date, r.scooterId, s.name as scooterName, s.totalDistance, s.totalRides FROM ridingRecords r LEFT JOIN scooters s ON r.scooterId = s.id WHERE r.userId = (SELECT userId FROM scooters WHERE name LIKE '%하코%' LIMIT 1) ORDER BY r.id DESC LIMIT 15;",
+  "rows": [
+    {
+      "id": "3720001",
+      "distance": "3792",
+      "date": "2026. 2. 14.",
+      "scooterId": "NULL",
+      "scooterName": "NULL",
+      "totalDistance": "NULL",
+      "totalRides": "NULL"
+    },
+    {
+      "id": "3420001",
+      "distance": "0",
+      "date": "2026. 2. 10.",
+      "scooterId": "NULL",
+      "scooterName": "NULL",
+      "totalDistance": "NULL",
+      "totalRides": "NULL"
+    },
+    {
+      "id": "2730002",
+      "distance": "27439",
+      "date": "2026. 2. 5.",
+      "scooterId": "NULL",
+      "scooterName": "NULL",
+      "totalDistance": "NULL",
+      "totalRides": "NULL"
+    },
+    {
+      "id": "2670003",
+      "distance": "7111",
+      "date": "2026. 2. 5.",
+      "scooterId": "NULL",
+      "scooterName": "NULL",
+      "totalDistance": "NULL",
+      "totalRides": "NULL"
+    },
+    {
+      "id": "2670002",
+      "distance": "403",
+      "date": "2026. 2. 5.",
+      "scooterId": "NULL",
+      "scooterName": "NULL",
+      "totalDistance": "NULL",
+      "totalRides": "NULL"
+    },
+    {
+      "id": "2610001",
+      "distance": "32152",
+      "date": "2026. 2. 4.",
+      "scooterId": "NULL",
+      "scooterName": "NULL",
+      "totalDistance": "NULL",
+      "totalRides": "NULL"
+    },
+    {
+      "id": "2580001",
+      "distance": "15",
+      "date": "2026. 2. 4.",
+      "scooterId": "NULL",
+      "scooterName": "NULL",
+      "totalDistance": "NULL",
+      "totalRides": "NULL"
+    },
+    {
+      "id": "2550015",
+      "distance": "303",
+      "date": "2026. 2. 4.",
+      "scooterId": "NULL",
+      "scooterName": "NULL",
+      "totalDistance": "NULL",
+      "totalRides": "NULL"
+    },
+    {
+      "id": "2490003",
+      "distance": "11703",
+      "date": "2026. 2. 3.",
+      "scooterId": "NULL",
+      "scooterName": "NULL",
+      "totalDistance": "NULL",
+      "totalRides": "NULL"
+    },
+    {
+      "id": "2370001",
+      "distance": "7180",
+      "date": "2026. 2. 3.",
+      "scooterId": "NULL",
+      "scooterName": "NULL",
+      "totalDistance": "NULL",
+      "totalRides": "NULL"
+    },
+    {
+      "id": "2220004",
+      "distance": "679",
+      "date": "2026. 2. 2.",
+      "scooterId": "NULL",
+      "scooterName": "NULL",
+      "totalDistance": "NULL",
+      "totalRides": "NULL"
+    },
+    {
+      "id": "2220001",
+      "distance": "1681",
+      "date": "2026. 2. 2.",
+      "scooterId": "NULL",
+      "scooterName": "NULL",
+      "totalDistance": "NULL",
+      "totalRides": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tdistance\tdate\tscooterId\tscooterName\ttotalDistance\ttotalRides\n3720001\t3792\t2026. 2. 14.\tNULL\tNULL\tNULL\tNULL\n3420001\t0\t2026. 2. 10.\tNULL\tNULL\tNULL\tNULL\n2730002\t27439\t2026. 2. 5.\tNULL\tNULL\tNULL\tNULL\n2670003\t7111\t2026. 2. 5.\tNULL\tNULL\tNULL\tNULL\n2670002\t403\t2026. 2. 5.\tNULL\tNULL\tNULL\tNULL\n2610001\t32152\t2026. 2. 4.\tNULL\tNULL\tNULL\tNULL\n2580001\t15\t2026. 2. 4.\tNULL\tNULL\tNULL\tNULL\n2550015\t303\t2026. 2. 4.\tNULL\tNULL\tNULL\tNULL\n2490003\t11703\t2026. 2. 3.\tNULL\tNULL\tNULL\tNULL\n2370001\t7180\t2026. 2. 3.\tNULL\tNULL\tNULL\tNULL\n2220004\t679\t2026. 2. 2.\tNULL\tNULL\tNULL\tNULL\n2220001\t1681\t2026. 2. 2.\tNULL\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1549
+}

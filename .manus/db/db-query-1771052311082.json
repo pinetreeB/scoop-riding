@@ -1,0 +1,21 @@
+{
+  "query": "SELECT id, userId, date, duration, distance, avgSpeed, maxSpeed, scooterId, LENGTH(gpsPointsJson) as gpsJsonLen FROM ridingRecords WHERE duration > 3600 OR distance > 100000 ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT id, userId, date, duration, distance, avgSpeed, maxSpeed, scooterId, LENGTH(gpsPointsJson) as gpsJsonLen FROM ridingRecords WHERE duration > 3600 OR distance > 100000 ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "2970004",
+      "userId": "4530402",
+      "date": "2026. 2. 6.",
+      "duration": "3252",
+      "distance": "104796",
+      "avgSpeed": "1047",
+      "maxSpeed": "1379",
+      "scooterId": "NULL",
+      "gpsJsonLen": "493973"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tdate\tduration\tdistance\tavgSpeed\tmaxSpeed\tscooterId\tgpsJsonLen\n2970004\t4530402\t2026. 2. 6.\t3252\t104796\t1047\t1379\tNULL\t493973\n",
+  "stderr": "",
+  "execution_time_ms": 1585
+}

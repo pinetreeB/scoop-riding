@@ -1,0 +1,21 @@
+{
+  "query": "SELECT s.id as scooterId, s.name, s.totalDistance, s.totalRides, s.userId, r.id as rideId, r.distance, r.duration, r.date FROM scooters s LEFT JOIN ridingRecords r ON r.scooterId = s.id AND r.userId = s.userId WHERE s.name LIKE '%하코%' ORDER BY r.id DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT s.id as scooterId, s.name, s.totalDistance, s.totalRides, s.userId, r.id as rideId, r.distance, r.duration, r.date FROM scooters s LEFT JOIN ridingRecords r ON r.scooterId = s.id AND r.userId = s.userId WHERE s.name LIKE '%하코%' ORDER BY r.id DESC;",
+  "rows": [
+    {
+      "scooterId": "330001",
+      "name": "하코",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "1920694",
+      "rideId": "NULL",
+      "distance": "NULL",
+      "duration": "NULL",
+      "date": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "scooterId\tname\ttotalDistance\ttotalRides\tuserId\trideId\tdistance\tduration\tdate\n330001\t하코\t0\t0\t1920694\tNULL\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1499
+}

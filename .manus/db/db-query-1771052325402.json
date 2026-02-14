@@ -1,0 +1,307 @@
+{
+  "query": "SELECT s.id, s.name, s.totalDistance, s.totalRides, s.userId, (SELECT COUNT(*) FROM ridingRecords r WHERE r.scooterId = s.id) as actualRides, (SELECT COALESCE(SUM(r.distance), 0) FROM ridingRecords r WHERE r.scooterId = s.id) as actualDistance FROM scooters s ORDER BY s.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT s.id, s.name, s.totalDistance, s.totalRides, s.userId, (SELECT COUNT(*) FROM ridingRecords r WHERE r.scooterId = s.id) as actualRides, (SELECT COALESCE(SUM(r.distance), 0) FROM ridingRecords r WHERE r.scooterId = s.id) as actualDistance FROM scooters s ORDER BY s.id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "하이퍼코어",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "1",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "30001",
+      "name": "Ev6",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "120152",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "30002",
+      "name": "cbr600rr",
+      "totalDistance": "3516",
+      "totalRides": "1",
+      "userId": "120503",
+      "actualRides": "1",
+      "actualDistance": "3516"
+    },
+    {
+      "id": "60001",
+      "name": "5N",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "150001",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "90001",
+      "name": "커브",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "120051",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "90002",
+      "name": "테스트",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "330874",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "120001",
+      "name": "뽀로로",
+      "totalDistance": "21501",
+      "totalRides": "5",
+      "userId": "420001",
+      "actualRides": "5",
+      "actualDistance": "21501"
+    },
+    {
+      "id": "150001",
+      "name": "찡브이",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "1",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "180001",
+      "name": "dualtron new storm",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "2790182",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "180002",
+      "name": "g3",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "2790182",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "210001",
+      "name": "위페드 FS",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3545973",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "210002",
+      "name": "Limousine TX119",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3547701",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "210003",
+      "name": "차",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3546319",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "240001",
+      "name": "몬스터",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3547822",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "240002",
+      "name": "만두125",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3570423",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "270001",
+      "name": "타우러스 뉴지티",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3690001",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "270004",
+      "name": "슬랙 이온",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3690477",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "270005",
+      "name": "전동보드",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3690477",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "300001",
+      "name": "라이롱",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3840161",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "330001",
+      "name": "하코",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "1920694",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "330002",
+      "name": "스웨5_1",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3961751",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "330003",
+      "name": "테스트4885",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3961721",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "330004",
+      "name": "로보롱",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3961751",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "330005",
+      "name": "썬더",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3961751",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "330006",
+      "name": "사퐁",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3840161",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "330007",
+      "name": "이글이글",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3840161",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "330008",
+      "name": "스파이시",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3840161",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "330009",
+      "name": "레거시",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3840161",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "330010",
+      "name": "울푸",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3840161",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "360001",
+      "name": "다크소닉",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "3571703",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "390001",
+      "name": "투싼",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "4530402",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "420001",
+      "name": "킥보드",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "7020001",
+      "actualRides": "0",
+      "actualDistance": "0"
+    },
+    {
+      "id": "450001",
+      "name": "내킥보드",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "userId": "7020809",
+      "actualRides": "0",
+      "actualDistance": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\ttotalDistance\ttotalRides\tuserId\tactualRides\tactualDistance\n1\t하이퍼코어\t0\t0\t1\t0\t0\n30001\tEv6\t0\t0\t120152\t0\t0\n30002\tcbr600rr\t3516\t1\t120503\t1\t3516\n60001\t5N\t0\t0\t150001\t0\t0\n90001\t커브\t0\t0\t120051\t0\t0\n90002\t테스트\t0\t0\t330874\t0\t0\n120001\t뽀로로\t21501\t5\t420001\t5\t21501\n150001\t찡브이\t0\t0\t1\t0\t0\n180001\tdualtron new storm\t0\t0\t2790182\t0\t0\n180002\tg3\t0\t0\t2790182\t0\t0\n210001\t위페드 FS\t0\t0\t3545973\t0\t0\n210002\tLimousine TX119\t0\t0\t3547701\t0\t0\n210003\t차\t0\t0\t3546319\t0\t0\n240001\t몬스터\t0\t0\t3547822\t0\t0\n240002\t만두125\t0\t0\t3570423\t0\t0\n270001\t타우러스 뉴지티\t0\t0\t3690001\t0\t0\n270004\t슬랙 이온\t0\t0\t3690477\t0\t0\n270005\t전동보드\t0\t0\t3690477\t0\t0\n300001\t라이롱\t0\t0\t3840161\t0\t0\n330001\t하코\t0\t0\t1920694\t0\t0\n330002\t스웨5_1\t0\t0\t3961751\t0\t0\n330003\t테스트4885\t0\t0\t3961721\t0\t0\n330004\t로보롱\t0\t0\t3961751\t0\t0\n330005\t썬더\t0\t0\t3961751\t0\t0\n330006\t사퐁\t0\t0\t3840161\t0\t0\n330007\t이글이글\t0\t0\t3840161\t0\t0\n330008\t스파이시\t0\t0\t3840161\t0\t0\n330009\t레거시\t0\t0\t3840161\t0\t0\n330010\t울푸\t0\t0\t3840161\t0\t0\n360001\t다크소닉\t0\t0\t3571703\t0\t0\n390001\t투싼\t0\t0\t4530402\t0\t0\n420001\t킥보드\t0\t0\t7020001\t0\t0\n450001\t내킥보드\t0\t0\t7020809\t0\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1543
+}

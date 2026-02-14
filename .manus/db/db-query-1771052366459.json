@@ -1,0 +1,100 @@
+{
+  "query": "SELECT r.id, r.userId, r.distance, r.duration, r.date, r.scooterId, r.startTime FROM ridingRecords r WHERE r.userId = (SELECT userId FROM scooters WHERE name LIKE '%하코%' LIMIT 1) ORDER BY r.id DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT r.id, r.userId, r.distance, r.duration, r.date, r.scooterId, r.startTime FROM ridingRecords r WHERE r.userId = (SELECT userId FROM scooters WHERE name LIKE '%하코%' LIMIT 1) ORDER BY r.id DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "3720001",
+      "userId": "1920694",
+      "distance": "3792",
+      "duration": "422",
+      "date": "2026. 2. 14.",
+      "scooterId": "NULL",
+      "startTime": "2026-02-13 16:05:25"
+    },
+    {
+      "id": "3420001",
+      "userId": "1920694",
+      "distance": "0",
+      "duration": "5",
+      "date": "2026. 2. 10.",
+      "scooterId": "NULL",
+      "startTime": "2026-02-10 11:33:25"
+    },
+    {
+      "id": "2730002",
+      "userId": "1920694",
+      "distance": "27439",
+      "duration": "1587",
+      "date": "2026. 2. 5.",
+      "scooterId": "NULL",
+      "startTime": "2026-02-05 05:40:31"
+    },
+    {
+      "id": "2670003",
+      "userId": "1920694",
+      "distance": "7111",
+      "duration": "731",
+      "date": "2026. 2. 5.",
+      "scooterId": "NULL",
+      "startTime": "2026-02-04 16:35:53"
+    },
+    {
+      "id": "2670002",
+      "userId": "1920694",
+      "distance": "403",
+      "duration": "100",
+      "date": "2026. 2. 5.",
+      "scooterId": "NULL",
+      "startTime": "2026-02-04 16:33:31"
+    },
+    {
+      "id": "2610001",
+      "userId": "1920694",
+      "distance": "32152",
+      "duration": "1422",
+      "date": "2026. 2. 4.",
+      "scooterId": "NULL",
+      "startTime": "2026-02-04 11:15:38"
+    },
+    {
+      "id": "2580001",
+      "userId": "1920694",
+      "distance": "15",
+      "duration": "28",
+      "date": "2026. 2. 4.",
+      "scooterId": "NULL",
+      "startTime": "2026-02-04 10:12:07"
+    },
+    {
+      "id": "2550015",
+      "userId": "1920694",
+      "distance": "303",
+      "duration": "227",
+      "date": "2026. 2. 4.",
+      "scooterId": "NULL",
+      "startTime": "2026-02-04 09:21:58"
+    },
+    {
+      "id": "2490003",
+      "userId": "1920694",
+      "distance": "11703",
+      "duration": "641",
+      "date": "2026. 2. 3.",
+      "scooterId": "NULL",
+      "startTime": "2026-02-03 13:13:57"
+    },
+    {
+      "id": "2370001",
+      "userId": "1920694",
+      "distance": "7180",
+      "duration": "663",
+      "date": "2026. 2. 3.",
+      "scooterId": "NULL",
+      "startTime": "2026-02-02 15:09:10"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tdistance\tduration\tdate\tscooterId\tstartTime\n3720001\t1920694\t3792\t422\t2026. 2. 14.\tNULL\t2026-02-13 16:05:25\n3420001\t1920694\t0\t5\t2026. 2. 10.\tNULL\t2026-02-10 11:33:25\n2730002\t1920694\t27439\t1587\t2026. 2. 5.\tNULL\t2026-02-05 05:40:31\n2670003\t1920694\t7111\t731\t2026. 2. 5.\tNULL\t2026-02-04 16:35:53\n2670002\t1920694\t403\t100\t2026. 2. 5.\tNULL\t2026-02-04 16:33:31\n2610001\t1920694\t32152\t1422\t2026. 2. 4.\tNULL\t2026-02-04 11:15:38\n2580001\t1920694\t15\t28\t2026. 2. 4.\tNULL\t2026-02-04 10:12:07\n2550015\t1920694\t303\t227\t2026. 2. 4.\tNULL\t2026-02-04 09:21:58\n2490003\t1920694\t11703\t641\t2026. 2. 3.\tNULL\t2026-02-03 13:13:57\n2370001\t1920694\t7180\t663\t2026. 2. 3.\tNULL\t2026-02-02 15:09:10\n",
+  "stderr": "",
+  "execution_time_ms": 1537
+}

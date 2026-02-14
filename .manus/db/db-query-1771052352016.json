@@ -1,0 +1,36 @@
+{
+  "query": "SELECT * FROM scooters WHERE name LIKE '%하코%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mJX9EQK12biUJGd.0c3e5cf8c922 --database XQsH52MNZAyXrU9qYq4MDw --execute SELECT * FROM scooters WHERE name LIKE '%하코%';",
+  "rows": [
+    {
+      "id": "330001",
+      "userId": "1920694",
+      "name": "하코",
+      "brand": "스쿱",
+      "model": "하이퍼코어",
+      "serialNumber": "NULL",
+      "purchaseDate": "NULL",
+      "initialOdometer": "100",
+      "totalDistance": "0",
+      "totalRides": "0",
+      "isDefault": "1",
+      "color": "#FF6D00",
+      "notes": "NULL",
+      "createdAt": "2026-02-03 08:22:17",
+      "updatedAt": "2026-02-03 08:22:17",
+      "maintenanceInterval": "500000",
+      "lastMaintenanceDistance": "0",
+      "lastMaintenanceDate": "NULL",
+      "batteryVoltage": "88",
+      "batteryCapacity": "45.00",
+      "batteryType": "lithium_ion",
+      "batteryCellCount": "24",
+      "batteryFullVoltage": "100.80",
+      "batteryEmptyVoltage": "72.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tname\tbrand\tmodel\tserialNumber\tpurchaseDate\tinitialOdometer\ttotalDistance\ttotalRides\tisDefault\tcolor\tnotes\tcreatedAt\tupdatedAt\tmaintenanceInterval\tlastMaintenanceDistance\tlastMaintenanceDate\tbatteryVoltage\tbatteryCapacity\tbatteryType\tbatteryCellCount\tbatteryFullVoltage\tbatteryEmptyVoltage\n330001\t1920694\t하코\t스쿱\t하이퍼코어\tNULL\tNULL\t100\t0\t0\t1\t#FF6D00\tNULL\t2026-02-03 08:22:17\t2026-02-03 08:22:17\t500000\t0\tNULL\t88\t45.00\tlithium_ion\t24\t100.80\t72.00\n",
+  "stderr": "",
+  "execution_time_ms": 1516
+}
