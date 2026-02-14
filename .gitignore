@@ -60,3 +60,9 @@ Thumbs.db
 *.tgz
 *.tar.gz
 .cache/
+
+# Sensitive token files
+expo-token.txt
+expo-token-v2.txt
+*.token
+*.key.txt
