@@ -18,7 +18,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://scoopride-xqsh52mn.manus.space",
+        "EXPO_PUBLIC_API_BASE_URL": "https://scoop-riding-server-636693195470.asia-northeast3.run.app",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "447637248249-9hq9bj8l8tnkq7tecah0nbfv75anqdlo.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "447637248249-hm0k8figug49i4t0ej2n6l667nmp2b0g.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyBNXFzCS5S1BAYbOldscsMxnkNd-89DeEY"
@@ -30,7 +30,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://scoopride-xqsh52mn.manus.space",
+        "EXPO_PUBLIC_API_BASE_URL": "https://scoop-riding-server-636693195470.asia-northeast3.run.app",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "447637248249-9hq9bj8l8tnkq7tecah0nbfv75anqdlo.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "447637248249-hm0k8figug49i4t0ej2n6l667nmp2b0g.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyBNXFzCS5S1BAYbOldscsMxnkNd-89DeEY"
