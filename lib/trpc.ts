@@ -28,6 +28,7 @@ export function createTRPCClient() {
         url: `${baseUrl}/api/trpc`,
         // tRPC v11: transformer MUST be inside httpBatchLink, not at root
         transformer: superjson,
+        maxURLLength: 2083,
         async headers() {
           const token = await Auth.getSessionToken();
           console.log("[tRPC] headers() called, hasToken:", !!token);
@@ -39,16 +40,22 @@ export function createTRPCClient() {
         // Custom fetch to include credentials for cookie-based auth
         fetch(url, options) {
           console.log("[tRPC] fetch() called:", { url: String(url).substring(0, 100), method: options?.method || "GET" });
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+
           return fetch(url, {
             ...options,
             credentials: "include",
+            signal: controller.signal,
           }).then(response => {
+            clearTimeout(timeoutId);
             console.log("[tRPC] Response status:", response.status);
             if (!response.ok) {
               console.error("[tRPC] Request failed with status:", response.status);
             }
             return response;
           }).catch(error => {
+            clearTimeout(timeoutId);
             console.error("[tRPC] Fetch error:", error);
             throw error;
           });

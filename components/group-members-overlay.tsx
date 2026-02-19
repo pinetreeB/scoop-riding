@@ -65,18 +65,21 @@ export function GroupMembersOverlay({
       >
         <Text style={styles.title}>그룹원</Text>
         <View style={styles.membersList}>
-          {otherMembers.map((member) => (
+          {otherMembers.map((member) => {
+            const isOffline = member.isOnline === false;
+
+            return (
             <TouchableOpacity
               key={member.id}
               style={styles.memberItem}
               onPress={() => onMemberPress?.(member)}
-              disabled={!member.isRiding || !member.latitude}
+              disabled={isOffline || !member.latitude}
               activeOpacity={0.7}
             >
               <View
                 style={[
                   styles.profileContainer,
-                  !member.isRiding && styles.profileInactive,
+                  isOffline && styles.profileInactive,
                 ]}
               >
                 {member.profileImage ? (
@@ -84,8 +87,8 @@ export function GroupMembersOverlay({
                     source={{ uri: member.profileImage }}
                     style={[
                       styles.profileImage,
-                      { borderColor: member.isRiding ? "#4CAF50" : "#666" },
-                      !member.isRiding && styles.profileImageInactive,
+                      { borderColor: isOffline ? "#666" : "#4CAF50" },
+                      isOffline && styles.profileImageInactive,
                     ]}
                   />
                 ) : (
@@ -93,7 +96,7 @@ export function GroupMembersOverlay({
                     style={[
                       styles.profilePlaceholder,
                       { backgroundColor: member.profileColor || "#FF6B00" },
-                      !member.isRiding && styles.profilePlaceholderInactive,
+                      isOffline && styles.profilePlaceholderInactive,
                     ]}
                   >
                     <Text style={styles.profileInitial}>
@@ -104,30 +107,31 @@ export function GroupMembersOverlay({
                 {/* Online/Offline status indicator */}
                 <View style={[
                   styles.statusIndicator,
-                  member.isRiding ? styles.statusOnline : styles.statusOffline,
+                  isOffline ? styles.statusOffline : styles.statusOnline,
                 ]} />
               </View>
               <Text
                 style={[
                   styles.memberName,
-                  !member.isRiding && styles.memberNameInactive,
+                  isOffline && styles.memberNameInactive,
                 ]}
                 numberOfLines={1}
               >
                 {member.name || "익명"}
               </Text>
-              {member.isRiding && member.speed !== undefined && (
+              {!isOffline && member.isRiding && member.speed !== undefined && (
                 <Text style={styles.memberSpeed}>
                   {member.speed.toFixed(0)}km/h
                 </Text>
               )}
-              {!member.isRiding && (
+              {(isOffline || !member.isRiding) && (
                 <Text style={styles.memberStatus}>
-                  {member.isOnline === false ? "오프라인" : "대기중"}
+                  {isOffline ? "오프라인" : "대기중"}
                 </Text>
               )}
             </TouchableOpacity>
-          ))}
+            );
+          })}
         </View>
       </Container>
     </View>

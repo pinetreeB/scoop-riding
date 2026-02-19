@@ -15,6 +15,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/hooks/use-translation";
+import { useAuth } from "@/hooks/use-auth";
 
 // Badge definitions with icons and colors
 const BADGE_DEFINITIONS: Record<string, { nameKey: string; descKey: string; icon: string; color: string }> = {
@@ -108,20 +109,55 @@ export default function BadgesScreen() {
   const router = useRouter();
   const colors = useColors();
   const { t, language } = useTranslation();
+  const { isAuthenticated } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data: myBadges, refetch } = trpc.badges.mine.useQuery();
+  const { data: myBadges, refetch } = trpc.badges.mine.useQuery(undefined, { enabled: isAuthenticated });
+  const myStatsQuery = trpc.friends.getMyStats.useQuery(undefined, { enabled: isAuthenticated });
+  const checkBadgesMutation = trpc.badges.check.useMutation();
 
   useFocusEffect(
     useCallback(() => {
-      refetch();
-    }, [refetch])
+      const runBadgeCheck = async () => {
+        if (!isAuthenticated) return;
+
+        try {
+          const stats = await myStatsQuery.refetch();
+          const statsData = stats.data;
+
+          if (statsData) {
+            await checkBadgesMutation.mutateAsync({
+              totalDistance: statsData.totalDistance || 0,
+              totalRides: statsData.totalRides || 0,
+            });
+          }
+        } catch (error) {
+          console.log("[Badges] Badge check error:", error);
+        } finally {
+          await refetch();
+        }
+      };
+
+      runBadgeCheck();
+    }, [isAuthenticated, myStatsQuery, checkBadgesMutation, refetch])
   );
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
+    try {
+      const stats = await myStatsQuery.refetch();
+      if (stats.data) {
+        await checkBadgesMutation.mutateAsync({
+          totalDistance: stats.data.totalDistance || 0,
+          totalRides: stats.data.totalRides || 0,
+        });
+      }
+      await refetch();
+    } catch (error) {
+      console.log("[Badges] Refresh badge check error:", error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const earnedBadgeNames = new Set(myBadges?.map((b) => b.badge.name) || []);

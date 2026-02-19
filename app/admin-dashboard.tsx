@@ -262,7 +262,7 @@ function AdminDashboardContent() {
   return (
     <ScreenContainer>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
+      <View className="flex-row items-center justify-between px-4 py-2 border-b border-border">
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -272,40 +272,56 @@ function AdminDashboardContent() {
         </TouchableOpacity>
       </View>
 
-      {/* Tab Selector - Scrollable */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        className="border-b border-border"
-        contentContainerStyle={{ paddingHorizontal: 8 }}
-      >
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            className={`px-4 py-3 items-center ${activeTab === tab.key ? "border-b-2 border-primary" : ""}`}
-            onPress={() => setActiveTab(tab.key as TabType)}
-          >
-            <View className="flex-row items-center">
-              <MaterialIcons
-                name={tab.icon as any}
-                size={18}
-                color={activeTab === tab.key ? colors.primary : colors.muted}
-              />
-              <Text className={`ml-1 text-sm font-medium ${activeTab === tab.key ? "text-primary" : "text-muted"}`}>
-                {tab.label}
-              </Text>
-              {tab.badge && tab.badge > 0 && (
-                <View className="ml-1 bg-error rounded-full px-1.5 py-0.5 min-w-[18px] items-center">
-                  <Text className="text-white text-xs font-bold">{tab.badge}</Text>
+      {/* Tab Selector - Compact & Fixed */}
+      <View className="border-b border-border bg-background">
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 4, gap: 6 }}
+        >
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                className="rounded-full border"
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderColor: isActive ? colors.primary : colors.border,
+                  backgroundColor: isActive ? `${colors.primary}14` : colors.surface,
+                }}
+                onPress={() => setActiveTab(tab.key as TabType)}
+              >
+                <View className="flex-row items-center">
+                  <MaterialIcons
+                    name={tab.icon as any}
+                    size={14}
+                    color={isActive ? colors.primary : colors.muted}
+                  />
+                  <Text
+                    className="ml-1 text-xs font-semibold"
+                    style={{ color: isActive ? colors.primary : colors.muted }}
+                  >
+                    {tab.label}
+                  </Text>
+                  {tab.badge && tab.badge > 0 && (
+                    <View className="ml-1 bg-error rounded-full px-1.5 py-0.5 min-w-[16px] items-center">
+                      <Text className="text-white text-[10px] font-bold">{tab.badge}</Text>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       <ScrollView
         className="flex-1"
+        contentContainerStyle={{ paddingTop: 0, paddingBottom: 8 }}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
@@ -338,7 +354,6 @@ function AdminDashboardContent() {
         {activeTab === "posts" && <PostsTab colors={colors} />}
         {activeTab === "rides" && <RidesTab colors={colors} />}
 
-        <View className="h-8" />
       </ScrollView>
     </ScreenContainer>
   );
