@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useCallback, useEffect, useState, useMemo } from "react";
-import { Platform } from "react-native";
+import { Alert, Platform } from "react-native";
 import * as Api from "@/lib/_core/api";
 import * as Auth from "@/lib/_core/auth";
 import { setCurrentUserId } from "@/lib/riding-store";
@@ -155,6 +155,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("[AuthContext] Token verification:", storedToken ? "stored correctly" : "FAILED TO STORE");
       } catch (tokenError) {
         console.error("[AuthContext] Failed to store session token:", tokenError);
+        Alert.alert("로그인 오류", "세션 저장에 실패했습니다. 다시 시도해주세요.");
+        throw new Error("토큰 저장 실패");
       }
     }
 

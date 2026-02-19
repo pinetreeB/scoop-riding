@@ -1750,6 +1750,13 @@ ${ridesSummary}
       .query(async ({ input }) => {
         return db.getLatestAppVersion(input.platform);
       }),
+
+    // Get version history list
+    getHistory: publicProcedure
+      .input(z.object({ platform: z.string().default("android") }))
+      .query(async ({ input }) => {
+        return db.getAllAppVersions(input.platform);
+      }),
   }),
 
   // Announcements router
