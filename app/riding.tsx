@@ -212,6 +212,11 @@ export default function RidingScreen() {
       }
     };
   }, []);
+
+  // 맵에는 현재 WebSocket 접속 중인 그룹원만 표시
+  const connectedMemberIds = new Set(wsMembers.map((member) => member.userId));
+  const visibleGroupMembers = groupMembers.filter((member) => connectedMemberIds.has(member.userId));
+
   
   // HTTP polling fallback (only when WebSocket is not connected)
   const { data: groupMembersData, refetch: refetchGroupMembers } = trpc.groups.getMembersLocations.useQuery(
@@ -2097,7 +2102,7 @@ export default function RidingScreen() {
                 isLive={true}
                 showCurrentLocation={false}
                 gpxRoute={gpxRoute}
-                groupMembers={groupMembers}
+                groupMembers={visibleGroupMembers}
                 navigationMode={true} // 주행 중에는 항상 네비게이션 스타일 (진행 방향이 위를 향하도록 지도 회전)
                 currentSpeed={currentSpeed} // 속도 기반 자동 줌 레벨 조절
                 showRecenterButton={true} // 현재 위치 버튼 표시
@@ -2110,7 +2115,7 @@ export default function RidingScreen() {
                 isLive={true}
                 showCurrentLocation={false}
                 gpxRoute={gpxRoute}
-                groupMembers={groupMembers}
+                groupMembers={visibleGroupMembers}
                 style={{ flex: 1, borderRadius: 0 }}
               />
             )}
@@ -2254,6 +2259,7 @@ export default function RidingScreen() {
                   profileImage: m.profileImage,
                   profileColor: m.profileColor ?? undefined,
                   isRiding: m.isRiding,
+                  isOnline: wsMembers.some((wsMember) => wsMember.userId === m.userId),
                   latitude: m.latitude ?? undefined,
                   longitude: m.longitude ?? undefined,
                   speed: m.currentSpeed,

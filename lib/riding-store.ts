@@ -56,6 +56,9 @@ export interface RidingStats {
 }
 
 const STORAGE_KEY_PREFIX = "scoop_riding_records";
+const MAX_RECORDS_PER_KEY = 50;
+const ARCHIVE_MAX_RECORDS = 500;
+const SYNC_FETCH_TIMEOUT_MS = 45000;
 const GPS_STORAGE_PREFIX = "scoop_gps_track_";
 const SYNC_STATUS_KEY = "scoop_sync_status";
 const USER_ID_KEY = "scoop_current_user_id";
@@ -72,6 +75,20 @@ async function getStorageKey(): Promise<string> {
   }
   // Fallback to legacy key for backward compatibility
   return STORAGE_KEY_PREFIX;
+}
+
+async function withFetchTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // Set current user ID for data isolation
@@ -229,9 +246,24 @@ export async function saveRidingRecord(record: RidingRecord, retryCount = 0): Pr
     
     const updated = [recordWithoutGps, ...existing];
     const storageKey = await getStorageKey();
+    const archiveKey = `${storageKey}_archive`;
     console.log(`[RidingStore] Saving to storage key: ${storageKey}`);
-    
-    await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
+
+    if (updated.length > MAX_RECORDS_PER_KEY) {
+      const currentRecords = updated.slice(0, MAX_RECORDS_PER_KEY);
+      const overflowRecords = updated.slice(MAX_RECORDS_PER_KEY);
+
+      const archiveData = await AsyncStorage.getItem(archiveKey);
+      const existingArchive: RidingRecord[] = archiveData ? JSON.parse(archiveData) : [];
+      const mergedArchive = [...overflowRecords, ...existingArchive].slice(0, ARCHIVE_MAX_RECORDS);
+
+      await AsyncStorage.setItem(storageKey, JSON.stringify(currentRecords));
+      await AsyncStorage.setItem(archiveKey, JSON.stringify(mergedArchive));
+
+      console.log(`[RidingStore] Main records=${currentRecords.length}, archive records=${mergedArchive.length}`);
+    } else {
+      await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
+    }
     
     // Verify the save was successful
     const verifyData = await AsyncStorage.getItem(storageKey);
@@ -265,8 +297,17 @@ export async function saveRidingRecord(record: RidingRecord, retryCount = 0): Pr
 export async function getRidingRecords(): Promise<RidingRecord[]> {
   try {
     const storageKey = await getStorageKey();
-    const data = await AsyncStorage.getItem(storageKey);
-    return data ? JSON.parse(data) : [];
+    const archiveKey = `${storageKey}_archive`;
+
+    const [mainData, archiveData] = await Promise.all([
+      AsyncStorage.getItem(storageKey),
+      AsyncStorage.getItem(archiveKey),
+    ]);
+
+    const mainRecords: RidingRecord[] = mainData ? JSON.parse(mainData) : [];
+    const archiveRecords: RidingRecord[] = archiveData ? JSON.parse(archiveData) : [];
+
+    return [...mainRecords, ...archiveRecords];
   } catch (error) {
     console.error("Failed to get riding records:", error);
     return [];
@@ -450,7 +491,7 @@ export async function syncRecordToCloud(
     try {
       const checkUrl = `${baseUrl}/api/trpc/rides.get?input=${encodeURIComponent(JSON.stringify({ json: { recordId: record.id } }))}`;
       console.log("[Sync] Checking if record exists:", record.id);
-      const checkResponse = await fetch(checkUrl, { headers, credentials: "include" });
+      const checkResponse = await withFetchTimeout(checkUrl, { headers, credentials: "include" }, SYNC_FETCH_TIMEOUT_MS);
       if (checkResponse.ok) {
         const checkData = await checkResponse.json();
         const existingRecord = checkData?.result?.data?.json;
@@ -506,12 +547,12 @@ export async function syncRecordToCloud(
     
     console.log("[Sync] Making direct fetch to:", url);
     
-    const response = await fetch(url, {
+    const response = await withFetchTimeout(url, {
       method: "POST",
       headers,
       body: JSON.stringify(requestBody),
       credentials: "include",
-    });
+    }, SYNC_FETCH_TIMEOUT_MS);
     
     console.log("[Sync] Response status:", response.status);
     
