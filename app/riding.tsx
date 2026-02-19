@@ -1689,11 +1689,12 @@ export default function RidingScreen() {
         
         // Check and award badges based on cumulative stats
         try {
-          const stats = await trpcUtils.friends.getMyStats.fetch();
-          if (stats) {
+          await trpcUtils.friends.getMyStats.invalidate();
+          const statsResult = await trpcUtils.friends.getMyStats.fetch();
+          if (statsResult) {
             const badgeResult = await checkBadgesMutation.mutateAsync({
-              totalDistance: stats.totalDistance || 0,
-              totalRides: stats.totalRides || 0,
+              totalDistance: statsResult.totalDistance || 0,
+              totalRides: statsResult.totalRides || 0,
             });
             if (badgeResult.newBadges && badgeResult.newBadges.length > 0) {
               console.log("[Riding] New badges earned:", badgeResult.newBadges);
@@ -1708,7 +1709,7 @@ export default function RidingScreen() {
             }
           }
         } catch (badgeError) {
-          console.log("[Riding] Badge check error:", badgeError);
+          console.log("[Riding] Badge check after ride:", badgeError);
         }
         
         // Invalidate ranking queries to reflect new data
@@ -2251,9 +2252,9 @@ export default function RidingScreen() {
               </View>
             )}
             {/* 그룹 라이딩 접속자 오버레이 */}
-            {groupId && groupMembers.length > 0 && (
+            {groupId && visibleGroupMembers.length > 0 && (
               <GroupMembersOverlay
-                members={groupMembers.map(m => ({
+                members={visibleGroupMembers.map(m => ({
                   id: m.userId,
                   name: m.name,
                   profileImage: m.profileImage,
