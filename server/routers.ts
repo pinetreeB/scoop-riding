@@ -11,8 +11,12 @@ import { aiUsageRouter } from "./ai-usage-router";
 
 // JWT secret for session tokens - MUST match sdk.ts getSessionSecret()
 // Uses ENV.cookieSecret which comes from JWT_SECRET environment variable
-const JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret || "scoop-riding-secret-key-change-in-production");
-console.log("[Auth] JWT_SECRET initialized, cookieSecret length:", ENV.cookieSecret?.length || 0);
+if (!ENV.cookieSecret) {
+  throw new Error("[Auth] JWT_SECRET 환경변수(JWT_SECRET)가 설정되지 않았습니다.");
+}
+
+const JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret);
+console.log("[Auth] JWT_SECRET initialized, cookieSecret length:", ENV.cookieSecret.length);
 
 // Generate session token
 // Must include openId, appId, and name to be compatible with SDK verifySession

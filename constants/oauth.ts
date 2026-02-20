@@ -115,7 +115,7 @@ export async function startOAuthLogin(): Promise<string | null> {
   const supported = await Linking.canOpenURL(loginUrl);
   if (!supported) {
     console.warn("[OAuth] Cannot open login URL: URL scheme not supported");
-    // 可考虑抛出错误或返回错误状态，让调用方处理
+    // 필요하면 에러를 던지거나 오류 상태를 반환해 호출부에서 처리할 수 있음
     return null;
   }
 
@@ -123,7 +123,7 @@ export async function startOAuthLogin(): Promise<string | null> {
     await Linking.openURL(loginUrl);
   } catch (error) {
     console.error("[OAuth] Failed to open login URL:", error);
-    // 可考虑抛出错误让调用方处理
+    // 필요하면 에러를 던져 호출부에서 처리할 수 있음
   }
 
   // The OAuth callback will reopen the app via deep link.
