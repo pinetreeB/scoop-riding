@@ -207,5 +207,5 @@ function getApiBaseUrl(): string {
   }
   
   // For native apps, use the configured API URL from environment
-  return process.env.EXPO_PUBLIC_API_BASE_URL || "https://scoopride-xqsh52mn.manus.space";
+  return process.env.EXPO_PUBLIC_API_BASE_URL || "https://scoop-riding-server-636693195470.asia-northeast3.run.app";
 }

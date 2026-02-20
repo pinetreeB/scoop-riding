@@ -1,5 +1,5 @@
 import "@/global.css";
-import { Platform } from "react-native";
+import { Alert, Platform } from "react-native";
 
 // Define background location task at module level (required by expo-task-manager)
 // Only on native platforms
@@ -10,6 +10,7 @@ if (Platform.OS !== "web") {
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
+import * as Updates from "expo-updates";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -139,6 +140,7 @@ function RootLayoutContent() {
         <Stack.Screen name="admin-dashboard" options={{ presentation: "card" }} />
         <Stack.Screen name="bug-report" options={{ presentation: "modal" }} />
         <Stack.Screen name="eco-leaderboard" options={{ presentation: "card" }} />
+        <Stack.Screen name="version-history" options={{ presentation: "card" }} />
       </Stack>
       <StatusBar style="auto" />
     </>
@@ -157,6 +159,38 @@ export default function RootLayout() {
     initManusRuntime();
     // 앱 사용 횟수 증가 (알파 테스트 설문 표시 조건)
     incrementAppUsageCount();
+  }, []);
+
+  useEffect(() => {
+    const checkOtaUpdate = async () => {
+      if (__DEV__) return;
+
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (!update.isAvailable) return;
+
+        const result = await Updates.fetchUpdateAsync();
+        if (!result.isNew) return;
+
+        Alert.alert(
+          "업데이트 준비 완료",
+          "새 버전이 준비되었습니다. 지금 적용하면 앱이 재시작됩니다.",
+          [
+            { text: "나중에", style: "cancel" },
+            {
+              text: "지금 적용",
+              onPress: () => {
+                void Updates.reloadAsync();
+              },
+            },
+          ],
+        );
+      } catch (error) {
+        console.log("[OTA] Update check failed:", error);
+      }
+    };
+
+    checkOtaUpdate();
   }, []);
 
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
@@ -179,6 +213,11 @@ export default function RootLayout() {
             // Disable automatic refetching on window focus for mobile
             refetchOnWindowFocus: false,
             // Retry failed requests once
+            retry: 1,
+            staleTime: 1000 * 60 * 5,
+            gcTime: 1000 * 60 * 30,
+          },
+          mutations: {
             retry: 1,
           },
         },

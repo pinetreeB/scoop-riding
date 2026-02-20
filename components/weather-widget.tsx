@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
-import { Text, View, Pressable, ActivityIndicator, Platform } from "react-native";
+import { useState, useEffect, useRef } from "react";
+import { Text, View, Pressable, Platform } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useColors } from "@/hooks/use-colors";
 import { WeatherIcon } from "./weather-icon";
@@ -17,28 +18,33 @@ interface WeatherData {
   precipitationType: number | null;
 }
 
+interface WeatherCacheData {
+  weather: WeatherData;
+  locationName: string | null;
+  updatedAt: string;
+}
+
+const WEATHER_CACHE_KEY = "@scoop_weather_widget_cache";
+const WEATHER_API_TIMEOUT_MS = 5000;
+
 // 주행 추천 여부 결정
 function getRidingRecommendation(weather: WeatherData): {
   recommended: boolean;
   reason: string;
   color: string;
 } {
-  // 날씨 정보가 없으면 중립
   if (!weather.weatherCondition) {
     return { recommended: true, reason: "날씨 정보를 확인할 수 없습니다", color: "#9CA3AF" };
   }
 
-  // 비/눈 오는 날 (0: 없음, 1: 비, 2: 비/눈, 3: 눈, 5: 빗방울, 6: 빗방울/눈날림, 7: 눈날림)
   if (weather.precipitationType && weather.precipitationType > 0) {
     return { recommended: false, reason: "비/눈이 오고 있어 주행에 주의가 필요합니다", color: "#EF4444" };
   }
 
-  // 강풍 (10m/s 이상)
   if (weather.windSpeed && weather.windSpeed >= 10) {
     return { recommended: false, reason: "강풍으로 인해 주행이 위험할 수 있습니다", color: "#F59E0B" };
   }
 
-  // 극한 온도
   if (weather.temperature !== null) {
     if (weather.temperature <= -10) {
       return { recommended: false, reason: "한파로 인해 배터리 성능이 저하될 수 있습니다", color: "#3B82F6" };
@@ -48,103 +54,240 @@ function getRidingRecommendation(weather: WeatherData): {
     }
   }
 
-  // 흐린 날
   if (weather.weatherCondition.includes("흐림") || weather.weatherCondition.includes("구름 많음")) {
     return { recommended: true, reason: "흐린 날씨지만 주행하기 좋습니다", color: "#22C55E" };
   }
 
-  // 맑은 날
   return { recommended: true, reason: "주행하기 좋은 날씨입니다!", color: "#22C55E" };
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} timeout (${timeoutMs}ms)`));
+    }, timeoutMs);
+
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
 }
 
 export function WeatherWidget() {
   const colors = useColors();
+  const trpcUtils = trpc.useUtils();
+
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [locationName, setLocationName] = useState<string | null>(null);
+  const hasCachedDataRef = useRef(false);
 
-  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
-  const weatherQuery = trpc.weather.getCurrent.useQuery(
-    { lat: coords?.lat ?? 0, lon: coords?.lon ?? 0 },
-    { enabled: !!coords }
-  );
+  const loadCachedWeather = async (): Promise<boolean> => {
+    console.log("[WeatherWidget] 캐시 읽기 시작");
+    try {
+      const cached = await AsyncStorage.getItem(WEATHER_CACHE_KEY);
+      if (!cached) {
+        console.log("[WeatherWidget] 캐시 없음");
+        return false;
+      }
 
-  const fetchWeather = async () => {
-    setIsLoading(true);
+      const parsed: WeatherCacheData = JSON.parse(cached);
+      const updatedAt = new Date(parsed.updatedAt);
+      if (Number.isNaN(updatedAt.getTime())) {
+        console.log("[WeatherWidget] 캐시 시간 파싱 실패");
+        return false;
+      }
+
+      hasCachedDataRef.current = true;
+      setWeather(parsed.weather);
+      setLocationName(parsed.locationName);
+      setLastUpdated(updatedAt);
+      setError(null);
+      setIsLoading(false);
+      console.log("[WeatherWidget] 캐시 표시 완료", { updatedAt: parsed.updatedAt });
+      return true;
+    } catch (cacheError) {
+      console.error("[WeatherWidget] 캐시 읽기 실패", cacheError);
+      return false;
+    }
+  };
+
+  const saveWeatherCache = async (cacheData: WeatherCacheData) => {
+    console.log("[WeatherWidget] 캐시 저장 시작");
+    try {
+      await AsyncStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(cacheData));
+      console.log("[WeatherWidget] 캐시 저장 완료");
+    } catch (cacheError) {
+      console.error("[WeatherWidget] 캐시 저장 실패", cacheError);
+    }
+  };
+
+  const fetchWeather = async (options?: { background?: boolean }) => {
+    const isBackgroundRefresh = options?.background === true;
+    console.log("[WeatherWidget] 날씨 갱신 시작", { isBackgroundRefresh });
+
+    if (!isBackgroundRefresh) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
-      // 위치 권한 확인
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setError("위치 권한이 필요합니다");
+      console.log("[WeatherWidget] 위치 권한 확인 시작");
+      const currentPermission = await Location.getForegroundPermissionsAsync();
+      let permissionStatus = currentPermission.status;
+
+      if (permissionStatus !== "granted") {
+        try {
+          console.log("[WeatherWidget] 위치 권한 요청 시작");
+          const requested = await withTimeout(
+            Location.requestForegroundPermissionsAsync(),
+            WEATHER_API_TIMEOUT_MS,
+            "location_permission"
+          );
+          permissionStatus = requested.status;
+          console.log("[WeatherWidget] 위치 권한 요청 완료", { status: permissionStatus });
+        } catch (permissionError) {
+          console.error("[WeatherWidget] 위치 권한 요청 타임아웃/실패", permissionError);
+        }
+      }
+
+      if (permissionStatus !== "granted") {
+        if (!hasCachedDataRef.current) {
+          setError("위치 권한이 필요합니다");
+        }
         setIsLoading(false);
         return;
       }
 
-      // 현재 위치 가져오기
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      let latitude: number | null = null;
+      let longitude: number | null = null;
 
-      // 좌표 설정 -> useQuery 트리거
-      setCoords({
-        lat: location.coords.latitude,
-        lon: location.coords.longitude,
-      });
-
-      // 역지오코딩으로 지역명 가져오기
       try {
-        const geocode = await Location.reverseGeocodeAsync({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
+        console.log("[WeatherWidget] 현재 위치 조회 시작");
+        const location = await withTimeout(
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+          WEATHER_API_TIMEOUT_MS,
+          "current_location"
+        );
+        latitude = location.coords.latitude;
+        longitude = location.coords.longitude;
+        console.log("[WeatherWidget] 현재 위치 조회 완료", { latitude, longitude });
+      } catch (locationError) {
+        console.warn("[WeatherWidget] 현재 위치 조회 실패, 마지막 위치 사용 시도", locationError);
+        const lastKnown = await Location.getLastKnownPositionAsync({
+          maxAge: 1000 * 60 * 60,
+          requiredAccuracy: 500,
         });
+
+        if (lastKnown) {
+          latitude = lastKnown.coords.latitude;
+          longitude = lastKnown.coords.longitude;
+          console.log("[WeatherWidget] 마지막 위치 사용", { latitude, longitude });
+        }
+      }
+
+      if (latitude === null || longitude === null) {
+        if (!hasCachedDataRef.current) {
+          setError("위치 정보를 가져올 수 없습니다");
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      let resolvedLocationName: string | null = locationName;
+      try {
+        console.log("[WeatherWidget] 역지오코딩 시작");
+        const geocode = await withTimeout(
+          Location.reverseGeocodeAsync({ latitude, longitude }),
+          WEATHER_API_TIMEOUT_MS,
+          "reverse_geocode"
+        );
         if (geocode && geocode.length > 0) {
           const place = geocode[0];
-          // 한국 주소 형식: 시/도 + 구/군 또는 city + district
           const parts: string[] = [];
-          if (place.region) parts.push(place.region); // 시/도
-          if (place.city && place.city !== place.region) parts.push(place.city); // 시/군/구
-          if (place.district && place.district !== place.city) parts.push(place.district); // 동/읍/면
+          if (place.region) parts.push(place.region);
+          if (place.city && place.city !== place.region) parts.push(place.city);
+          if (place.district && place.district !== place.city) parts.push(place.district);
           if (place.subregion && parts.length === 0) parts.push(place.subregion);
-          
-          const name = parts.length > 0 ? parts.join(" ") : (place.name || null);
-          setLocationName(name);
+
+          resolvedLocationName = parts.length > 0 ? parts.join(" ") : (place.name || null);
+          setLocationName(resolvedLocationName);
+          console.log("[WeatherWidget] 역지오코딩 완료", { resolvedLocationName });
         }
       } catch (geoErr) {
-        console.log("Reverse geocode error:", geoErr);
-        // 지역명 실패해도 날씨는 계속 표시
+        console.warn("[WeatherWidget] 역지오코딩 실패", geoErr);
       }
-    } catch (err) {
-      console.error("Weather fetch error:", err);
-      setError("날씨 정보를 가져올 수 없습니다");
-      setIsLoading(false);
-    }
-  };
 
-  // 날씨 데이터 업데이트
-  useEffect(() => {
-    if (weatherQuery.data && weatherQuery.data.success && weatherQuery.data.weather) {
-      const w = weatherQuery.data.weather;
-      setWeather({
+      console.log("[WeatherWidget] 날씨 API 호출 시작");
+      const weatherResult = await withTimeout(
+        trpcUtils.client.weather.getCurrent.query({ lat: latitude, lon: longitude }),
+        WEATHER_API_TIMEOUT_MS,
+        "weather_api"
+      );
+      console.log("[WeatherWidget] 날씨 API 호출 완료", { success: weatherResult?.success });
+
+      if (!weatherResult?.success || !weatherResult.weather) {
+        if (!hasCachedDataRef.current) {
+          setError(weatherResult?.error || "날씨 정보를 가져올 수 없습니다");
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      const w = weatherResult.weather;
+      const weatherData: WeatherData = {
         temperature: w.temperature,
         humidity: w.humidity,
         windSpeed: w.windSpeed,
         weatherCondition: w.weatherCondition,
         precipitationType: w.precipitationType,
-      });
-      setLastUpdated(new Date());
+      };
+
+      const now = new Date();
+      hasCachedDataRef.current = true;
+      setWeather(weatherData);
+      setLastUpdated(now);
+      setError(null);
       setIsLoading(false);
-    } else if (weatherQuery.data && !weatherQuery.data.success) {
-      setError(weatherQuery.data.error || "날씨 정보를 가져올 수 없습니다");
+
+      await saveWeatherCache({
+        weather: weatherData,
+        locationName: resolvedLocationName,
+        updatedAt: now.toISOString(),
+      });
+    } catch (err) {
+      console.error("[WeatherWidget] 날씨 갱신 실패", err);
+      if (!hasCachedDataRef.current) {
+        setError("날씨 정보를 가져올 수 없습니다");
+      }
       setIsLoading(false);
     }
-  }, [weatherQuery.data]);
+  };
 
   useEffect(() => {
-    fetchWeather();
+    let isMounted = true;
+
+    const initializeWeather = async () => {
+      const hasCache = await loadCachedWeather();
+      if (!isMounted) return;
+
+      // 캐시는 무조건 먼저 보여주고, 백그라운드에서 재검증
+      await fetchWeather({ background: hasCache });
+    };
+
+    initializeWeather();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleRefresh = () => {
@@ -180,7 +323,6 @@ export function WeatherWidget() {
 
   return (
     <View className="bg-surface rounded-2xl p-4 mx-4 mb-4 border border-border">
-      {/* 헤더 - 지역명 표시 */}
       <View className="flex-row items-center justify-between mb-3">
         <View className="flex-row items-center flex-1">
           <MaterialIcons name="wb-sunny" size={18} color={colors.primary} />
@@ -197,7 +339,6 @@ export function WeatherWidget() {
         </Pressable>
       </View>
 
-      {/* 날씨 정보 */}
       <View className="flex-row items-center mb-3">
         <WeatherIcon condition={weather.weatherCondition || "맑음"} size={48} />
         <View className="ml-3 flex-1">
@@ -224,19 +365,18 @@ export function WeatherWidget() {
         </View>
       </View>
 
-      {/* 주행 추천 */}
       {recommendation && (
-        <View 
+        <View
           className="rounded-xl p-3 mt-1"
           style={{ backgroundColor: `${recommendation.color}15` }}
         >
           <View className="flex-row items-center">
-            <MaterialIcons 
-              name={recommendation.recommended ? "check-circle" : "warning"} 
-              size={20} 
-              color={recommendation.color} 
+            <MaterialIcons
+              name={recommendation.recommended ? "check-circle" : "warning"}
+              size={20}
+              color={recommendation.color}
             />
-            <Text 
+            <Text
               className="text-sm font-medium ml-2 flex-1"
               style={{ color: recommendation.color }}
             >
@@ -246,7 +386,6 @@ export function WeatherWidget() {
         </View>
       )}
 
-      {/* 마지막 업데이트 시간 */}
       {lastUpdated && (
         <Text className="text-xs text-muted text-right mt-2">
           {lastUpdated.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 업데이트

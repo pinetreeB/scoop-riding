@@ -1112,24 +1112,7 @@ export default function ProfileScreen() {
             {/* App Version */}
             <Pressable
               onPress={() => {
-                if (appUpdateInfo.hasUpdate && appUpdateInfo.downloadUrl) {
-                  Alert.alert(
-                    t('profile.newVersionAvailable'),
-                    `v${appUpdateInfo.latestVersion} ${t('profile.versionReleased')}\n\n${appUpdateInfo.releaseNotes || t('profile.newFeaturesIncluded')}`,
-                    [
-                      { text: t('profile.later'), style: "cancel" },
-                      { 
-                        text: t('profile.download'), 
-                        onPress: async () => {
-                          const { Linking } = await import("react-native");
-                          Linking.openURL(appUpdateInfo.downloadUrl!);
-                        }
-                      },
-                    ]
-                  );
-                } else {
-                  Alert.alert(t('profile.appInfo'), `SCOOP Riding v${CURRENT_APP_VERSION}\n\n${t('profile.latestVersion')}`);
-                }
+                router.push("/version-history");
               }}
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
               className="flex-row items-center p-4 border-b border-border"

@@ -36,7 +36,10 @@ export default function PostDetailScreen() {
   const colors = useColors();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading: authLoading } = useAuth();
+
+  const postId = Number(id || "0");
+  const hasValidPostId = Number.isInteger(postId) && postId > 0;
 
   const [commentText, setCommentText] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
@@ -47,13 +50,13 @@ export default function PostDetailScreen() {
   const trpcUtils = trpc.useUtils();
 
   const postQuery = trpc.community.getPost.useQuery(
-    { id: parseInt(id || "0") },
-    { enabled: !!id && isAuthenticated }
+    { id: postId },
+    { enabled: hasValidPostId && isAuthenticated }
   );
 
   const commentsQuery = trpc.community.getComments.useQuery(
-    { postId: parseInt(id || "0") },
-    { enabled: !!id && isAuthenticated }
+    { postId },
+    { enabled: hasValidPostId && isAuthenticated }
   );
 
   const toggleLikeMutation = trpc.community.toggleLike.useMutation({
@@ -230,6 +233,16 @@ export default function PostDetailScreen() {
   };
 
   if (!isAuthenticated) {
+    if (authLoading) {
+      return (
+        <ScreenContainer>
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        </ScreenContainer>
+      );
+    }
+
     return (
       <ScreenContainer>
         <View className="flex-1 items-center justify-center p-6">
@@ -239,7 +252,7 @@ export default function PostDetailScreen() {
     );
   }
 
-  if (postQuery.isLoading) {
+  if (!hasValidPostId || postQuery.isLoading || (postQuery.isFetching && !postQuery.data) || !postQuery.isFetched) {
     return (
       <ScreenContainer>
         <View className="flex-1 items-center justify-center">

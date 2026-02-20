@@ -885,7 +885,7 @@ export async function getUserPosts(userId: number): Promise<PostWithAuthor[]> {
 
 // ==================== Friend Functions ====================
 
-import { or, like, ne } from "drizzle-orm";
+import { or, ne } from "drizzle-orm";
 
 export interface UserWithFriendStatus {
   id: number;
@@ -913,7 +913,11 @@ export async function searchUsers(
   const db = await getDb();
   if (!db) return [];
 
-  const searchPattern = `%${query}%`;
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) return [];
+
+  const normalizedQuery = trimmedQuery.toLowerCase();
+  const searchPattern = `%${normalizedQuery}%`;
   
   const result = await db
     .select({
@@ -926,8 +930,8 @@ export async function searchUsers(
       and(
         ne(users.id, currentUserId),
         or(
-          like(users.name, searchPattern),
-          like(users.email, searchPattern)
+          sql`LOWER(COALESCE(${users.name}, '')) LIKE ${searchPattern}`,
+          sql`LOWER(COALESCE(${users.email}, '')) LIKE ${searchPattern}`
         )
       )
     )
@@ -1970,12 +1974,70 @@ export async function awardBadge(userId: number, badgeId: number): Promise<void>
   }
 }
 
+async function ensureDefaultBadges(): Promise<Badge[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const defaultBadges: Array<Omit<InsertBadge, "id" | "createdAt">> = [
+    { name: "첫 주행", description: "첫 번째 주행을 완료했습니다", icon: "directions-bike", color: "#3B82F6", category: "rides", requirement: "1" },
+    { name: "100km 달성", description: "총 100km 주행을 달성했습니다", icon: "speed", color: "#10B981", category: "distance", requirement: "100" },
+    { name: "500km 달성", description: "총 500km 주행을 달성했습니다", icon: "speed", color: "#22C55E", category: "distance", requirement: "500" },
+    { name: "1,000km 달성", description: "총 1,000km 주행을 달성했습니다", icon: "emoji-events", color: "#F59E0B", category: "distance", requirement: "1000" },
+    { name: "5,000km 달성", description: "총 5,000km 주행을 달성했습니다", icon: "military-tech", color: "#8B5CF6", category: "distance", requirement: "5000" },
+    { name: "10,000km 달성", description: "총 10,000km 주행을 달성했습니다", icon: "military-tech", color: "#8B5CF6", category: "distance", requirement: "10000" },
+    { name: "10회 주행", description: "총 10회 주행을 완료했습니다", icon: "repeat", color: "#06B6D4", category: "rides", requirement: "10" },
+    { name: "50회 주행", description: "총 50회 주행을 완료했습니다", icon: "repeat", color: "#14B8A6", category: "rides", requirement: "50" },
+    { name: "100회 주행", description: "총 100회 주행을 완료했습니다", icon: "star", color: "#F59E0B", category: "rides", requirement: "100" },
+    { name: "500회 주행", description: "총 500회 주행을 완료했습니다", icon: "star", color: "#EC4899", category: "rides", requirement: "500" },
+    { name: "1,000회 주행", description: "총 1,000회 주행을 완료했습니다", icon: "military-tech", color: "#FFD700", category: "rides", requirement: "1000" },
+  ];
+
+  const existing = await db.select().from(badges);
+  const existingNameSet = new Set(existing.map((badge) => badge.name));
+
+  const missingBadges = defaultBadges.filter((badge) => !existingNameSet.has(badge.name));
+  if (missingBadges.length > 0) {
+    console.log("[Badge] Seeding missing default badges:", missingBadges.map((badge) => badge.name));
+    await db.insert(badges).values(missingBadges as InsertBadge[]);
+  }
+
+  return db.select().from(badges);
+}
+
+function evaluateBadgeQualification(badge: Badge, totalDistance: number, totalRides: number): boolean {
+  const requirement = Number(String(badge.requirement).replace(/,/g, ""));
+  if (!Number.isFinite(requirement) || requirement <= 0) {
+    return false;
+  }
+
+  const normalizedCategory = (badge.category || "").toLowerCase();
+
+  if (normalizedCategory === "distance") {
+    return totalDistance >= requirement * 1000; // km to m
+  }
+
+  if (normalizedCategory === "rides" || normalizedCategory === "ride") {
+    return totalRides >= requirement;
+  }
+
+  // Fallback: 배지 이름 기준으로도 조건 체크 (운영 DB 카테고리 오타/불일치 대비)
+  if (badge.name.includes("km")) {
+    return totalDistance >= requirement * 1000;
+  }
+
+  if (badge.name.includes("주행")) {
+    return totalRides >= requirement;
+  }
+
+  return false;
+}
+
 // Check and award badges based on user stats
 export async function checkAndAwardBadges(userId: number, totalDistance: number, totalRides: number): Promise<Badge[]> {
   const db = await getDb();
   if (!db) return [];
 
-  const allBadges = await getAllBadges();
+  const allBadges = await ensureDefaultBadges();
   const earnedBadges = await getUserBadges(userId);
   const earnedBadgeIds = new Set(earnedBadges.map(eb => eb.badge.id));
   const newBadges: Badge[] = [];
@@ -1983,17 +2045,7 @@ export async function checkAndAwardBadges(userId: number, totalDistance: number,
   for (const badge of allBadges) {
     if (earnedBadgeIds.has(badge.id)) continue;
 
-    let qualified = false;
-    const requirement = parseFloat(badge.requirement);
-
-    switch (badge.category) {
-      case "distance":
-        qualified = totalDistance >= requirement * 1000; // km to m
-        break;
-      case "rides":
-        qualified = totalRides >= requirement;
-        break;
-    }
+    const qualified = evaluateBadgeQualification(badge, totalDistance, totalRides);
 
     if (qualified) {
       await awardBadge(userId, badge.id);

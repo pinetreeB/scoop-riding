@@ -103,9 +103,15 @@ export default function FriendsScreen() {
   };
 
   const handleSearch = () => {
-    if (searchQuery.length >= 2) {
+    const trimmedQuery = searchQuery.trim();
+    setSearchQuery(trimmedQuery);
+
+    if (trimmedQuery.length >= 2) {
       setIsSearching(true);
+      return;
     }
+
+    setIsSearching(false);
   };
 
   const handleSendRequest = (userId: number) => {

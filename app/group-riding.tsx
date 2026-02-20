@@ -217,7 +217,7 @@ export default function GroupRidingScreen() {
 
   // 그룹 라이딩 시작
   const handleStartGroupRiding = (group: GroupSession) => {
-    router.push(`/riding?groupId=${group.id}`);
+    router.push(`/select-scooter?groupId=${group.id}`);
   };
 
   // 멤버 승인

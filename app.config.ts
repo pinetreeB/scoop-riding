@@ -4,7 +4,7 @@ import type { ExpoConfig } from "expo/config";
 
 // Bundle ID format: space.manus.<project_name_dots>.<timestamp>
 // e.g., "my-app" created at 2024-01-15 10:30:45 -> "space.manus.my.app.t20240115103045"
-// Bundle ID can only contain letters, numbers, and dots
+// Bundle ID can only contain letters, numbers, and dots (끝의 오타 문자 제거 상태 유지)
 // Android requires each dot-separated segment to start with a letter
 const rawBundleId = "space.manus.scoop.riding.t20260121093006";
 const bundleId =
@@ -41,7 +41,7 @@ const env = {
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
-  version: "0.1.7",
+  version: "0.1.11",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,

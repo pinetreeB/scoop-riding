@@ -115,6 +115,7 @@ export default function SelectScooterScreen() {
     destinationLng?: string;
     routePolyline?: string;
     routeSteps?: string;
+    groupId?: string;
   }>();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -180,22 +181,30 @@ export default function SelectScooterScreen() {
   };
 
   const navigateToRiding = () => {
-    // Pass navigation params to riding screen if available
+    const ridingParams: Record<string, string | undefined> = {};
+
     if (hasNavigation) {
+      ridingParams.withNavigation = "true";
+      ridingParams.destinationName = params.destinationName;
+      ridingParams.destinationLat = params.destinationLat;
+      ridingParams.destinationLng = params.destinationLng;
+      ridingParams.routePolyline = params.routePolyline;
+      ridingParams.routeSteps = params.routeSteps;
+    }
+
+    if (params.groupId) {
+      ridingParams.groupId = params.groupId;
+    }
+
+    if (Object.keys(ridingParams).length > 0) {
       router.push({
         pathname: "/riding",
-        params: {
-          withNavigation: "true",
-          destinationName: params.destinationName,
-          destinationLat: params.destinationLat,
-          destinationLng: params.destinationLng,
-          routePolyline: params.routePolyline,
-          routeSteps: params.routeSteps,
-        },
+        params: ridingParams,
       } as any);
-    } else {
-      router.push("/riding");
+      return;
     }
+
+    router.push("/riding");
   };
 
   const handleVoltageSubmit = async (voltage: number, soc: number) => {
@@ -219,22 +228,7 @@ export default function SelectScooterScreen() {
     setSelectedScooter(null);
     clearStartVoltage();
     
-    // Pass navigation params to riding screen if available
-    if (hasNavigation) {
-      router.push({
-        pathname: "/riding",
-        params: {
-          withNavigation: "true",
-          destinationName: params.destinationName,
-          destinationLat: params.destinationLat,
-          destinationLng: params.destinationLng,
-          routePolyline: params.routePolyline,
-          routeSteps: params.routeSteps,
-        },
-      } as any);
-    } else {
-      router.push("/riding");
-    }
+    navigateToRiding();
   };
 
   // Format battery info for display
