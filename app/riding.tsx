@@ -112,6 +112,7 @@ export default function RidingScreen() {
     distance: number;
     currentSpeed: number;
     isRiding: boolean;
+    lastUpdate: Date | null;
   }[]>([]);
 
   // Group riding mutations (HTTP fallback - disabled when WebSocket is connected)
@@ -155,6 +156,7 @@ export default function RidingScreen() {
         distance: m.distance,
         currentSpeed: m.speed,
         isRiding: m.isRiding,
+        lastUpdate: new Date(),
       }));
       
       // Throttle updates to prevent UI lag
@@ -213,9 +215,18 @@ export default function RidingScreen() {
     };
   }, []);
 
-  // 맵에는 현재 WebSocket 접속 중인 그룹원만 표시
-  const connectedMemberIds = new Set(wsMembers.map((member) => member.userId));
-  const visibleGroupMembers = groupMembers.filter((member) => connectedMemberIds.has(member.userId));
+  // 그룹원 온라인 여부 판별: WS 연결 시 wsMembers 기준, HTTP 폴링 시 lastUpdate 5분 기준
+  const GROUP_MEMBER_OFFLINE_THRESHOLD_MS = 5 * 60 * 1000;
+  const isGroupMemberOnline = (member: (typeof groupMembers)[number]) => {
+    if (wsConnected) {
+      return wsMembers.some((wsMember) => wsMember.userId === member.userId);
+    }
+    if (!member.lastUpdate) return false;
+    const lastUpdateTime = new Date(member.lastUpdate).getTime();
+    if (Number.isNaN(lastUpdateTime)) return false;
+    return Date.now() - lastUpdateTime <= GROUP_MEMBER_OFFLINE_THRESHOLD_MS;
+  };
+  const visibleGroupMembers = groupMembers;
 
   
   // HTTP polling fallback (only when WebSocket is not connected)
@@ -596,6 +607,7 @@ export default function RidingScreen() {
         distance: m.distance,
         currentSpeed: m.currentSpeed,
         isRiding: m.isRiding,
+        lastUpdate: m.lastUpdate ? new Date(m.lastUpdate) : null,
       })));
     }
   }, [groupMembersData, user?.id]);
@@ -2260,7 +2272,7 @@ export default function RidingScreen() {
                   profileImage: m.profileImage,
                   profileColor: m.profileColor ?? undefined,
                   isRiding: m.isRiding,
-                  isOnline: wsMembers.some((wsMember) => wsMember.userId === m.userId),
+                  isOnline: isGroupMemberOnline(m),
                   latitude: m.latitude ?? undefined,
                   longitude: m.longitude ?? undefined,
                   speed: m.currentSpeed,
