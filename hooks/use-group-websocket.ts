@@ -194,6 +194,11 @@ export function useGroupWebSocket({
               
             case "error":
               console.error("[WebSocket] Server error:", message.message);
+              if (message.message === "Invalid authentication token" && reconnectAttemptsRef.current < 3) {
+                console.log("[WebSocket] Auth error detected, reconnecting...");
+                wsRef.current?.close(4001, "Auth error reconnect");
+                return;
+              }
               onErrorRef.current?.(message.message);
               break;
               

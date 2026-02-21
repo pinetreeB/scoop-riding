@@ -590,7 +590,7 @@ export default function RidingScreen() {
         userId: m.userId,
         name: m.name,
         profileImage: m.profileImageUrl || null,
-        profileColor: (m as any).profileColor || null,
+        profileColor: m.profileColor || null,
         latitude: m.latitude,
         longitude: m.longitude,
         distance: m.distance,
@@ -715,6 +715,10 @@ export default function RidingScreen() {
   const isProcessingRef = useRef(false);
   
   useEffect(() => {
+    // Force reset refs on screen entry
+    isSavingRef.current = false;
+    isProcessingRef.current = false;
+
     const checkAndInitialize = async () => {
       // 저장 중이거나 분석 모달이 표시 중이면 복구 팝업 표시 안 함
       if (isSavingRef.current || isProcessingRef.current) {
@@ -766,10 +770,14 @@ export default function RidingScreen() {
     checkAndInitialize();
 
     return () => {
-      stopLocationTracking();
-      stopBackupInterval(backupIntervalRef.current);
-      if (Platform.OS !== "web") {
-        stopBackgroundLocationTracking();
+      try {
+        stopLocationTracking();
+        stopBackupInterval(backupIntervalRef.current);
+        if (Platform.OS !== "web") {
+          stopBackgroundLocationTracking();
+        }
+      } catch (e) {
+        console.error("[Riding] Cleanup error:", e);
       }
     };
   }, []);
@@ -1833,6 +1841,7 @@ export default function RidingScreen() {
     } finally {
       // Reset saving state after completion
       isSavingRef.current = false;
+      isProcessingRef.current = false;
       setIsSaving(false);
     }
   };

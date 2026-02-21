@@ -69,8 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               loginMethod: apiUser.loginMethod,
               lastSignedIn: new Date(apiUser.lastSignedIn),
               profileImageUrl: apiUser.profileImageUrl,
-              profileColor: (apiUser as any).profileColor || null,
-              role: (apiUser as any).role || "user",
+              profileColor: apiUser.profileColor || null,
+              role: apiUser.role || "user",
             };
             setUser(userInfo);
             await Auth.setUserInfo(userInfo);
@@ -111,8 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             loginMethod: apiUser.loginMethod,
             lastSignedIn: new Date(apiUser.lastSignedIn),
             profileImageUrl: apiUser.profileImageUrl,
-            profileColor: (apiUser as any).profileColor || null,
-            role: (apiUser as any).role || "user",
+            profileColor: apiUser.profileColor || null,
+            role: apiUser.role || "user",
           };
           setUser(userInfo);
           await Auth.setUserInfo(userInfo);

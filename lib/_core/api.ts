@@ -132,6 +132,7 @@ export async function getMe(): Promise<{
   loginMethod: string | null;
   lastSignedIn: string;
   profileImageUrl: string | null;
+  profileColor: string | null;
   role: "user" | "admin";
 } | null> {
   try {
